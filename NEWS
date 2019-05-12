@@ -1,9 +1,9 @@
-Something new in version 0.3beta:
+Something new lsd2:
 - Compute confidence intervals, use option -f, e.g. -f 100 to calculate confidence intervals by generating 100 simulated trees. The Possion distribution is used to generate the branch lengths from the time-scaled tree, so the sequence length should be given.
 - The input dates are more flexible, can be either applied for an internal node or a tip. A constrained date can be either a fix value or a lower bound or an upper bound or an interval. Moreover, it's not necessary that all tips have to have temporal constraints. If the input constraints are not enough to have unique solution, then the users will be notified to: either add more temporal constrainst, or ignore the input dates to estimate relative dates.
 - Be able to estimate several substitution rates, use option -p to specify the input partition file. A partition file should define substitution rate groups based on subtrees.
 - Be able to use variance in estimating the root position.
 - Be able to read non-binary tree
-- When variances are used, the user can run LSD twice where the second time the variances are calculated based on the estimated branch lengths of the first run.
+- When variances are used, the user can run LSD2 twice where the second time the variances are calculated based on the estimated branch lengths of the first run.
 - When outgroups are given, either remove the outgroups or keep them. In the former case, the root position is estimated on only the branch defined by the outgroups.
 - Estimate outliers tips using standard regression of root-to-tip paths. 
