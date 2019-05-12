@@ -5,7 +5,7 @@
 Type *make* from the folder *src*, you will have the executable file *lsd2* in the *src* folder.
 Note that C++ compiler and library support for the ISO C++ 2011 is required to compile the program from sources. 
      
-## Run LSD:
+## Run LSD2:
 
 If you want to use the interface, type *./lsd2* without parameters in the terminal from the folder containing the executable file.
 Otherwise, type *./lsd2 parameters*  where the list of parameters usage can be obtained by *./lsd2 -h*.
