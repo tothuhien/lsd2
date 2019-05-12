@@ -1,13 +1,14 @@
 # LSD2: LEAST-SQUARES METHODS TO ESTIMATE RATES AND DATES FROM SERIAL PHYLOGENIES
 
 ## Compile LSD2:
-	Type 'make' from the folder 'src', you will have the executable file 'lsd2' in the 'src' folder.
-	Note that C++ compiler and library support for the ISO C++ 2011 is required to compile the program from the code source. 
+
+Type *make* from the folder *src*, you will have the executable file *lsd2* in the *src* folder.
+Note that C++ compiler and library support for the ISO C++ 2011 is required to compile the program from the code source. 
      
 ## Run LSD:
 
-If you want to use the interface, type ./lsd2 in the terminal without parameters.
-Otherwise, type './lsd2 <parameters>'  where the list of parameters usage can be obtained by './lsd2 -h'
+If you want to use the interface, type *./lsd2* without parameters in the terminal from the folder containing the executable file.
+Otherwise, type *./lsd2 <parameters>*  where the list of parameters usage can be obtained by *./lsd2 -h*
 The input tree file is required and should be specified by option -i. 
 	
 If the input date is provided, the program estimates will the absolute dates. 
@@ -28,7 +29,7 @@ Option -c is recommended to take into account the temporal constraints (date of 
 It should be noticed that LSD always assumes an increasing-time order from root to tips, i.e the date of a node is smaller than that of its children. If your data has the reverse order, the simplest way is to take the negation of the
 input date, and take the negation again of the output date to obtain your expected results.
 
-Further options can be specified, see './lsd2 -h' for more details.
+Further options can be specified, see *./lsd2 -h* for more details.
     
 ## Input files:
 
