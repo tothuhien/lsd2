@@ -3,16 +3,14 @@
 ## Compile LSD2:
 
 Type *make* from the folder *src*, you will have the executable file *lsd2* in the *src* folder.
-Note that C++ compiler and library support for the ISO C++ 2011 is required to compile the program from the code source. 
+Note that C++ compiler and library support for the ISO C++ 2011 is required to compile the program from sources. 
      
 ## Run LSD:
 
 If you want to use the interface, type *./lsd2* without parameters in the terminal from the folder containing the executable file.
-Otherwise, type *./lsd2 <parameters>*  where the list of parameters usage can be obtained by *./lsd2 -h*
+Otherwise, type *./lsd2 parameters*  where the list of parameters usage can be obtained by *./lsd2 -h*.
+
 The input tree file is required and should be specified by option -i. 
-	
-If the input date is provided, the program estimates will the absolute dates. 
-	
 	
 The input date file is necessary to estimate absolute dates and can be specified by option -d. 
 The input date file should contain the date of all tips and possiblly some internal nodes if known. 
@@ -26,7 +24,7 @@ If all tips have the same date, you can estimate relative dates using options -a
 specify the root date and tip date. 
 	
 Option -c is recommended to take into account the temporal constraints (date of a node >= date of its ancestors). 
-It should be noticed that LSD always assumes an increasing-time order from root to tips, i.e the date of a node is smaller than that of its children. If your data has the reverse order, the simplest way is to take the negation of the
+It should be noticed that LSD2 always assumes an increasing-time order from root to tips, i.e the date of a node is smaller than that of its children. If your data has the reverse order, the simplest way is to take the negation of the
 input date, and take the negation again of the output date to obtain your expected results.
 
 Further options can be specified, see *./lsd2 -h* for more details.
@@ -69,7 +67,7 @@ then an input date file can be as follows:
     n2 u(2003)
     root b(1998,1999)
 
-### given_rate_file
+### Given rate file
 
 If the rates are known and you want to use it to infer the dates, then you can 
 give them in a file. The file should have each rate per line which corresponds 
@@ -79,7 +77,7 @@ to each tree in the Input_tree_file, for example:
 	0.0052
 
 
-### Example of Outgroup_file format:
+### Outgroup file:
 
 	2
 	outgroup1
@@ -87,11 +85,12 @@ to each tree in the Input_tree_file, for example:
 
 If there are more than 1 outgroups, than they must be monophyletic in the input trees.
 
-### Example of Partition_file: 
+### Partition file: 
 
 You can partition the branch trees into several subsets that you know each subset
 has a different rate. 
-Suppose that we have a tree `((A:0.12,D:0.12)n1:0.3,((B:0.3,C:0.5)n2:0.4,(E:0.5,(F:0.2,G:0.3)n3:0.33)n4:0.22)n5:0.2)root;` then an example for Partition_file can be as follows:
+
+Suppose that we have a tree `((A:0.12,D:0.12)n1:0.3,((B:0.3,C:0.5)n2:0.4,(E:0.5,(F:0.2,G:0.3)n3:0.33)n4:0.22)n5:0.2)root;` then an example for partition file can be as follows:
 
     group1 {n1} {n5 n4}
     group2 {n3}
@@ -109,6 +108,8 @@ Note that if the internal nodes don't have labels, then they can be defined by m
 ## Some examples of command lines:
 
 * for rooted tree, constrained mode, and using variances
+Sequence length of the multiple alignments used to build the tree is required via option -s to calculate variances.
+Without specifying this, it will use 1000 by default.
 
     `./lsd2 -i rootedtree_file -d date_file -c -v 1`
     
@@ -116,31 +117,32 @@ Note that if the internal nodes don't have labels, then they can be defined by m
 
     `./lsd2 -i rootedtree_file -d date_file -c -v 1 -e 3`
 
-* for rooted tree, constrained mode, using variances, using partition file 
+* for rooted tree, constrained mode, using variances, estimate different rate for each part of the given tree partition
 
     `./lsd2 -i rootedtree_file -d date_file -c -v 1 -p parition_file`
 
-* for rooted tree, constrained mode, re-estimate the root position around the given root
+* for rooted tree, constrained mode, re-estimate the root position locally around the given root
 
     `./lsd2 -i rootedtree_file -d date_file -c -r l`
 
-* similar to the previous example, but calculate confidence intervals from 100 simulated trees 
-(sequence length is required via option -s to calculate confidence intervals. The program will use the min of sequence length and 1000 to generate branch lengths of simulated trees.)
+* similar to the previous example, but calculate confidence intervals from 100 simulated trees. 
+To calculate confidence intervals, sequence length of the multiple alignment used to build the tree is required via option -s. 
+The program will use the min of sequence length and 1000 to generate branch lengths of simulated trees.
 
     `./lsd2 -i rootedtree_file -d date_file -c -r l -f 100 -s 1700`
 
-* for unrooted tree without outgroups, without constraints, estimate the root position
+* for unrooted tree without outgroups, do not use temporal constraints, estimate the root position
 
     `./lsd2 -i unrootedtree_file -d date_file -c -r a`
 
 * for unrooted tree with outgroups, constrained mode, using variances from the estimated branch lengths (run LSD twice), 
 remove outgroups to obtain the root
 
-    `./lsd2 -i unrootedtree_file -d date_file -g outgroup_file -c -v 2 -s 1000`
+    `./lsd2 -i unrootedtree_file -d date_file -g outgroup_file -c -v 2`
 
 * similar to the previous example, but keep outgroups in the tree, just estimate the root position defined by the outgroups
 
-    `./lsd2 -i unrootedtree_file -d date_file -g outgroup_file -k -c -v 2 -s 1000`
+    `./lsd2 -i unrootedtree_file -d date_file -g outgroup_file -k -c -v 2`
 
 * for rooted tree, constrained mode, and using given rates to estimate dates
 
@@ -153,9 +155,9 @@ remove outgroups to obtain the root
 
 ## Output files: 
 
-    .result : contain the estimated rates, root date, possibly confidente intervals, outlier tips and the value of the objective function.
+    .result : contain the estimated rates, root date, possibly confidence intervals, outlier tips and the value of the objective function.
 
-    .nexus : trees in nexus format which contain information about the dates of internal nodes (named date), branch lengths, and the confidence intervals (named CI) if option -f was used.
+    .nexus : trees in nexus format which contain information about the dates of internal nodes, branch lengths, and the confidence intervals (CI) if option -f was used.
     
     .date.nexus : trees in nexus format where branch lengths are rescaled to time unit by multiplying with the estimated rate. 
 
