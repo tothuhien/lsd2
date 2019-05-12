@@ -1,5 +1,5 @@
-# lsd-0.3beta
-LSD: LEAST-SQUARES METHODS TO ESTIMATE RATES AND DATES FROM SERIAL PHYLOGENIES - v0.3beta by Thu-Hien TO
+# lsd2
+LSD2: LEAST-SQUARES METHODS TO ESTIMATE RATES AND DATES FROM SERIAL PHYLOGENIES - by Thu-Hien TO
 
 If you use this software, please cite: “ Fast dating using least-squares criteria and algorithms”, T-H. To, M. Jung, S. Lycett, O. Gascuel, Syst Biol. 2016 Jan;65(1):82-97.
 
