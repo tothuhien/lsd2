@@ -5,14 +5,15 @@
 	Note that C++ compiler and library support for the ISO C++ 2011 is required to compile the program from the code source. 
      
 ## Run LSD:
-	If you want to use the interface, type ./lsd2 in the terminal without parameters.
-	Otherwise, type './lsd2 <parameters>'  where the list of parameters usage can be obtained by './lsd2 -h'
-	The input tree file is required and should be specified by option -i. 
+
+If you want to use the interface, type ./lsd2 in the terminal without parameters.
+Otherwise, type './lsd2 <parameters>'  where the list of parameters usage can be obtained by './lsd2 -h'
+The input tree file is required and should be specified by option -i. 
 	
-	If the input date is provided, the program estimates will the absolute dates. 
+If the input date is provided, the program estimates will the absolute dates. 
 	
 	
-	The input date file is necessary to estimate absolute dates and can be specified by option -d. 
+The input date file is necessary to estimate absolute dates and can be specified by option -d. 
 The input date file should contain the date of all tips and possiblly some internal nodes if known. 
 If some tip dates are missing, the program just uses the subtree containing all defined date tips & nodes for the estimation. 
 The missing tip dates would be inferred at the end using the estimated rate & dates.
@@ -20,14 +21,14 @@ In order to have unique solution, at least two different precise values of dates
 given. A tree with all tips having the same date and no further date 
 information on internal nodes will not be able to infer absolute dates. 
 
-	If all tips have the same date, you can estimate relative dates using options -a and -z to 
+If all tips have the same date, you can estimate relative dates using options -a and -z to 
 specify the root date and tip date. 
 	
-	Option -c is recommended to take into account the temporal constraints (date of a node >= date of its ancestors). 
-	It should be noticed that LSD always assumes an increasing-time order from root to tips, i.e the date of a node is smaller than that of its children. If your data has the reverse order, the simplest way is to take the negation of the
+Option -c is recommended to take into account the temporal constraints (date of a node >= date of its ancestors). 
+It should be noticed that LSD always assumes an increasing-time order from root to tips, i.e the date of a node is smaller than that of its children. If your data has the reverse order, the simplest way is to take the negation of the
 input date, and take the negation again of the output date to obtain your expected results.
 
-	Further options can be specified, see './lsd2 -h' for more details.
+Further options can be specified, see './lsd2 -h' for more details.
     
 ## Input files:
 
@@ -157,4 +158,5 @@ remove outgroups to obtain the root
     
     .date.nexus : trees in nexus format where branch lengths are rescaled to time unit by multiplying with the estimated rate. 
 
+## Citation
 If you use this software, please cite: “ Fast dating using least-squares criteria and algorithms”, T-H. To, M. Jung, S. Lycett, O. Gascuel, Syst Biol. 2016 Jan;65(1):82-97.
