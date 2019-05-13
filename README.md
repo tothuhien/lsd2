@@ -1,27 +1,24 @@
-# LSD2: LEAST-SQUARES METHODS TO ESTIMATE RATES AND DATES FROM SERIAL PHYLOGENIES
+# LSD2: LEAST-SQUARES METHODS TO ESTIMATE RATES AND DATES FROM PHYLOGENIES
 
 ## Compile LSD2:
 
-Type *make* from the folder *src*, you will have the executable file *lsd2* in the *src* folder.
+Type *make* from the folder *src*, you will have the executable file *lsd2* in the same place.
 Note that C++ compiler and library support for the ISO C++ 2011 is required to compile the program from sources. 
      
 ## Run LSD2:
 
 If you want to use the interface, type *./lsd2* without parameters in the terminal from the folder containing the executable file.
-Otherwise, type *./lsd2 parameters*  where the list of parameters usage can be obtained by *./lsd2 -h*.
+Otherwise, type *./lsd2 parameters*  where the list of parameters can be obtained by *./lsd2 -h*.
 
 The input tree file is required and should be specified by option -i. 
 	
 The input date file is necessary to estimate absolute dates and can be specified by option -d. 
 The input date file should contain the date of all tips and possiblly some internal nodes if known. 
-If some tip dates are missing, the program just uses the subtree containing all defined date tips & nodes for the estimation. 
+If some tip dates are missing, the program just uses the subtree containing all defined date tips & nodes for estimating the rate. 
 The missing tip dates would be inferred at the end using the estimated rate & dates.
-In order to have unique solution, at least two different precise values of dates should be 
-given. A tree with all tips having the same date and no further date 
-information on internal nodes will not be able to infer absolute dates. 
-
-If all tips have the same date, you can estimate relative dates using options -a and -z to 
-specify the root date and tip date. 
+In order to have unique solution, at least two nodes should have different given dates. 
+A tree where all tips having the same date and no further date information on internal nodes will not be able to infer absolute dates. 
+In this case, you can estimate relative dates using options -a and -z to specify the root date and tip date. 
 	
 Option -c is recommended to take into account the temporal constraints (date of a node >= date of its ancestors). 
 It should be noticed that LSD2 always assumes an increasing-time order from root to tips, i.e the date of a node is smaller than that of its children. If your data has the reverse order, the simplest way is to take the negation of the
@@ -29,7 +26,7 @@ input date, and take the negation again of the output date to obtain your expect
 
 Further options can be specified, see *./lsd2 -h* for more details.
     
-## Input files:
+## Input files format
 
 
 ### Input_tree_file
@@ -77,7 +74,7 @@ to each tree in the Input_tree_file, for example:
 	0.0052
 
 
-### Outgroup file:
+### Outgroup file
 
 	2
 	outgroup1
@@ -85,7 +82,7 @@ to each tree in the Input_tree_file, for example:
 
 If there are more than 1 outgroups, than they must be monophyletic in the input trees.
 
-### Partition file: 
+### Partition file
 
 You can partition the branch trees into several subsets that you know each subset
 has a different rate. 
@@ -107,59 +104,57 @@ Note that if the internal nodes don't have labels, then they can be defined by m
 
 ## Some examples of command lines:
 
-* for rooted tree, constrained mode, and using variances
-Sequence length of the multiple alignments used to build the tree is required via option -s to calculate variances.
-Without specifying this, it will use 1000 by default.
+* If the input tree is rooted:
+
+    - You want to estimate rate & dates under temporal constrained mode, using variances:
 
     `./lsd2 -i rootedtree_file -d date_file -c -v 1`
-    
-* for rooted tree, constrained mode, using variances, remove outlier tips with k=3 in Tukey's fences
+
+	  (The sequence length of the multiple alignments which are used to build the tree is required via option -s to calculate variances. Without specifying this, it will use 1000 by default.)
+
+	- You want to remove outlier tips with k=3 in Tukey's fences:
 
     `./lsd2 -i rootedtree_file -d date_file -c -v 1 -e 3`
 
-* for rooted tree, constrained mode, using variances, estimate different rate for each part of the given tree partition
+	- You know the tree partition where each part should have a different rate:
 
     `./lsd2 -i rootedtree_file -d date_file -c -v 1 -p parition_file`
 
-* for rooted tree, constrained mode, re-estimate the root position locally around the given root
+	- You want to re-estimate the root position locally around the given root
 
     `./lsd2 -i rootedtree_file -d date_file -c -r l`
 
-* similar to the previous example, but calculate confidence intervals from 100 simulated trees. 
-To calculate confidence intervals, sequence length of the multiple alignment used to build the tree is required via option -s. 
-The program will use the min of sequence length and 1000 to generate branch lengths of simulated trees.
+	- You want to calculate confidence intervals from 100 simulated trees. 
 
     `./lsd2 -i rootedtree_file -d date_file -c -r l -f 100 -s 1700`
+    
+    (To calculate confidence intervals, sequence length is also required via option -s. The program will use the sequence length (or 1000 if the sequence length is greater) to generate branch lengths of simulated trees.)
 
-* for unrooted tree without outgroups, do not use temporal constraints, estimate the root position
+	- If all tips are supposed to have the same date, you can still estimate the rate but only relative dates.
+	
+	`./lsd2 -i tree_file -c`
 
-    `./lsd2 -i unrootedtree_file -d date_file -c -r a`
+* If the input tree is unrooted, you should either specify outgroups or use option -r to estimate the root position.
+	
+	- If you don't have any outgroup and you want to estimate the root position:
 
-* for unrooted tree with outgroups, constrained mode, using variances from the estimated branch lengths (run LSD twice), 
-remove outgroups to obtain the root
+    `./lsd2 -i unrootedtree_file -d date_file -c -r a -v 1`
 
-    `./lsd2 -i unrootedtree_file -d date_file -g outgroup_file -c -v 2`
+	- If you have a list of outgroups and want to use them for rooting (also remove them):
 
-* similar to the previous example, but keep outgroups in the tree, just estimate the root position defined by the outgroups
-
-    `./lsd2 -i unrootedtree_file -d date_file -g outgroup_file -k -c -v 2`
-
-* for rooted tree, constrained mode, and using given rates to estimate dates
-
-    `./lsd2 -i rootedtree_file -d date_file -w given_rate_file -c` 
-
-* for rooted tree, estimating relative dates with date root=0 and date of all leaves=1, under constrained mode
-
-    `./lsd2 -i tree_file -c -a 0 -z 1`
-
-
+    `./lsd2 -i unrootedtree_file -d date_file -g outgroup_file -c -v 1`
+    
+    - If you want to keep the outgroups in the tree, just estimate the root position on the branch that defined by the outgroups:
+    
+    `./lsd2 -i unrootedtree_file -d date_file -g outgroup_file -k -c -v 1`
+    
 ## Output files: 
 
-    .result : contain the estimated rates, root date, possibly confidence intervals, outlier tips and the value of the objective function.
+*.result* : contain the estimated rates, root date, possibly confidence intervals, outlier tips and the value of the objective function.
 
-    .nexus : trees in nexus format which contain information about the dates of internal nodes, branch lengths, and the confidence intervals (CI) if option -f was used.
+*.nexus* : trees in nexus format which contain information about the dates of internal nodes, branch lengths, and the confidence intervals (CI) if option -f was used.
     
-    .date.nexus : trees in nexus format where branch lengths are rescaled to time unit by multiplying with the estimated rate. 
+*.date.nexus* : trees in nexus format where branch lengths are rescaled to time unit by multiplying with the estimated rate. 
 
 ## Citation
 If you use this software, please cite: “ Fast dating using least-squares criteria and algorithms”, T-H. To, M. Jung, S. Lycett, O. Gascuel, Syst Biol. 2016 Jan;65(1):82-97.
