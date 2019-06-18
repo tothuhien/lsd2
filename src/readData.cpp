@@ -153,6 +153,11 @@ void readDateFile(Pr* pr,Node** &nodes,bool& constraintConsistent){
             if (mr.size()>0){ k=mrca(nodes,mr);}
         }
         if (k!=-1){
+            if (k < pr->nbINodes && k!=0 && pr->k >=0){
+                std::ostringstream oss;
+                oss<<" - The temporal constraint of internal node "+s+" can not be included in estimating outliers.\n";
+                pr->warningMessage.push_back(oss.str());
+            }
             if (nodes[k]->type!='n'){
                 std::ostringstream oss;
                 oss<<" - There are nodes that have more than one temporal constraint.\n";

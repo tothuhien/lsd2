@@ -262,7 +262,7 @@ void output(double br,int y, Pr* pr,Node** nodes,FILE* f,FILE* tree1,FILE* tree2
     }
     if (pr->relative) {
         std::ostringstream oss;
-        oss<<" - The results correspond to the estimation of relative dates when T[mrca]="<<pr->mrca<<" and T[tips]="<<pr->leaves;
+        oss<<" - The results correspond to the estimation of relative dates when T[mrca]="<<pr->mrca<<" and T[tips]="<<pr->leaves<<"\n";
         pr->warningMessage.push_back(oss.str());
     }
     if (pr->ratePartition.size()==0) {

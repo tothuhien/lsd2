@@ -17,4 +17,4 @@ void getOulier(double* sortedArray,double& mi,double& ma,int size,double k);
 void calculateRtt(Pr* pr,Node** nodes,vector<double> &paths,vector<double> &dates);
 void calculateRtt_lambda(double br, Pr* pr,Node** nodes,vector<double> & paths,vector<double> &paths_lambda,vector<double> &dates);
 //void calculateRtt_lambda(double br,Pr* pr,Node** nodes,double* & rtt, double* & rtt_lambda);
-void regression(Pr* pr,vector<double> paths,vector<double> dates,double & slope,double & intercept);
+void regression(Pr* pr,Node** & nodes,vector<double> paths,vector<double> dates,double & slope,double & intercept);

@@ -57,11 +57,8 @@ int main( int argc, char** argv ){
     }
     opt->treeFile1=opt->outFile+".nexus";
     opt->treeFile2=opt->outFile+".date.nexus";
-    //opt->treeFile3=opt->outFile+".date.newick";
     FILE * tree1 = fopen(opt->treeFile1.c_str(),"wt");
     FILE * tree2 = fopen(opt->treeFile2.c_str(),"wt");
-    //FILE * tree3 = fopen(opt->treeFile3.c_str(),"wt");
-    //FILE * gr=NULL;//given rate
     ifstream gr(opt->rate.c_str());
     if (tree1==NULL || tree2==NULL){
         cout<<"Error: can not create the output tree files."<<endl;

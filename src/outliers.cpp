@@ -85,6 +85,8 @@ double regression_lambda(double br,double &lambda,Pr* pr, Node** nodes){
     double intercept = 0;
     double intercept_lambda = 0;
     double det = 0;
+    //for (int i=pr->nbINodes;i<=pr->nbBranches;i++) cout<<nodes[i]->D<<" ";
+    //cout<<br<<endl;
     if (br == 0){
         vector<int> s = nodes[0]->suc;
         int s1 = s[0];
@@ -92,7 +94,7 @@ double regression_lambda(double br,double &lambda,Pr* pr, Node** nodes){
         nodes[s1]->B = br/2;
         nodes[s2]->B = br/2;
         calculateRtt(pr,nodes,paths,dates);
-        regression(pr,paths,dates,slope,intercept);
+        regression(pr,nodes,paths,dates,slope,intercept);
         double* res = residus_rtt(paths,dates,slope,intercept);
         double resSquare = 0;
         for (int i=0; i<= pr->nbBranches-pr->nbINodes; i++){
@@ -113,9 +115,35 @@ double regression_lambda(double br,double &lambda,Pr* pr, Node** nodes){
     mean_dates /= n;
     mean_paths /= n;
     mean_paths_lambda /= n;
-    if (pr->givenRate[0]){
+    
+    if (pr->givenRate[0] && nodes[0]->type=='p'){
         slope = pr->rho;
         slope_lambda = 0;
+        intercept = nodes[0]->D;
+        intercept_lambda = 0;
+    }
+    else if (pr->relative){
+        intercept = nodes[0]->D;
+        intercept_lambda = 0;
+        slope =  (mean_paths-intercept)/mean_dates;
+        slope_lambda = mean_paths_lambda/mean_dates;
+    }
+    else if (pr->givenRate[0]){
+        slope = pr->rho;
+        slope_lambda = 0;
+        intercept =  mean_paths - slope*mean_dates;
+        intercept_lambda = mean_paths_lambda;
+    }
+    else if (nodes[0]->type=='p'){
+        intercept = nodes[0]->D;
+        intercept_lambda = 0;
+        for (int i=0;i<n;i++){
+            det += dates[i]*dates[i];
+            slope += dates[i]*(paths[i] - intercept);
+            slope_lambda += dates[i]*(paths_lambda[i]);
+        }
+        slope = slope / det;
+        slope_lambda = slope_lambda / det;
     }
     else{
         for (int i=0;i<n;i++){
@@ -125,9 +153,10 @@ double regression_lambda(double br,double &lambda,Pr* pr, Node** nodes){
         }
         slope /= det;
         slope_lambda /= det;
+        intercept =  mean_paths - slope*mean_dates;
+        intercept_lambda = mean_paths_lambda - slope_lambda*mean_dates;
     }
-    intercept =  mean_paths - slope*mean_dates;
-    intercept_lambda = mean_paths_lambda - slope_lambda*mean_dates;
+
     double A = 0;
     double B = 0;
     double C = 0;
@@ -271,10 +300,7 @@ void estimate_root_local_rtt(Pr* pr, Node** & nodes){
     nodes[s2]->B = BR-L*BR;
 }
 
-
-
-
-void regression(Pr* pr,vector<double> paths,vector<double> dates,double & slope,double & intercept){
+void regression(Pr* pr,Node** & nodes,vector<double> paths,vector<double> dates,double & slope,double & intercept){
     int n = paths.size();
     double mean_dates = 0;
     double mean_paths = 0;
@@ -286,11 +312,25 @@ void regression(Pr* pr,vector<double> paths,vector<double> dates,double & slope,
     mean_dates /= n;
     mean_paths /= n;
     slope = 0;
-    if (pr->givenRate[0]){
+    if (pr->givenRate[0] && nodes[0]->type=='p'){
         slope = pr->rho;
+        intercept = nodes[0]->D;
+    }
+    else if (pr->relative){
+        intercept = nodes[0]->D;
+        slope = (mean_paths-intercept)/mean_dates;
+    }
+    else if (pr->givenRate[0]){
+        slope = pr->rho;
+        intercept =  mean_paths - slope*mean_dates;
+    }
+    else if (nodes[0]->type=='p'){
+        intercept = nodes[0]->D;
         for (int i=0;i<n;i++){
-            det += (dates[i] - mean_dates)*(dates[i] - mean_dates);
+            det += dates[i]*dates[i];
+            slope += dates[i]*(paths[i] - intercept);
         }
+        slope = slope / det;
     }
     else{
         for (int i=0;i<n;i++){
@@ -298,8 +338,8 @@ void regression(Pr* pr,vector<double> paths,vector<double> dates,double & slope,
             det += (dates[i] - mean_dates)*(dates[i] - mean_dates);
         }
         slope = slope / det;
+        intercept =  mean_paths - slope*mean_dates;
     }
-    intercept =  mean_paths - slope*mean_dates;
 }
 
 void calculateRtt(Pr* pr,Node** nodes,vector<double> &paths,vector<double> &dates){
@@ -312,7 +352,7 @@ void calculateRtt(Pr* pr,Node** nodes,vector<double> &paths,vector<double> &date
                 k = nodes[k]->P;
             }
             paths.push_back(rtt);
-            dates.push_back(nodes[i-pr->nbINodes]->D);
+            dates.push_back(nodes[i]->D);
         }
     }
 }
@@ -369,14 +409,9 @@ void outlier(Pr* pr,Node** nodes,double k){
         oss<<" - The tip(s)"+nodes_imprecise_date+" do not have precise date value, so will not be included in estimating outliers.\n";
         pr->warningMessage.push_back(oss.str());
     }
-    if (pr->internalConstraints.size()>0){
-        std::ostringstream oss;
-        oss<<" - Temporal constraints of internal nodes can not be included in estimating outliers.\n";
-        pr->warningMessage.push_back(oss.str());
-    }
     calculateRtt(pr,nodes,paths,dates);
     double slope,intercept;
-    regression(pr,paths,dates,slope,intercept);
+    regression(pr,nodes,paths,dates,slope,intercept);
     double* res = residus_rtt(paths,dates,slope,intercept);
     double mi=0;
     double ma=0;
@@ -473,6 +508,11 @@ void shift_node_id(Pr* &pr,Node** &nodes,int* &tab){//t is a tip
                 nodesReduced[tab[i]]->rateGroup = nodes[i]->rateGroup;
             }
         }
+    }
+    for (int i=0;i<pr->internalConstraints.size();i++){
+        Date* d = pr->internalConstraints[i];
+        d->id = tab[d->id];
+        prReduced->internalConstraints.push_back(d);
     }
     computeSuc_polytomy(prReduced, nodesReduced);
     computeVariance(prReduced,nodesReduced);
