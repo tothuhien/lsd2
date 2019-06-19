@@ -232,9 +232,9 @@ void readDateFile(Pr* pr,Node** &nodes,bool& constraintConsistent){
             }
         }
         else{
-            std::ostringstream oss;
-            oss<<" - There are temporal constraints on some tips that are not in the input tree.\n";
-            pr->warningMessage.push_back(oss.str());
+            //std::ostringstream oss;
+            //oss<<" - There are temporal constraints on some tips that are not in the input tree.\n";
+            //pr->warningMessage.push_back(oss.str());
             if (i<ino-1){
                 char c=readChar(dateFile,pr->inDateFile);
                 while (c!='\n') c=readChar(dateFile,pr->inDateFile);
