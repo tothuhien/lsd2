@@ -301,7 +301,7 @@ list<double> without_constraint_lambda(double br,Pr* &par,Node** &nodes,list<int
         }
         list<double> ld;
         for (int i=0;i<active_set.size();i++){
-            if (myabs(lambda[i])<(10e-15))
+            if (myabs(lambda[i])<(maxNumError))
                 lambda[i]=0;
             ld.push_back(lambda[i]);
         }
@@ -996,7 +996,7 @@ list<double> with_constraint_lambda(double br,Pr* &pr,Node** &nodes,list<int> ac
             }
         }
         for (int i=0;i<active_set.size();i++){
-            if (myabs(lambda[i])<(10e-15))
+            if (myabs(lambda[i])<(maxNumError))
                 lambda[i]=0;
             ld.push_back(lambda[i]);
         }
@@ -1545,7 +1545,7 @@ int estimate_root_with_constraint_fast_rooted(Pr* &pr,Node** &nodes){
                     cv[e]=pr->objective;
                     if (pr->verbose) printf("%.10f %.10f %.10f\n",cv[e],pr->rho,nodes_new[0]->D);
                     //printf("%.10f\n",cv[e]);
-                    if (cv[e]<cv[tab[P_ref[i]]] || r==0){
+                    if (cv[e]<cv[tab[P_ref[i]]]+maxNumError || r==0){
                         if (i<pr->nbINodes){
                             next.push_back(Suc1_ref[i]);
                             next.push_back(Suc2_ref[i]);

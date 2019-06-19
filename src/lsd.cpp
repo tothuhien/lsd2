@@ -189,6 +189,9 @@ int main( int argc, char** argv ){
                 if (opt->estimate_root==""){//keep the given root
                     if (constraintConsistent){
                         cout<<"Dating under temporal constraints mode ..."<<endl;
+                        for (int i = opt->nbINodes;i<=opt->nbBranches;i++){
+                            cout<<nodes[i]->B<<"*"<<nodes[i]->D<<" ";
+                        }cout<<endl;
                         bool consistent = with_constraint_multirates(opt,nodes,true);
                         if (consistent) {
                             output(br,y,opt,nodes,result,tree1,tree2);
@@ -222,10 +225,11 @@ int main( int argc, char** argv ){
                     if (opt->estimate_root.compare("l")==0){//improve locally the root around the given root
                         r=estimate_root_with_constraint_local_rooted(opt,nodes);
                     }
-                    else if (opt->estimate_root.compare("a")==0){ //forget the given root and re-estimate the position of the root over all branhces
+                    else if (opt->estimate_root.compare("a")==0){
+                        //forget the given root and re-estimate the position of the root over all branhces using fast method
                         r=estimate_root_with_constraint_fast_rooted(opt,nodes);
                     }
-                    else{ //forget the given root and re-estimate the position of the root over all branhces
+                    else{ //forget the given root and re-estimate the position of the root over all branches
                         r=estimate_root_with_constraint_rooted(opt,nodes);
                     }
                     if (r>0){

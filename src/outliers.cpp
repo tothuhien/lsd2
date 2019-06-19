@@ -50,7 +50,7 @@ bool calculateOutliers(Pr* & pr,Node** & nodes){
             }
             oss<<"\n";
             pr->resultMessage.push_back(oss.str());
-            bool bl = remove_outlier_tips(pr,nodes);
+            bool bl = remove_outlier_tips(pr,nodes);//cout<<pr->nbBranches<<" "<<pr->leaves<<" "<<pr->mrca<<" "<<pr->relative<<endl;
             if (!bl) {
                 cout<<"Removing outliers will make the root lost. Check the root position and the dates of the outlier tips: ";
                 for (int i=0;i<pr->outlier.size();i++){
@@ -119,14 +119,14 @@ double regression_lambda(double br,double &lambda,Pr* pr, Node** nodes){
     if (pr->givenRate[0] && nodes[0]->type=='p'){
         slope = pr->rho;
         slope_lambda = 0;
-        intercept = nodes[0]->D;
+        intercept = -slope*nodes[0]->D;
         intercept_lambda = 0;
     }
     else if (pr->relative){
-        intercept = nodes[0]->D;
-        intercept_lambda = 0;
-        slope =  (mean_paths-intercept)/mean_dates;
-        slope_lambda = mean_paths_lambda/mean_dates;
+        slope = (mean_paths)/(pr->leaves - pr->mrca);
+        slope_lambda = (mean_paths_lambda)/(pr->leaves - pr->mrca);
+        intercept = -slope*pr->mrca;
+        intercept_lambda = -slope_lambda*pr->mrca;
     }
     else if (pr->givenRate[0]){
         slope = pr->rho;
@@ -314,11 +314,11 @@ void regression(Pr* pr,Node** & nodes,vector<double> paths,vector<double> dates,
     slope = 0;
     if (pr->givenRate[0] && nodes[0]->type=='p'){
         slope = pr->rho;
-        intercept = nodes[0]->D;
+        intercept = -slope*nodes[0]->D;
     }
     else if (pr->relative){
-        intercept = nodes[0]->D;
-        slope = (mean_paths-intercept)/mean_dates;
+        slope = (mean_paths)/(pr->leaves - pr->mrca);
+        intercept = -slope*pr->mrca;
     }
     else if (pr->givenRate[0]){
         slope = pr->rho;
@@ -381,7 +381,7 @@ void calculateRtt_lambda(double br,Pr* pr,Node** nodes,vector<double> & paths, v
             }
             paths.push_back(rtt);
             paths_lambda.push_back(rtt_lambda);
-            dates.push_back(nodes[i-pr->nbINodes]->D);
+            dates.push_back(nodes[i]->D);
         }
     }
 }
