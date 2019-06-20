@@ -19,7 +19,7 @@
 //////////////////////////////////////////////////////////////////////////////////////////////////////////////
 ///////////estimate root without constraint (by using LD algorithm)///////////////////////////////////////////
 
-list<double> without_constraint_lambda(double br,Pr* &par,Node** &nodes,list<int> active_set){
+bool without_constraint_lambda(double br,Pr* &par,Node** &nodes,list<int> active_set,list<double> & ld){
     //P: rooted tree
     //compute optimized solution without constraint (LD algorithm) with the position of root
     vector<int>::iterator iter=nodes[0]->suc.begin();
@@ -33,8 +33,9 @@ list<double> without_constraint_lambda(double br,Pr* &par,Node** &nodes,list<int
     if (br==0) {
         nodes[r]->B=0;
         nodes[pr]->B=0;
-        without_constraint(par,nodes);
-        return computeLambda(active_set,par,nodes);
+        bool val = without_constraint(par,nodes);
+        if (val) ld = computeLambda(active_set,par,nodes);
+        return val;
     }
     else{
         list<int> pos = postorder_polytomy(par,nodes);
@@ -124,8 +125,7 @@ list<double> without_constraint_lambda(double br,Pr* &par,Node** &nodes,list<int
                         }
                     }
                     if (coefs==0) {
-                        cout<<"The input temporal constraints are not sufficient to have unique solution. Please either add more temporal constraints or ignore date file to estimate relative dates"<<endl;
-                        exit(EXIT_FAILURE);
+                        return false;
                     }
                     C[i]=ctemp/coefs;
                     X[i]=xtemp/coefs;
@@ -299,7 +299,6 @@ list<double> without_constraint_lambda(double br,Pr* &par,Node** &nodes,list<int
                 lambda[as[i]]=-lambdaPC;
             }
         }
-        list<double> ld;
         for (int i=0;i<active_set.size();i++){
             if (myabs(lambda[i])<(maxNumError))
                 lambda[i]=0;
@@ -346,7 +345,7 @@ list<double> without_constraint_lambda(double br,Pr* &par,Node** &nodes,list<int
          }*/
         delete[] lambda;
         delete[] as;
-        return ld;
+        return true;
     }
 }
 
@@ -451,11 +450,12 @@ bool without_constraint_active_set_lambda(double br,Pr* &pr,Node** &nodes){
         for (int i=0; i<=pr->nbBranches; i++) {
             D_old[i]=nodes[i]->D;
         }
-        list<double> lambda = without_constraint_lambda(br,pr,nodes,active_set);
+        list<double> lambda;
+        bool val = without_constraint_lambda(br,pr,nodes,active_set,lambda);
         int nb_iter=0;
         double alpha;
         double* dir = new double[pr->nbBranches+1];
-        while (!conditions(lambda,pr,nodes) && nb_iter<=maxIter){
+        while (val && !conditions(lambda,pr,nodes) && nb_iter<=maxIter){
             for (int i=0;i<=pr->nbBranches;i++)  {dir[i]=nodes[i]->D-D_old[i];}
             alpha=1;
             int as=0;
@@ -496,7 +496,8 @@ bool without_constraint_active_set_lambda(double br,Pr* &pr,Node** &nodes){
                     nodes[as-pr->nbBranches-1]->D=nodes[as-pr->nbBranches-1]->lower;
                 }
             }
-            lambda=without_constraint_lambda(br,pr,nodes,active_set);
+            lambda.clear();
+            val = without_constraint_lambda(br,pr,nodes,active_set,lambda);
             nb_iter++;
         }
         if (nb_iter>maxIter){
@@ -504,12 +505,12 @@ bool without_constraint_active_set_lambda(double br,Pr* &pr,Node** &nodes){
         }
         delete[] D_old;
         delete[] dir;
-        return true;
+        return val;
     }
     return false;
 }
 
-list<double> with_constraint_lambda(double br,Pr* &pr,Node** &nodes,list<int> active_set){
+bool with_constraint_lambda(double br,Pr* &pr,Node** &nodes,list<int> active_set,list<double> &ld){
     vector<int>::iterator iter=nodes[0]->suc.begin();
     int r=(*iter);//r=r1
     iter++;
@@ -517,10 +518,9 @@ list<double> with_constraint_lambda(double br,Pr* &pr,Node** &nodes,list<int> ac
     if (br==0) {
         nodes[0]->B=0;
         nodes[p_r]->B=0;
-        return with_constraint(pr,nodes,active_set);
+        return with_constraint(pr,nodes,active_set,ld);
     }
     else {
-        list<double> ld;
         list<int>* Suc = new list<int>[pr->nbINodes];
         int* Pre=new int[pr->nbBranches+1];
         for (int i=0;i<=pr->nbBranches;i++){
@@ -585,8 +585,7 @@ list<double> with_constraint_lambda(double br,Pr* &pr,Node** &nodes,list<int> ac
                             }
                         }
                         if (coefs==0) {
-                            cout<<"The input temporal constraints are not sufficient to have unique solution. Please either add more temporal constraints or ignore date file to estimate relative dates"<<endl;
-                            exit(EXIT_FAILURE);
+                            return false;
                         }
                         C[i]=ctemp/coefs;
                         X[i]=xtemp/coefs;
@@ -731,8 +730,7 @@ list<double> with_constraint_lambda(double br,Pr* &pr,Node** &nodes,list<int> ac
                             }
                         }
                         if (coefs==0) {
-                            cout<<"The input temporal constraints are not sufficient to have unique solution. Please either add more temporal constraints or ignore date file to estimate relative dates"<<endl;
-                            exit(EXIT_FAILURE);
+                            return false;
                         }
                         C[i]=ctemp/coefs;
                         X[i]=xtemp/coefs;
@@ -1057,7 +1055,7 @@ list<double> with_constraint_lambda(double br,Pr* &pr,Node** &nodes,list<int> ac
         delete[] as;
         delete[] bl;
         delete[] lambda;
-        return ld;
+        return true;
     }
 }
 
@@ -1075,10 +1073,10 @@ bool with_constraint_active_set_lambda(double br,Pr* &pr,Node** &nodes){
         for (int i=0; i<=pr->nbBranches; i++) {
             D_old[i]=nodes[i]->D;
         }
-        lambda = with_constraint_lambda(br,pr,nodes,active_set);
+        bool val = with_constraint_lambda(br,pr,nodes,active_set,lambda);
         int nb_iter=0;
         double alpha;
-        while (!conditionsQP(lambda,pr,nodes) && nb_iter<=maxIter){
+        while (val && !conditionsQP(lambda,pr,nodes) && nb_iter<=maxIter){
             for (int i=0;i<=pr->nbBranches;i++)  {dir[i]=nodes[i]->D-D_old[i];}
             alpha=1;
             int as=2*pr->nbBranches+2;
@@ -1136,7 +1134,8 @@ bool with_constraint_active_set_lambda(double br,Pr* &pr,Node** &nodes){
                     activeLower(nodes[-as]);
                 }
             }
-            lambda=with_constraint_lambda(br,pr,nodes,active_set);
+            lambda.clear();
+            val=with_constraint_lambda(br,pr,nodes,active_set,lambda);
             nb_iter++;
         }
         if (nb_iter>maxIter){
@@ -1144,7 +1143,7 @@ bool with_constraint_active_set_lambda(double br,Pr* &pr,Node** &nodes){
         }
         delete[] D_old;
         delete[] dir;
-        return true;
+        return val;
     }
     else return false;
 }
@@ -1186,11 +1185,11 @@ int estimate_root_without_constraint_local_rooted(Pr* &pr,Node** &nodes){
             }
         }
         else{
-            if (pr->verbose) printf("Ignoring due to temporal constraints conflict.\n");
+            if (pr->verbose) printf("Ignoring due to undetermined solution.\n");
         }
     }
     else{
-        if (pr->verbose) printf("Ignoring due to indeterminable problem.\n");
+        if (pr->verbose) printf("Ignoring due to undetermined solution.\n");
     }
     list<int> next;
     if (s1<pr->nbINodes){
@@ -1214,7 +1213,8 @@ int estimate_root_without_constraint_local_rooted(Pr* &pr,Node** &nodes){
             for (int i=pr->nbINodes;i<=pr->nbBranches;i++){
                 if (nodes_new[i]->type=='p') nodes_new[i]->D = originalD[i];
             }
-            bool consistent=without_constraint_active_set_lambda_multirates(br,pr,nodes_new,true);            if (consistent) {
+            bool consistent=without_constraint_active_set_lambda_multirates(br,pr,nodes_new,true);
+            if (consistent) {
                 cv[i]=pr->objective;
                 if (pr->verbose) printf("%.10f\n",cv[i]);
                 if (cv[i]<cv[nodes[i]->P] || r==0){
@@ -1232,7 +1232,7 @@ int estimate_root_without_constraint_local_rooted(Pr* &pr,Node** &nodes){
                 }
             }
             else{
-                if (pr->verbose) printf("Ignoring due to temporal constraints conflict.\n");
+                if (pr->verbose) printf("Ignoring due to undetermined solution.\n");
                 if (i<pr->nbINodes){
                     for (vector<int>::iterator iter=nodes[i]->suc.begin(); iter!=nodes[i]->suc.end(); iter++) {
                         next.push_back(*iter);
@@ -1241,7 +1241,7 @@ int estimate_root_without_constraint_local_rooted(Pr* &pr,Node** &nodes){
             }
         }
         else{
-            if (pr->verbose) printf("Ignoring due to indeterminable problem\n");
+            if (pr->verbose) printf("Ignoring due to undetermined solution\n");
             if (i<pr->nbINodes){
                 for (vector<int>::iterator iter=nodes[i]->suc.begin(); iter!=nodes[i]->suc.end(); iter++) {
                     next.push_back(*iter);
@@ -1251,7 +1251,7 @@ int estimate_root_without_constraint_local_rooted(Pr* &pr,Node** &nodes){
         next.remove(i);
     }
     if (pr->verbose) {
-        if (r==0) cout<<"Indeterminable problem."<<endl;
+        if (r==0) cout<<"Undetermined solution."<<endl;
         else if (r==s1 || r==s2) cout<<"The new root is on the original branch."<<endl;
         else cout<<"The new root is on the branch "<<r<<endl;
     }
@@ -1290,7 +1290,6 @@ int estimate_root_without_constraint_rooted(Pr* &pr,Node** &nodes){
             if (nodes_new[i]->type=='p') nodes_new[i]->D = originalD[i];
         }
         bool consistent=without_constraint_active_set_lambda_multirates(br,pr,nodes_new,true);
-        
         if (consistent) {
             phi1=pr->objective;
             if (pr->verbose) printf("%.10f %.10f %.10f\n",phi1,pr->rho,nodes_new[0]->D);
@@ -1300,11 +1299,11 @@ int estimate_root_without_constraint_rooted(Pr* &pr,Node** &nodes){
             }
         }
         else{
-            if (pr->verbose) printf("Ignoring due to temporal constraints conflict.\n");
+            if (pr->verbose) printf("Ignoring due to undetermined solution.\n");
         }
     }
     else{
-        if (pr->verbose) printf("Ignoring due to indeterminable problem.\n");
+        if (pr->verbose) printf("Ignoring due to undetermined solution.\n");
     }
     y++;
     double phi;
@@ -1331,16 +1330,16 @@ int estimate_root_without_constraint_rooted(Pr* &pr,Node** &nodes){
                 }
             }
             else{
-                if (pr->verbose) printf("Ignoring due to temporal constraints conflict.\n");
+                if (pr->verbose) printf("Ignoring due to undetermined solution.\n");
             }
         }
         else{
-            if (pr->verbose) printf("Ignoring due to indeterminable problem.\n");
+            if (pr->verbose) printf("Ignoring due to undetermined solution.\n");
         }
         y++;
     }
     if (pr->verbose) {
-        if (r==0) cout<<"Indeterminable problem."<<endl;
+        if (r==0) cout<<"Undetermined solution."<<endl;
         else if (r==s1 || r==s2) cout<<"The new root is on the original branch."<<endl;
         else cout<<"The new root is on the branch "<<r<<endl;
     }
@@ -1387,11 +1386,11 @@ int estimate_root_with_constraint_local_rooted(Pr* &pr,Node** &nodes){
             }
         }
         else{
-            if (pr->verbose) printf("Ignoring due to temporal constraints conflict.\n");
+            if (pr->verbose) printf("Ignoring due to undetermined solution.\n");
         }
     }
     else{
-        if (pr->verbose) printf("Ignoring due to indeterminable problem.\n");
+        if (pr->verbose) printf("Ignoring due to undetermined solution.\n");
     }
     list<int> next;
     if (s1<pr->nbINodes){
@@ -1443,7 +1442,7 @@ int estimate_root_with_constraint_local_rooted(Pr* &pr,Node** &nodes){
             }
         }
         else{
-            if (pr->verbose) printf("Ignoring due to indeterminable problem.\n");
+            if (pr->verbose) printf("Ignoring due to undetermined solution.\n");
             if (i<pr->nbINodes){
                 for (vector<int>::iterator iter=nodes[i]->suc.begin(); iter!=nodes[i]->suc.end(); iter++) {
                     next.push_back(*iter);
@@ -1453,7 +1452,7 @@ int estimate_root_with_constraint_local_rooted(Pr* &pr,Node** &nodes){
         next.remove(i);
     }
     if (pr->verbose) {
-        if (r==0) cout<<"Indeterminable problem.\n"<<endl;
+        if (r==0) cout<<"Undetermined solution.\n"<<endl;
         else if (r==s1 || r==s2) cout<<"The new root is on the original branch."<<endl;
         else cout<<"The new root is on the branch "<<r<<endl;
     }
@@ -1507,11 +1506,11 @@ int estimate_root_with_constraint_fast_rooted(Pr* &pr,Node** &nodes){
                 }
             }
             else{
-                if (pr->verbose) printf("Ignoring due to temporal constraints conflict.\n");
+                if (pr->verbose) printf("Ignoring due to undetermined solution.\n");
             }
         }
         else{
-            if (pr->verbose) printf("Ignoring due to indeterminable problem.\n");
+            if (pr->verbose) printf("Ignoring due to undetermined solution.\n");
         }
         list<int> next;
         int* Suc1_ref = new int[pr->nbINodes];
@@ -1559,7 +1558,7 @@ int estimate_root_with_constraint_fast_rooted(Pr* &pr,Node** &nodes){
                     }
                 }
                 else{
-                    if (pr->verbose) printf("Ignoring due to temporal constraints conflict\n");
+                    if (pr->verbose) printf("Ignoring due to undetermined solution\n");
                     if (i<pr->nbINodes){
                         next.push_back(Suc1_ref[i]);
                         next.push_back(Suc2_ref[i]);
@@ -1567,7 +1566,7 @@ int estimate_root_with_constraint_fast_rooted(Pr* &pr,Node** &nodes){
                 }
             }
             else{
-                if (pr->verbose) printf("Ignoring due to indeterminable problem.\n");
+                if (pr->verbose) printf("Ignoring due to undetermined solution.\n");
                 if (i<pr->nbINodes){
                     next.push_back(Suc1_ref[i]);
                     next.push_back(Suc2_ref[i]);
@@ -1628,7 +1627,7 @@ int estimate_root_with_constraint_rooted(Pr* &pr,Node** &nodes){
             }
         }
         else{
-            if (pr->verbose) printf("Ignoring due to temporal constraints conflict.\n");
+            if (pr->verbose) printf("Ignoring due to undetermined solution.\n");
         }
     }
     else{
@@ -1658,16 +1657,16 @@ int estimate_root_with_constraint_rooted(Pr* &pr,Node** &nodes){
                 }
             }
             else{
-                if (pr->verbose) printf("Ignoring due to temporal constraints conflict.\n");
+                if (pr->verbose) printf("Ignoring due to undetermined solution.\n");
             }
         }
         else{
-            if (pr->verbose) printf("Ignoring due to indeterminable problem.\n");
+            if (pr->verbose) printf("Ignoring due to undetermined solution.\n");
         }
         y++;
     }
     if (pr->verbose) {
-        if (r==0) cout<<"Indeterminable problem."<<endl;
+        if (r==0) cout<<"Undetermined solution."<<endl;
         else if (r==s1 || r==s2) cout<<"The new root is on the original branch."<<endl;
         else cout<<"The new root is on the branch "<<r<<endl;
     }

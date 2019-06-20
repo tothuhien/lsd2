@@ -12,13 +12,13 @@
 
 using namespace std;
 
-list<double> without_constraint_lambda(double br,Pr* &par,Node** &nodes,list<int> active_set);
+bool without_constraint_lambda(double br,Pr* &par,Node** &nodes,list<int> active_set, list<double> & ld);
 
 bool starting_point_without_constraint_lambda(double br,Pr* &pr,Node** &nodes,list<int> &active_set);
 
 bool without_constraint_active_set_lambda(double br,Pr* &pr,Node** &nodes);
 
-list<double> with_constraint_lambda(double br,Pr* &pr,Node** &nodes,list<int> active_set);
+bool with_constraint_lambda(double br,Pr* &pr,Node** &nodes,list<int> active_set,list<double> & ld);
 
 
 bool with_constraint_active_set_lambda(double br,Pr* &pr,Node** &nodes);

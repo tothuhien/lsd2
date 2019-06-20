@@ -50,7 +50,7 @@ bool calculateOutliers(Pr* & pr,Node** & nodes){
             }
             oss<<"\n";
             pr->resultMessage.push_back(oss.str());
-            bool bl = remove_outlier_tips(pr,nodes);//cout<<pr->nbBranches<<" "<<pr->leaves<<" "<<pr->mrca<<" "<<pr->relative<<endl;
+            bool bl = remove_outlier_tips(pr,nodes);
             if (!bl) {
                 cout<<"Removing outliers will make the root lost. Check the root position and the dates of the outlier tips: ";
                 for (int i=0;i<pr->outlier.size();i++){

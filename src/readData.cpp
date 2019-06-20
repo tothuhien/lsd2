@@ -132,7 +132,10 @@ void readDateFile(Pr* pr,Node** &nodes,bool& constraintConsistent){
         cout<<"The number of given constraints is small than the number of constraints to read. Please change the number of constraints to read at the first line of the input date file."<<endl;
         exit(EXIT_FAILURE);
     }
-    
+    string w1="";//store temporal constraints that are not in the tree;
+    string w2="";//store nodes that have more than 1 temporal constraints.
+    string w3="";//store internal nodes that have temporal constraints in the case estimating outliers
+
     for (int i=0;i<ino;i++){
         string s=readWord(dateFile,pr->inDateFile);
         int type='n';
@@ -154,14 +157,10 @@ void readDateFile(Pr* pr,Node** &nodes,bool& constraintConsistent){
         }
         if (k!=-1){
             if (k < pr->nbINodes && k!=0 && pr->k >=0){
-                std::ostringstream oss;
-                oss<<" - The temporal constraint of internal node "+s+" can not be included in estimating outliers.\n";
-                pr->warningMessage.push_back(oss.str());
+                w3=w3+" "+s;
             }
             if (nodes[k]->type!='n'){
-                std::ostringstream oss;
-                oss<<" - There are nodes that have more than one temporal constraint.\n";
-                pr->warningMessage.push_back(oss.str());
+                w2=w2+" "+s;
             }
             char c = readChar(dateFile,pr->inDateFile);
             while (c<33 || c>126) c=readChar(dateFile,pr->inDateFile);
@@ -232,15 +231,30 @@ void readDateFile(Pr* pr,Node** &nodes,bool& constraintConsistent){
             }
         }
         else{
-            //std::ostringstream oss;
-            //oss<<" - There are temporal constraints on some tips that are not in the input tree.\n";
-            //pr->warningMessage.push_back(oss.str());
+            w1=w1+" "+s;
             if (i<ino-1){
                 char c=readChar(dateFile,pr->inDateFile);
                 while (c!='\n') c=readChar(dateFile,pr->inDateFile);
-                
             }
         }
+    }
+    if (w1!=""){
+        std::ostringstream oss;
+        if (pr->verbose) oss<<" - The nodes"+w1+" in the input date file are not present in the input tree.\n";
+        else oss<<" - There are some nodes in the input date file that are not present in the input tree.\n";
+        pr->warningMessage.push_back(oss.str());
+    }
+    if (w2!=""){
+        std::ostringstream oss;
+        if (pr->verbose) oss<<" - There nodes"+w2+" have more than one temporal constraint.\n";
+        else oss<<" - There nodes that have more than one temporal constraint.\n";
+        pr->warningMessage.push_back(oss.str());
+    }
+    if (w3!=""){
+        std::ostringstream oss;
+        if (pr->verbose) oss<<" - The temporal constraint of internal nodes"+w3+" can not be included in estimating outliers.\n";
+        else oss<<" - The temporal constraint of internal nodes can not be included in estimating outliers.\n";
+        pr->warningMessage.push_back(oss.str());
     }
     fclose(dateFile);
 }

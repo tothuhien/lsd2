@@ -15,7 +15,7 @@
 //    along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #include "dating.h"
 
-void without_constraint(Pr* pr,Node** nodes){
+bool without_constraint(Pr* pr,Node** nodes){
     //This function implements LD algorithm using only precise date constrains of the tips (interval date constrains of tips are also ignored)
     //The estimated substitution rate and dates of all internal nodes are returned in variable paramaters.
     //It returns the value of the objective function
@@ -48,8 +48,7 @@ void without_constraint(Pr* pr,Node** nodes){
                     }
                 }
                 if (coefs==0) {
-                    cout<<"The input temporal constraints are not sufficient to have unique solution. Please either add more temporal constraints or ignore date file to estimate relative dates"<<endl;
-                    exit(EXIT_FAILURE);
+                    return false;
                 }
                 C[i]=ctemp/coefs;
                 X[i]=xtemp/coefs;
@@ -136,6 +135,7 @@ void without_constraint(Pr* pr,Node** nodes){
     delete[] W;
     delete[] C;
     delete[] X;
+    return true;
 }
 
 bool conditions(list<double>& ldLagrange,Pr* pr,Node** nodes){
@@ -154,9 +154,9 @@ bool conditions(list<double>& ldLagrange,Pr* pr,Node** nodes){
     return true;
 }
 
-list<int> starting_point(Pr* pr,Node** nodes){
-    list<int> active_set;
-    without_constraint(pr,nodes);
+bool starting_point(Pr* pr,Node** nodes,list<int> & active_set){
+    bool val = without_constraint(pr,nodes);
+    if (!val) return false;
     for (int i =0;i<pr->nbINodes;i++) {
         if (lower(nodes[i]) || upper(nodes[i])) {
             active_set.push_back(-i);
@@ -191,7 +191,7 @@ list<int> starting_point(Pr* pr,Node** nodes){
             }
         }
     }
-    return active_set;
+    return true;
 }
 
 list<double> computeLambda(list<int> active_set,Pr* pr,Node** nodes){
@@ -289,21 +289,23 @@ bool remove_ne_lambda(list<double> & lambda,list<int> & active_set,int& as){
 }
 
 
-void without_constraint_active_set(Pr* pr,Node** nodes){
+bool without_constraint_active_set(Pr* pr,Node** nodes){
     //this methods implements the LD algorithm (active set method)
     initialize_status(pr,nodes);
-    list<int> active_set=starting_point(pr,nodes);
-    
+    list<int> active_set;
+    bool val = starting_point(pr,nodes,active_set);
+    if (!val) return false;
     double* D_old = new double[pr->nbBranches+1];
     for (int i=0; i<=pr->nbBranches; i++) {
         D_old[i]=nodes[i]->D;
     }
-    without_constraint(pr,nodes);
+    val = without_constraint(pr,nodes);
+    if (!val) return false;
     list<double> lambda = computeLambda(active_set,pr,nodes);
     int nb_iter=0;
     double alpha;
     double* dir = new double[pr->nbBranches+1];
-    while (!conditions(lambda,pr,nodes) && nb_iter<=maxIter){
+    while (val && !conditions(lambda,pr,nodes) && nb_iter<=maxIter){
         for (int i=0;i<=pr->nbBranches;i++)  {dir[i]=nodes[i]->D-D_old[i];}
         alpha=1;
         int as=0;
@@ -356,7 +358,7 @@ void without_constraint_active_set(Pr* pr,Node** nodes){
                 nodes[as-pr->nbBranches-1]->D=nodes[as-pr->nbBranches-1]->lower;
             }
         }
-        without_constraint(pr,nodes);
+        val = without_constraint(pr,nodes);
         lambda=computeLambda(active_set,pr,nodes);
         nb_iter++;
     }
@@ -366,7 +368,7 @@ void without_constraint_active_set(Pr* pr,Node** nodes){
     computeObjective(pr,nodes);
     delete[] D_old;
     delete[] dir;
-    
+    return val;
 }
 
 
@@ -508,10 +510,9 @@ bool starting_pointQP(Pr* pr,Node** nodes,list<int> &active_set){
 }
 
 
-list<double> with_constraint(Pr* pr,Node** &nodes,list<int> active_set){
+bool with_constraint(Pr* pr,Node** &nodes,list<int> active_set,list<double>& ld){
     //this method computes the optimized solution of the Lagrange function.
     //it returns the list of Lagrange multipliers
-    list<double> ld;
     list<int>* Suc = new list<int>[pr->nbINodes];
     int* Pre=new int[pr->nbBranches+1];
     for (int i=0;i<=pr->nbBranches;i++){
@@ -576,8 +577,7 @@ list<double> with_constraint(Pr* pr,Node** &nodes,list<int> active_set){
                     }
                 }
                 if (coefs==0) {
-                    cout<<"The input temporal constraints are not sufficient to have unique solution. Please either add more temporal constraints or ignore date file to estimate relative dates"<<endl;
-                    exit(EXIT_FAILURE);
+                    return false;
                 }
                 C[i]=ctemp/coefs;
                 X[i]=xtemp/coefs;
@@ -824,7 +824,7 @@ list<double> with_constraint(Pr* pr,Node** &nodes,list<int> active_set){
     delete[] bl;
     delete[] lambda;
     delete[] internal;
-    return ld;
+    return true;
 }
 
 bool with_constraint_active_set(Pr* pr,Node** &nodes){
@@ -839,10 +839,10 @@ bool with_constraint_active_set(Pr* pr,Node** &nodes){
         for (int i=0; i<=pr->nbBranches; i++) {
             D_old[i]=nodes[i]->D;
         }
-        lambda = with_constraint(pr,nodes,active_set);
+        bool val = with_constraint(pr,nodes,active_set,lambda);
         int nb_iter=0;
         double alpha;
-        while (!conditionsQP(lambda,pr,nodes) && nb_iter<=maxIter){
+        while (val && !conditionsQP(lambda,pr,nodes) && nb_iter<=maxIter){
             for (int i=0;i<=pr->nbBranches;i++)  {dir[i]=nodes[i]->D-D_old[i];}
             alpha=1;
             int as=2*pr->nbBranches+2;
@@ -915,7 +915,8 @@ bool with_constraint_active_set(Pr* pr,Node** &nodes){
                     activeLower(nodes[-as]);
                 }
             }
-            lambda=with_constraint(pr,nodes,active_set);
+            lambda.clear();
+            val=with_constraint(pr,nodes,active_set,lambda);
             nb_iter++;
         }
         if (nb_iter>maxIter){
@@ -925,7 +926,7 @@ bool with_constraint_active_set(Pr* pr,Node** &nodes){
         
         delete[] D_old;
         delete[] dir;
-        return true;
+        return val;
     }
     else return false;
 }
@@ -963,7 +964,7 @@ void calculateMultiplier(Pr* pr,Node** nodes){
     }
 }
 
-void without_constraint_multirates(Pr* pr,Node** nodes,bool reassign){
+bool without_constraint_multirates(Pr* pr,Node** nodes,bool reassign){
     double* B = new double[pr->nbBranches+1];
     double* V = new double[pr->nbBranches+1];
     for (int i=1; i<=pr->nbBranches; i++) {
@@ -978,7 +979,8 @@ void without_constraint_multirates(Pr* pr,Node** nodes,bool reassign){
             nodes[r]->V = V[r]/m/m;
         }
     }
-    without_constraint_active_set(pr,nodes);
+    bool val = without_constraint_active_set(pr,nodes);
+    if (!val) return false;
     if (pr->ratePartition.size()>0) {
         double old_phi = 0;
         double old_rho = 0;
@@ -1002,8 +1004,8 @@ void without_constraint_multirates(Pr* pr,Node** nodes,bool reassign){
                 nodes[r]->B = B[r]/m;
                 nodes[r]->V = V[r]/m/m;
             }
-            without_constraint_active_set(pr,nodes);
-            cont = myabs((old_rho-pr->rho)/pr->rho) >= 1e-5;
+            val = without_constraint_active_set(pr,nodes);
+            cont = val && (myabs((old_rho-pr->rho)/pr->rho) >= 1e-5);
             for (int r=1; r<=pr->ratePartition.size(); r++) {
                 cont = cont || (pr->multiplierRate[r]>0 && myabs((old_multi[r]*old_rho-pr->multiplierRate[r]*pr->rho)/pr->multiplierRate[r]/pr->rho)>=1e-5);
             }
@@ -1016,9 +1018,8 @@ void without_constraint_multirates(Pr* pr,Node** nodes,bool reassign){
     }
     delete[] B;
     delete[] V;
+    return val;
 }
-
-
 
 bool with_constraint_multirates(Pr* pr,Node** nodes,bool reassign){
     double* B = new double[pr->nbBranches+1];
@@ -1035,7 +1036,7 @@ bool with_constraint_multirates(Pr* pr,Node** nodes,bool reassign){
             nodes[r]->V = V[r]/m/m;
         }
     }
-    bool consistent = with_constraint_active_set(pr,nodes);
+    bool val = with_constraint_active_set(pr,nodes);
     if (pr->ratePartition.size()>0) {
         /*printf("ROUND 0 , objective function %.15e , rate %.15f ",pr->objective,pr->rho);
         for (int r=1; r<=pr->ratePartition.size(); r++) {
@@ -1066,16 +1067,16 @@ bool with_constraint_multirates(Pr* pr,Node** nodes,bool reassign){
                 nodes[r]->V = V[r]/m/m;
             }
             if (!bl) {
-                without_constraint_active_set(pr,nodes);
+                val = without_constraint_active_set(pr,nodes);
                 bl = myabs((old_rho-pr->rho)/pr->rho)<=1e-4;
                 for (int r=1; r<=pr->ratePartition.size(); r++) {
                     bl = bl && (pr->multiplierRate[r]<0 || myabs((old_multi[r]*old_rho-pr->multiplierRate[r]*pr->rho)/pr->multiplierRate[r]/pr->rho)<=1e-4);
                 }
             }
             else {
-                consistent = with_constraint_active_set(pr,nodes);
+                val = with_constraint_active_set(pr,nodes);
             }
-            cont = myabs((old_rho-pr->rho)/pr->rho) >= 1e-5;
+            cont = val && (myabs((old_rho-pr->rho)/pr->rho) >= 1e-5);
             for (int r=1; r<=pr->ratePartition.size(); r++) {
                 cont = cont || (pr->multiplierRate[r]>0 && myabs((old_multi[r]*old_rho-pr->multiplierRate[r]*pr->rho)/pr->multiplierRate[r]/pr->rho)>=1e-5);
             }
@@ -1098,6 +1099,6 @@ bool with_constraint_multirates(Pr* pr,Node** nodes,bool reassign){
     }
     delete[] B;
     delete[] V;
-    return consistent;
+    return val;
 }
 
