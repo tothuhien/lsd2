@@ -1,4 +1,5 @@
 #include "outliers.h"
+#include "dating.h"
 
 bool calculateOutliers(Pr* & pr,Node** & nodes){
     pr->outlier.clear();
@@ -193,6 +194,8 @@ void estimate_root_rtt(Pr* pr, Node** & nodes){
     }
     phi1 = regression_lambda(br,l,pr,nodes_new);
     r=y;
+    BR=br;
+    L=l;
     y++;
     double phi;
     while (y<=pr->nbBranches){
@@ -250,6 +253,8 @@ void estimate_root_local_rtt(Pr* pr, Node** & nodes){
     cv[s2]=cv[s1];
     phi1=cv[s1];
     r=s1;
+    BR = br;
+    L = l;
     list<int> next;
     if (s1<pr->nbINodes){
         for (vector<int>::iterator iter=nodes[s1]->suc.begin(); iter!=nodes[s1]->suc.end(); iter++) {
@@ -272,7 +277,7 @@ void estimate_root_local_rtt(Pr* pr, Node** & nodes){
         }
         phi = regression_lambda(br,l,pr,nodes_new);
         cv[i]=phi;
-        if (cv[i]<cv[nodes[i]->P] || r==0){
+        if (cv[i]<cv[nodes[i]->P]+maxNumError || r==0){
             if (i<pr->nbINodes){
                 for (vector<int>::iterator iter=nodes[i]->suc.begin(); iter!=nodes[i]->suc.end(); iter++) {
                     next.push_back(*iter);

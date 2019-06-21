@@ -1418,7 +1418,7 @@ int estimate_root_with_constraint_local_rooted(Pr* &pr,Node** &nodes){
             if (consistent){
                 cv[i]=pr->objective;
                 if (pr->verbose) printf("%.10f \n",cv[i]);
-                if (cv[i]<cv[nodes[i]->P] || r==0){
+                if (cv[i]<cv[nodes[i]->P]+maxNumError || r==0){
                     if (i<pr->nbINodes){
                         for (vector<int>::iterator iter=nodes[i]->suc.begin(); iter!=nodes[i]->suc.end(); iter++) {
                             next.push_back(*iter);
