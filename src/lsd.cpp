@@ -189,9 +189,6 @@ int main( int argc, char** argv ){
                 if (opt->estimate_root==""){//keep the given root
                     if (constraintConsistent){
                         cout<<"Dating under temporal constraints mode ..."<<endl;
-                        for (int i = opt->nbINodes;i<=opt->nbBranches;i++){
-                            cout<<nodes[i]->B<<"*"<<nodes[i]->D<<" ";
-                        }cout<<endl;
                         bool consistent = with_constraint_multirates(opt,nodes,true);
                         if (consistent) {
                             output(br,y,opt,nodes,result,tree1,tree2);
