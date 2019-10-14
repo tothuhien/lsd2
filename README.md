@@ -1,9 +1,17 @@
 # LSD2: LEAST-SQUARES METHODS TO ESTIMATE RATES AND DATES FROM PHYLOGENIES
 
-## Compile LSD2:
+## Compile/install LSD2:
+
+### Compile from source:
 
 Type *make* from the folder *src*, you will have the executable file *lsd2* in the same place.
 Note that C++ compiler and library support for the ISO C++ 2011 is required to compile the program from sources. 
+     
+### Install via Homebrew:
+
+Mac users can install lsd2 via Homebrew as follows:
+
+`brew install brewsci/bio/lsd2`
      
 ## Run LSD2:
 
