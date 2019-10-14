@@ -1,5 +1,5 @@
-CC=g++
-CPPFLAGS=-std=c++11
+CXX=g++
+CXXFLAGS=-std=c++11 -Ofast
 EXEC=lsd2
 SRC= $(wildcard *.cpp)
 OBJ= $(SRC:.cpp=.o)
@@ -7,10 +7,10 @@ OBJ= $(SRC:.cpp=.o)
 all: $(EXEC)
 
 $(EXEC): $(OBJ)
-	$(CC) -o $@ $^ 
+	$(CXX) -o $@ $^ 
 
 %.o: %.cpp %.h
-	$(CC) $(CPPFLAGS) -o $@ -c $< 
+	$(CXX) $(CXXFLAGS) -o $@ -c $< 
 	
 .PHONY: clean mrproper
 

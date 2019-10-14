@@ -33,7 +33,7 @@ Pr* getCommandLine( int argc, char** argv)
     flagA=false,
     flagZ=false,
     fflag=false;
-    while ( (c = getopt(argc, argv, ":i:d:o:s:n:g:r:v:ct:w:b:ha:z:f:kje:p:")) != -1 )
+    while ( (c = getopt(argc, argv, ":i:d:o:s:n:g:r:v:ct:w:b:ha:z:f:kje:p:V")) != -1 )
     {
         switch (c)
         {
@@ -152,6 +152,9 @@ Pr* getCommandLine( int argc, char** argv)
                 opt->ci=true;
                 fflag = true;
                 break;
+            case 'V':
+                printf("lsd2 " VERSION"\n");
+                exit( EXIT_SUCCESS );
             case '?':
                 myExit("Unrecognized option: -%c\n", optopt);
             case ':':
@@ -315,7 +318,7 @@ void printInterface( FILE* in, Pr* opt)
 
 void printHelp( void )
 {
-    printf(BOLD"LSD: LEAST-SQUARES METHODS TO ESTIMATE RATES AND DATES - " VERSION" by Thu-Hien To\n\n");
+    printf(BOLD"LSD: LEAST-SQUARES METHODS TO ESTIMATE RATES AND DATES - " VERSION"\n\n");
     printf(BOLD"DESCRIPTION\n"
            FLAT"\tThis program estimates the rate and the dates of the input phylogenies given some temporal constraints.\n"
            FLAT"\tIt minimizes the square errors of the branch lengths under normal distribution model.\n\n"
@@ -433,6 +436,8 @@ void printHelp( void )
            FLAT"\t   by option -b and seq is specified by option -s.\n"
            FLAT"\t   If " FLAT LINE"variance" FLAT"=1, then LSD runs once. If " FLAT LINE"variance" FLAT"=2, then LSD runs twice where the second time it uses the variances \n"
            FLAT"\t   based on the estimated branch lengths of the first run.\n"
+           FLAT"\t" BOLD"-V \n"
+           FLAT"\t   Get the actual version.\n"
            FLAT"\t" BOLD"-w " LINE"given rate\n"
            FLAT"\t   This option is used to specify the name of the file containing the substitution rates.\n"
            FLAT"\t   In this case, the program will use the given rates to estimate the dates of the nodes.\n"
