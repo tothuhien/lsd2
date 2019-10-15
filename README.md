@@ -9,7 +9,7 @@ Note that C++ compiler and library support for the ISO C++ 2011 is required to c
      
 ### Install via Homebrew:
 
-Mac users can install lsd2 via Homebrew as follows:
+Mac/Linux users can install lsd2 via Homebrew as follows:
 
 `brew install brewsci/bio/lsd2`
      
