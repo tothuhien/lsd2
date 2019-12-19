@@ -480,7 +480,7 @@ Node** unrooted2rootedS(Pr* &pr,Node** nodes,int s){//simplier version, use only
 void computeVariance(Pr* pr,Node** nodes){
     if (pr->variance==1 || pr->variance==2){
         for (int i=1;i<=pr->nbBranches;i++){
-            nodes[i]->V=(nodes[i]->B+(double)(pr->c)/pr->seqLength)/pr->seqLength;
+            nodes[i]->V=(nodes[i]->B+(double)(pr->c)/100);
         }
     }
     else{
@@ -494,7 +494,7 @@ void computeVarianceEstimateRoot(Pr* pr,Node** nodes,double br){
     if (pr->variance==1 || pr->variance==2){
         for (int i=1;i<=pr->nbBranches;i++){
             if (nodes[i]->P!=0) {
-                nodes[i]->V=(nodes[i]->B+(double)(pr->c)/pr->seqLength)/pr->seqLength;
+                nodes[i]->V=(nodes[i]->B+(double)(pr->c)/100);
             }
             else nodes[i]->V=variance(pr,br);
         }
@@ -507,17 +507,17 @@ void computeVarianceEstimateRoot(Pr* pr,Node** nodes,double br){
 }
 
 double variance(Pr* pr,double b){
-    if (pr->variance==1 || pr->variance==2) return (b+(double)(pr->c)/pr->seqLength)/pr->seqLength;
+    if (pr->variance==1 || pr->variance==2) return (b+(double)(pr->c)/100);
     else return 1./(double)(pr->seqLength);
 }
 
 void computeNewVariance(Pr* pr,Node** nodes){
     for (int i=1;i<=pr->nbBranches;i++){
         if (nodes[i]->D>=nodes[nodes[i]->P]->D){
-            nodes[i]->V=(pr->rho*nodes[i]->D-pr->rho*nodes[nodes[i]->P]->D+(double)(pr->c)/pr->seqLength)/pr->seqLength;
+            nodes[i]->V=(pr->rho*nodes[i]->D-pr->rho*nodes[nodes[i]->P]->D+(double)(pr->c)/100);
         }
         else{
-            nodes[i]->V=((double)(pr->c)/pr->seqLength)/pr->seqLength;
+            nodes[i]->V=((double)(pr->c)/100);
         }
     }
 }
@@ -533,15 +533,15 @@ void computeNewVarianceEstimateRoot(Pr* pr,Node** nodes){
                 nodes[i]->V=variance(pr,br);
             }
             else{
-                nodes[i]->V=((double)(pr->c)/pr->seqLength)/pr->seqLength;
+                nodes[i]->V=((double)(pr->c)/100);
             }
         }
         else{
             if (nodes[i]->D>=nodes[nodes[i]->P]->D){
-                nodes[i]->V=(pr->rho*nodes[i]->D-pr->rho*nodes[nodes[i]->P]->D+(double)(pr->c)/pr->seqLength)/pr->seqLength;
+                nodes[i]->V=(pr->rho*nodes[i]->D-pr->rho*nodes[nodes[i]->P]->D+(double)(pr->c)/100);
             }
             else{
-                nodes[i]->V=((double)(pr->c)/pr->seqLength)/pr->seqLength;
+                nodes[i]->V=((double)(pr->c)/100);
             }
         }
     }
@@ -1313,7 +1313,6 @@ string nexus(int i,Pr* pr,Node** nodes){
         string newLabel="(";
         for (vector<int>::iterator iter=nodes[i]->suc.begin(); iter!=nodes[i]->suc.end(); iter++) {
             int s = *iter;
-            if (s>pr->nbBranches) cout<<i<<" "<<s<<endl;
             string l=nexus(s,pr,nodes);
             if (iter==nodes[i]->suc.begin()) newLabel+=l;
             else newLabel+=","+l;
@@ -1520,12 +1519,33 @@ list<int> getActiveSet(Pr* pr,Node** nodes){
     return active_set;
 }
 
-void computeSuc_polytomy(Pr* pr,Node** nodes){
+/*void computeSuc_polytomy(Pr* pr,Node** nodes){
     for (int i=0;i<pr->nbINodes;i++){
         nodes[i]->suc.clear();
     }
     for (int i=1;i<=pr->nbBranches;i++){
         nodes[nodes[i]->P]->suc.push_back(i);
+    }
+}*/
+
+void computeSuc_polytomy(Pr* pr,Node** nodes){
+    for (int i=0;i<pr->nbINodes;i++){
+        nodes[i]->suc.clear();
+    }
+    bool* visited = new bool[pr->nbINodes];
+    for (int i=0; i<pr->nbINodes;i++) visited[i] = false;
+    int v = pr->nbBranches;
+    while (v!= (pr->nbINodes-1)){
+        int vt = v;
+        int p = nodes[v]->P;
+        nodes[p]->suc.push_back(v);
+        while (p!=0 && !visited[p]){
+            visited[p] = true;
+            v = p;
+            p = nodes[v]->P;
+            nodes[p]->suc.push_back(v);
+        }
+        v = vt-1; 
     }
 }
 
@@ -1829,13 +1849,22 @@ int assignRecursive(int r,Node** nodes,int g){
 int assignRateGroupToSubTree(Subtree* subtree,Pr* pr,Node** nodes,int g){
     Pair* root = subtree->root;
     int r = getInternalNodeId(pr,nodes,root->name);
+    bool toReroot = false;
+    if (r >= pr->nbINodes) {
+        subtree->tips.push_back(root);
+        toReroot = true;
+        root->include = false;
+    }
     int s = 0;
+    vector<int> tipsId;
     for (int i=0; i<subtree->tips.size(); i++) {
         Pair* tip = subtree->tips[i];
         int t = getInternalNodeId(pr,nodes,tip->name);
         nodes[t]->rateGroup = g;
         s++;
+        tipsId.push_back(t);
     }
+    if (toReroot) r = mrca(nodes,tipsId);
     if (root->include) {
         s += assignRecursive(r,nodes,g);
     }

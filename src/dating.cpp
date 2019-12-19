@@ -1067,7 +1067,7 @@ bool with_constraint_multirates(Pr* pr,Node** nodes,bool reassign){
                 nodes[r]->V = V[r]/m/m;
             }
             if (!bl) {
-                val = without_constraint_active_set(pr,nodes);
+                val = with_constraint_active_set(pr,nodes);
                 bl = myabs((old_rho-pr->rho)/pr->rho)<=1e-4;
                 for (int r=1; r<=pr->ratePartition.size(); r++) {
                     bl = bl && (pr->multiplierRate[r]<0 || myabs((old_multi[r]*old_rho-pr->multiplierRate[r]*pr->rho)/pr->multiplierRate[r]/pr->rho)<=1e-4);

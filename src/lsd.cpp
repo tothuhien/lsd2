@@ -75,9 +75,6 @@ int main( int argc, char** argv ){
             opt->multiplierRate.push_back(1);
         }
     }
-    /*double rho_final=0;
-     double mrca_final=0;*/
-    
     for (int y=1;y<=opt->nbData;y++){
         fprintf(result,"\nTree %d \n",y);
         cout<<"\nTREE "<<y<<endl;
