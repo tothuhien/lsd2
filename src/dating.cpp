@@ -979,6 +979,8 @@ bool without_constraint_multirates(Pr* pr,Node** nodes,bool reassign){
             nodes[r]->V = V[r]/m/m;
         }
     }
+    for (int i=1;i<pr->multiplierRate.size();i++) cout<<pr->multiplierRate[i]<<" ";
+    cout<<endl;
     bool val = without_constraint_active_set(pr,nodes);
     if (!val) return false;
     if (pr->ratePartition.size()>0) {
@@ -1005,6 +1007,8 @@ bool without_constraint_multirates(Pr* pr,Node** nodes,bool reassign){
                 nodes[r]->V = V[r]/m/m;
             }
             val = without_constraint_active_set(pr,nodes);
+            for (int i=1;i<pr->multiplierRate.size();i++) cout<<pr->multiplierRate[i]<<" ";
+            cout<<pr->rho<<endl;
             cont = val && (myabs((old_rho-pr->rho)/pr->rho) >= 1e-5);
             for (int r=1; r<=pr->ratePartition.size(); r++) {
                 cont = cont || (pr->multiplierRate[r]>0 && myabs((old_multi[r]*old_rho-pr->multiplierRate[r]*pr->rho)/pr->multiplierRate[r]/pr->rho)>=1e-5);
@@ -1036,6 +1040,8 @@ bool with_constraint_multirates(Pr* pr,Node** nodes,bool reassign){
             nodes[r]->V = V[r]/m/m;
         }
     }
+    for (int i=1;i<pr->multiplierRate.size();i++) cout<<pr->multiplierRate[i]<<" ";
+    cout<<endl;
     bool val = with_constraint_active_set(pr,nodes);
     if (pr->ratePartition.size()>0) {
         /*printf("ROUND 0 , objective function %.15e , rate %.15f ",pr->objective,pr->rho);
@@ -1076,6 +1082,8 @@ bool with_constraint_multirates(Pr* pr,Node** nodes,bool reassign){
             else {
                 val = with_constraint_active_set(pr,nodes);
             }
+            for (int i=1;i<pr->multiplierRate.size();i++) cout<<pr->multiplierRate[i]<<" ";
+            cout<<pr->rho<<endl;
             cont = val && (myabs((old_rho-pr->rho)/pr->rho) >= 1e-5);
             for (int r=1; r<=pr->ratePartition.size(); r++) {
                 cont = cont || (pr->multiplierRate[r]>0 && myabs((old_multi[r]*old_rho-pr->multiplierRate[r]*pr->rho)/pr->multiplierRate[r]/pr->rho)>=1e-5);

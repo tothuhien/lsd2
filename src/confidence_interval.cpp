@@ -365,6 +365,7 @@ void output(double br,int y, Pr* pr,Node** nodes,FILE* f,FILE* tree1,FILE* tree2
     if (!pr->ci){
         fprintf(tree1,"tree %d = ",y);
         fprintf(tree1,"%s",nexus(0,pr,nodes).c_str());
+        fprintf(tree2,"tree %d = ",y);
         fprintf(tree2,"%s",nexusDate(0,pr,nodes).c_str());
         //fprintf(tree3,"%s",newickDate(0,pr,nodes).c_str());
     }

@@ -101,10 +101,11 @@ Suppose that we have a tree `((A:0.12,D:0.12)n1:0.3,((B:0.3,C:0.5)n2:0.4,(E:0.5,
 
 then an example for partition file can be as follows:
 
-    group1 {n1} {n5 n4}
-    group2 {n3}
+    group1 1 {n1} {n5 n4}
+    group2 1 {n3}
 
-Each line defines a list of subtrees whose branches are supposed to have the same substitution rate. Each subtree is defined between {}: the first node is the root of the subtree and the following nodes (if there any) define its tips. If the first node is a tip label then it takes the mrca of all tips as the root of the subtree.
+Each line defines a list of subtrees whose branches are supposed to have the same substitution rate. It starts by the name of the group (`group1`), then the prior proportion (`1`) of the group rate compared to the main rate. This is just a starting value, and the proportion will be estimated; giving an appropriate value helps to converge faster.
+Each subtree is then defined between {}: the first node is the root of the subtree and the following nodes (if there any) define its tips. If the first node is a tip label then it takes the mrca of all tips as the root of the subtree.
 If there's only root and not any tip defined, then the subtree is extended down to the tips of the full tree. Hence, {n1} defines the subtree rooted at the node n1; and {n5 n4} defines the subtree rooted at n5 that has one tip as n4 and other tips as the ones of the full trees (here are B,C). 
 As a consequence, in this example, the branches will be partitioned into 3 groups such that each group has a different rate: 
 

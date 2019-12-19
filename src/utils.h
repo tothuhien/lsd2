@@ -28,6 +28,8 @@ string readWord(string line,int& pos);
 
 char readChar(FILE *f,string fn);
 
+double readDouble(string line,int& pos);
+
 double readdouble(FILE *f,string fn);
 
 double readdouble(FILE *f,char c);

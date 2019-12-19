@@ -264,9 +264,16 @@ void readPartitionFile(Pr* pr){
     //Read partition file
     ifstream partFile(pr->partitionFile.c_str());
     string line;
+    pr->multiplierRate.push_back(1);
     while (getline(partFile,line)) {
         int pos=0;
         string groupName = readWord(line,pos);
+        double m = readDouble(line,pos);
+        if (m<=0){
+            cout<<"Error in the partition file: after the group name must be a positive real which is the prior proportion of the group rate compared to the main rate. Put 1 if you don't known about this value. Selecting appropriate value helps to converge faster."<<endl;
+            exit(EXIT_FAILURE);
+        }
+        pr->multiplierRate.push_back(m);
         int s = line.find_first_of("{",0);
         int e = line.find_first_of ("}",s+1);
         Part* part = new Part(groupName);

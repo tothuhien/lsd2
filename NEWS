@@ -7,6 +7,5 @@ Moreover, if some tip dates are missing, the program will use the maximal subtre
 A partition file defines subtrees where each one is supposed to have a different rate.
 - Use variance in estimating the root position.
 - Can be applied on non-binary tree
-- When variances are used, the user can run LSD2 twice where the second time the variances are calculated based on the estimated branch lengths of the first run.
 - When outgroups are given, either remove the outgroups or keep them. In the former case, the root position is estimated on only the branch defined by the outgroups.
 - Estimate outliers tips using standard regression of root-to-tip paths and remove them before estimating dates and rates.

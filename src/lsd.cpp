@@ -72,7 +72,7 @@ int main( int argc, char** argv ){
         readPartitionFile(opt);
         for (int i=0;i<=opt->ratePartition.size();i++){
             opt->givenRate.push_back(false);
-            opt->multiplierRate.push_back(1);
+            //opt->multiplierRate.push_back(1);
         }
     }
     for (int y=1;y<=opt->nbData;y++){
@@ -197,8 +197,6 @@ int main( int argc, char** argv ){
                     else{
                         cout<<"There's conflict in the input temporal constraints. Try the option -r to re-estimate the root position."<<endl;
                     }
-                    /*rho_final+=(opt->rho-0.006)*(opt->rho-0.006);
-                     mrca_final+=(nodes[0]->D)*(nodes[0]->D);*/
                 }
                 else if (opt->estimate_root=="k"){
                     cout<<"Estimating the root position on the branch defined by given outgroups ..."<<endl;
@@ -211,7 +209,6 @@ int main( int argc, char** argv ){
                     nodes[s1]->V=variance(opt,br);
                     nodes[s2]->V=nodes[s1]->V;
                     with_constraint_active_set_lambda_multirates(br,opt,nodes,true);
-                    //br=(nodes[s1]->D+nodes[s2]->D-2*nodes[0]->D)*opt->rho;
                     output(br,y,opt,nodes,result,tree1,tree2);
                 }
                 else{//estimate the root
@@ -239,8 +236,6 @@ int main( int argc, char** argv ){
                         
                         with_constraint_active_set_lambda_multirates(br,opt,nodes_new,true);
                         output(br,y,opt,nodes_new,result,tree1,tree2);
-                        /*rho_final+=(opt->rho-0.006)*(opt->rho-0.006);
-                         mrca_final+=(nodes_new[0]->D)*(nodes_new[0]->D);*/
                         for (int i=0;i<opt->nbBranches+1;i++) delete nodes_new[i];
                         delete[] nodes_new;
                         
@@ -258,9 +253,6 @@ int main( int argc, char** argv ){
     fprintf(tree1,"End;");
     fprintf(tree2,"End;");
     cout<<"\nTOTAL ELAPSED TIME: "<<elapsed_time<<" seconds"<<endl;
-    //rho_final = sqrt(rho_final/opt->nbData)/0.006;
-    //mrca_final = sqrt(mrca_final/opt->nbData);
-    //cout<<rho_final<<" "<<mrca_final<<endl;
     fclose(tree);
     fclose(result);
     fclose(tree1);

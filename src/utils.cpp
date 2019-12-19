@@ -79,6 +79,21 @@ vector<double> read_double_from_line(string line){
     return results;
 }
 
+double readDouble(string line,int& pos){
+    string s;
+    char c=line.at(pos);
+    while (pos < line.length() && (c<33 || c>126)){c=line.at(pos);pos++;}
+    while (pos < line.length() && c>=33 && c<=126){
+        c=line.at(pos);
+        s=s+c;
+        pos++;
+    }
+    double result;
+    stringstream ss(s);
+    ss >> result;
+    return result;
+}
+
 /*double readdouble(FILE *f,char c){
  double r;
  if (fscanf(f,"%lf",&r)==1){
