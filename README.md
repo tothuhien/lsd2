@@ -95,20 +95,29 @@ If there are more than 1 outgroups, than they must be monophyletic in the input 
 You can partition the branch trees into several subsets that you know each subset
 has a different rate. 
 
-Suppose that we have a tree `((A:0.12,D:0.12)n1:0.3,((B:0.3,C:0.5)n2:0.4,(E:0.5,(F:0.2,G:0.3)n3:0.33)n4:0.22)n5:0.2)root;` then an example for partition file can be as follows:
+Suppose that we have a tree `((A:0.12,D:0.12)n1:0.3,((B:0.3,C:0.5)n2:0.4,(E:0.5,(F:0.2,G:0.3)n3:0.33)n4:0.22)n5:0.2)root;` 
+
+<img src="examples/fig/ex.png" width="400"/>
+
+then an example for partition file can be as follows:
 
     group1 {n1} {n5 n4}
     group2 {n3}
 
-Each line defines a list of subtrees whose branches are supposed to have the same substitution rate. Each subtree is defined between {}: the first node is the root of the subtree and the following nodes (if there any) define its tips. 
-If there's not any tip defined, then the subtree is extended down to the tips of the full tree. Hence, {n1} defines the subtree rooted at the node n1; and {n5 n4} defines the subtree rooted at n5 that has one tip as n4 and other tips as the ones of the full trees (here are B,C). 
+Each line defines a list of subtrees whose branches are supposed to have the same substitution rate. Each subtree is defined between {}: the first node is the root of the subtree and the following nodes (if there any) define its tips. If the first node is a tip label then it takes the mrca of all tips as the root of the subtree.
+If there's only root and not any tip defined, then the subtree is extended down to the tips of the full tree. Hence, {n1} defines the subtree rooted at the node n1; and {n5 n4} defines the subtree rooted at n5 that has one tip as n4 and other tips as the ones of the full trees (here are B,C). 
 As a consequence, in this example, the branches will be partitioned into 3 groups such that each group has a different rate: 
 
-    (1) (n1,A), (n1,D), (n5,n4), (n5,n2), (n2,B), (n2,C); 
-    (2) (n3,F), (n3,G); 
-    (3) the remaining branches of the tree. 
+- group1: (n1,A), (n1,D), (n5,n4), (n5,n2), (n2,B), (n2,C); 
+- group2: (n3,F), (n3,G); 
+- group0: the remaining branches of the tree. 
     
 Note that if the internal nodes don't have labels, then they can be defined by mrca of at least two tips, for example n1 is mrca(A,D)
+
+## Caution in using variance
+
+Simulation data show that using variance (option `-v`) gives better result on strict clock data. 
+However for relaxed clock data, variances may not be well estimated since they are not necessarily be linear with the branch lengths. In this case, you can try to reduce the effect of variance by increasing parameter `-b` (which is 10 by default). This parameter should be between 1 and 100, the bigger it is the more it looks like no variance. Using varaince is still useful though to penalize long branch lengths.
 
 ## Some examples of command lines:
 
