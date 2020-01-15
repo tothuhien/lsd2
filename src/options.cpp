@@ -33,7 +33,7 @@ Pr* getCommandLine( int argc, char** argv)
     flagA=false,
     flagZ=false,
     fflag=false;
-    while ( (c = getopt(argc, argv, ":i:d:o:s:n:g:r:v:ct:w:b:ha:z:f:kje:p:V")) != -1 )
+    while ( (c = getopt(argc, argv, ":i:d:o:s:n:g:r:v:ct:w:b:ha:z:f:kje:m:p:V")) != -1 )
     {
         switch (c)
         {
@@ -107,9 +107,19 @@ Pr* getCommandLine( int argc, char** argv)
                 break;
             case 'e':
                 if( !isReal(optarg) )
-                    myExit("Argument of option -e must be a real number.\n");
-                opt->k = atof( optarg );
-                if (opt->k<0) myExit("Argument of option -e can not be negative.\n");
+                    myExit("Argument of option -e must be a real.\n");
+                opt->e = atof(optarg);
+                if (opt->e<0){
+                    std::ostringstream oss;
+                    oss<<"- The specified argument of option e was negative, so outliers detection option was not processed\n";
+                    opt->warningMessage.push_back(oss.str());
+                }
+                break;
+            case 'm':
+                if( !isInteger(optarg) )
+                    myExit("Argument of option -m must be an integer.\n");
+                opt->m = atof( optarg );
+                if (opt->m<0) myExit("Argument of option -m can not be negative.\n");
                 break;
             case 't':
                 if( !isReal(optarg) )
@@ -234,6 +244,13 @@ Pr* getInterface()
     if (!opt->rooted) {
         opt->estimate_root="a";
     }
+    do
+    {
+        printInterface( stdout, opt);
+        cout<<endl;
+        fgets( letter, 3, stdin );
+        if( isOptionActivate( opt, *letter ) ) setOptionsWithLetter( opt, *letter);
+    } while( *letter!='y' && *letter!='Y' );
     return opt;
 }
 
@@ -264,9 +281,8 @@ void printInterface( FILE* in, Pr* opt)
     else {
         if (opt->variance==1) fprintf(in,"Yes, use variances based on original branches\n");
         else if (opt->variance==2) fprintf(in,"Yes, use variances based on branches estimated by LSD\n");
-        fprintf(in,"  B                          Parameter of variances : %d\n",opt->c);
+        fprintf(in,"  B                Adjusted parameter for variances : %d\n",opt->c);
     }
-    fprintf(in,"  S                                 Sequence Length : %i\n",opt->seqLength);
     fprintf(in,"  R                               Estimate the root : ");
     if (opt->estimate_root==""){
         fprintf(in,"No\n");
@@ -303,17 +319,23 @@ void printInterface( FILE* in, Pr* opt)
     else
         fprintf(in,"Yes, %i data sets\n",opt->nbData);
     fprintf(in,"  F                    Compute confidence intervals : ");
-    if (opt->ci)
+    if (opt->ci){
         fprintf(in,"Yes, sampling %d times\n",opt->nbSampling);
+        fprintf(in,"  S                                 Sequence Length : %i\n",opt->seqLength);
+    }
     else
         fprintf(in,"No\n");
     fprintf(in,"  E                            Exclude outlier tips : ");
-    if (opt->k >= 0)
-        fprintf(in,"Yes, using Tukey method with k = %.2f\n",opt->k);
+    if (opt->e>0){
+        fprintf(in,"Yes, detecting and excluding outliers from the analysis\n");
+        fprintf(in,"  M     Number of sampling nodes to detect outliers : %i\n",opt->m);
+        fprintf(in,"  E         The Zscore threshold to detect outliers : %f\n",opt->e);
+    }
     else
         fprintf(in,"No\n");
+    
     fprintf(in,"\n  H to print Help ");
-    fprintf(in,"\n  Y to accept or type a letter to change an option (Q = Exit) ");
+    fprintf(in,"\n  Y to accept or type a letter to change an option (X = Exit) ");
 }
 
 void printHelp( void )
@@ -341,18 +363,18 @@ void printHelp( void )
            FLAT"\n");
     
     printf(BOLD"OPTIONS\n"
-           FLAT"\t" BOLD"-a " LINE"root date\n"
+           FLAT"\t" BOLD"-a " LINE"rootDate\n"
            FLAT"\t   If the dates of all tips are equal (which is given by option -z), you must use this option to provide the root date.\n"
            FLAT"\t   In this case, the input date file can be omitted, and the program estimates only the relative dates based on the given\n"
            FLAT"\t   root date and tips date. By default, T[root]=0 and T[tips]=1.\n"
-           FLAT"\t" BOLD"-b " LINE"parameter of variances\n"
-           FLAT"\t   The parameter (between 1 and 100) to compute the variances in option -v. By default b=10. The smaller it is the more variance\n"
-           FLAT"\t   would be linear to branch length, which is relevant for strict clock. The bigger it is the less effect of branch length on variance\n"
-           FLAT"\t   which might be better for relaxed clock.\n"
+           FLAT"\t" BOLD"-b " LINE"varianceParameter\n"
+           FLAT"\t   The parameter (between 1 and 100 - which is the proportion to the sequence length) to compute the variances in option -v.\n"
+           FLAT"\t   By default b=10. The smaller it is the more variance would be linear to branch length, which is relevant for strict clock.\n"
+           FLAT"\t   The bigger it is the less effect of branch length on variance which might be better for relaxed clock.\n"
            FLAT"\t" BOLD"-c \n"
            FLAT"\t   By using this option, we impose the constraints that the date of every node is equal or smaller then\n"
            FLAT"\t   the dates of its descendants. Without constraints, the runtime is linear (LD). With constraints, the\n"
-           FLAT"\t   problem is a quadratic programming and is solved efficiently by the active-set method.\n"
+           FLAT"\t   problem is a quadratic programming and is solved efficiently (quasi-linear) by the active-set method.\n"
            FLAT"\t" BOLD"-d " LINE"inputDateFile\n"
            FLAT"\t   This options is used to read the name of the input date file which contains temporal constraints of internal nodes\n"
            FLAT"\t   or tips. An internal node can be defined either by its label (given in the input tree) or by a subset of tips that have it as \n"
@@ -368,14 +390,15 @@ void printHelp( void )
            FLAT"\t    mrca(a,b,c,d) b(2000,2001)\n"
            FLAT"\t    n l(2004)\n"
            FLAT"\t   If this option is omitted, the program will estimate relative dates by giving T[root]=0 and T[tips]=1.\n"
-           FLAT"\t" BOLD"-e " LINE"outlierThreshold\n"
-           FLAT"\t   This option is used to estimate and exclude outlier tips before the estimation process.\n"
-           FLAT"\t   The parameter outlierThreshold represents the parameter k in the Tukey's fence method, which should be \n"
-           FLAT"\t   normally set to 3. Note that some functionalities could not be combined with outliers estimation, for example \n"
-           FLAT"\t   estimating multiple rates, date contraints for internal nodes, flexible date constraints.\n"
-           FLAT"\t" BOLD"-f " LINE"samplingNumber\n"
+           FLAT"\t" BOLD"-e " LINE"ZscoreOutlier\n"
+           FLAT"\t   This option is used to estimate and exclude outlier nodes before dating process.\n"
+           FLAT"\t   LSD2 normalize the branch residus and decide a node is outlier if its related residus is great than the " LINE"ZscoreOutlier.\n"
+           FLAT"\t   A normal value of " LINE"ZscoreOutlier" FLAT"could be 3, but you can adjust it bigger/smaller depending if you want to have\n"
+           FLAT"\t   less/more outliers. Note that for now, some functionalities could not be combined with outliers estimation, for example \n"
+           FLAT"\t   estimating multiple rates, imprecise date constraints.\n"
+           FLAT"\t" BOLD"-f " LINE"samplingNumberCI\n"
            FLAT"\t   This option calculates the confidence intervals of the estimated rate and dates. The branch lengths of the esimated\n"
-           FLAT"\t   tree are sampled " FLAT LINE"samplingNumber" FLAT " times to generate a set of simulated trees. We use Poisson distribution \n"
+           FLAT"\t   tree are sampled " FLAT LINE"samplingNumberCI" FLAT " times to generate a set of simulated trees. We use Poisson distribution \n"
            FLAT"\t   to generate branch lengths so we need to multiple the branch lengths with the sequence length provided by option -s.\n"
            FLAT"\t   However, to avoid over-estimate the confidence intervals in the case of very long sequence length but not necessarily\n"
            FLAT"\t   strict molecular clock, we use min of 1000 and the real sequence length to generate simulated trees.\n"
@@ -389,16 +412,21 @@ void printHelp( void )
            FLAT"\t        OUTGROUP2\n"
            FLAT"\t        ...\n"
            FLAT"\t        OUTGROUPn\n"
-           FLAT"\t" BOLD"-k\n"
-           FLAT"\t   Use this option to keep the outgroups (given in option -g) in the estimated tree. The root position is then estimated on the\n"
-           FLAT"\t   branch determined by the outgroups. If this option is not used, the outgroups will be removed.\n"
            FLAT"\t" BOLD"-h " LINE"help\n"
            FLAT"\t   Print this message.\n"
            FLAT"\t" BOLD"-i " LINE"inputTreesFile\n"
            FLAT"\t   The name of the input trees file. It contains tree(s) in newick format, each tree on one line. Note that the taxa sets of all\n"
            FLAT"\t   trees must be the same.\n"
+           FLAT"\t" BOLD"-j\n"
+           FLAT"\t   Verbose mode for output messages.\n"
+           FLAT"\t" BOLD"-k\n"
+           FLAT"\t   Use this option to keep the outgroups (given in option -g) in the estimated tree. The root position is then estimated on the\n"
+           FLAT"\t   branch determined by the outgroups. If this option is not used, the outgroups will be removed.\n"
+           FLAT"\t" BOLD"-m " LINE"samplingNumberOutlier\n"
+           FLAT"\t   The number of dated nodes to be sampled when detecting outlier nodes. This should be smaller than the number of dated nodes,\n"
+           FLAT"\t   and is 10 by default.\n"
            FLAT"\t" BOLD"-n " LINE"datasetNumber\n"
-           FLAT"\t   The number of trees that you want to read.\n"
+           FLAT"\t   The number of trees that you want to read and analyse.\n"
            FLAT"\t" BOLD"-o " LINE"outputFile\n"
            FLAT"\t   The base name of the output files to write the results and the time-scale trees.\n"
            FLAT"\t" BOLD"-p " LINE"partitionFile\n"
@@ -416,33 +444,33 @@ void printHelp( void )
            FLAT"\t         group2 1 {n3}\n"
            FLAT"\t   then there are 3 rates: the first one includes the branches (n1,A), (n1,D), (n5,n4), (n5,n2), (n2,B), (n2,C); the second one \n"
            FLAT"\t   includes the branches (n3,F), (n3,G), and the last one includes all the remaining branches. If the internal nodes don't have labels,\n"
-           FLAT"\t   then they can be defined by mrca of at least two tips, for example n1 is mrca(A,D)\n."
+           FLAT"\t   then they can be defined by mrca of at least two tips, for example n1 is mrca(A,D)\n"
            FLAT"\t" BOLD"-r " LINE"rootingMethod\n"
            FLAT"\t   This option is used to specify the rooting method to estimate the position of the root for unrooted trees, or\n"
            FLAT"\t   re-estimate the root for rooted trees. The principle is to search for the position of the root that minimizes\n"
            FLAT"\t   the objective function.\n"
-           FLAT"\t   If the tree is rooted, then either using operand \"l\" for searching the root locally around the given root, or  \"a\" for\n"
-           FLAT"\t   searching the root on all branches. Moreover, when the constrained mode is chosen (option -c), method \"a\" first\n"
-           FLAT"\t   estimates the root without using the constraints. After that, it uses the constrained mode to improve locally the position\n"
-           FLAT"\t   of the root around this pre-estimated root. To use constrained mode on all branches in this case, specify \"as\".\n"
-           FLAT"\t   If the tree is not rooted, then the program searches the root on all branches. Similarly for the previous case, if\n"
-           FLAT"\t   the constrained mode is chosen, method \"a\" uses only constrained mode to improve the root position around the pre-estimated\n"
-           FLAT"\t   root which is computed without constraints. To use constraints on all branches, use \"as\".\n"
+           FLAT"\t   Use " BOLD"-r l" FLAT" if your tree is rooted, and you want to re-estimate the root locally around the given root.\n"
+           FLAT"\t   Use " BOLD"-r a" FLAT" if you want to estimate the root on all branches (ignoring the given root if the tree is rooted).\n"
+           FLAT"\t       In this case, if the constrained mode is chosen (option -c), method \"a\" first estimates the root without using the constraints.\n"
+           FLAT"\t       After that, it uses the constrained mode to improve locally the position of the root around this pre-estimated root.\n"
+           FLAT"\t   Use " BOLD"-r as" FLAT" if you want to estimate to root using constrained mode on all branches.\n"
+           FLAT"\t   Use " BOLD"-r k" FLAT" if you want to re-estimate the root position on the same branche of the given root.\n"
+           FLAT"\t       If combined with option -g, the root will be estimated on the branche defined by the outgroups.\n"
            FLAT"\t" BOLD"-s " LINE"sequenceLength\n"
-           FLAT"\t   This option is used to specify the length of the multiple sequences that were used to build the input trees. This parameter \n"
-           FLAT"\t   is used to compute confidence intervals with option -f. By default it is 1000.\n"
-           FLAT"\t" BOLD"-t " LINE"lower bound for the rate\n"
-           FLAT"\t   This option corresponds to the lower bound for the estimating rate.\n"
-           FLAT"\t   It is 1e-10 by default.\n"
+           FLAT"\t   This option is used to specify the length of the multiple alignments that were used to build the input trees. It is used to  \n"
+           FLAT"\t   compute the confidence intervals with option -f. By default it is 1000 and it is 1000 if the sequence length is > 1000.\n"
+           FLAT"\t" BOLD"-t " LINE"rateLowerBound\n"
+           FLAT"\t   This option corresponds to the lower bound for the estimating rate. It is 1e-10 by default.\n"
            FLAT"\t" BOLD"-v " LINE"variance\n"
            FLAT"\t   Use this option if you want to apply variances for the branch lengths in order to recompense big errors on long estimated branch lengths. \n"
            FLAT"\t   The variance of the branch Bi is Vi = (Bi+b/100) where b is specified by option -b.\n"
-           FLAT"\t   If " FLAT LINE"variance" FLAT"=1, then LSD runs once. If " FLAT LINE"variance" FLAT"=2, then LSD runs twice where the second time it uses the variances \n"
-           FLAT"\t   based on the estimated branch lengths of the first run. However -v 2 only improves the result in the case variances \n"
-           FLAT"\t   were well estimated in the first run, most of the case it means your data follows a strict clock. If your tree is relaxed, don't use -v 2.\n"
+           FLAT"\t   If " FLAT LINE"variance" FLAT"=1, then LSD uses the input branch lengths to calculate variances. If " FLAT LINE"variance" FLAT"=2, then LSD\n"
+           FLAT"\t   runs twice where the second time it calculates the variances based on the estimated branch lengths of the first run. However -v 2 only \n"
+           FLAT"\t   improves the result in the case variances were well estimated in the first run, most of the case it means your data follows a strict clock. \n"
+           FLAT"\t   If your tree is likely relaxed, don't use -v 2.\n"
            FLAT"\t" BOLD"-V \n"
            FLAT"\t   Get the actual version.\n"
-           FLAT"\t" BOLD"-w " LINE"given rate\n"
+           FLAT"\t" BOLD"-w " LINE"givenRte\n"
            FLAT"\t   This option is used to specify the name of the file containing the substitution rates.\n"
            FLAT"\t   In this case, the program will use the given rates to estimate the dates of the nodes.\n"
            FLAT"\t   This file should have the following format\n"
@@ -450,7 +478,7 @@ void printHelp( void )
            FLAT"\t        RATE2\n"
            FLAT"\t        ...\n"
            FLAT"\t  where RATEi is the rate of the tree i in the inputTreesFile.\n"
-           FLAT"\t" BOLD"-z " LINE"tips date\n"
+           FLAT"\t" BOLD"-z " LINE"tipsDate\n"
            FLAT"\t   This option is used to give the date of the tips when they are all equal. It must be used with option -a to give the\n"
            FLAT"\t   root date. In this case the input date file can be omitted, and the program estimates only the relative dates based on\n"
            FLAT"\t   the given root date and tips date. By default, T[root]=0 and T[tips]=1.\n"
@@ -589,6 +617,12 @@ bool isOptionActivate( Pr* opt, char l )
         case 'Q':
         case 'e':
         case 'E':
+        case 'm':
+        case 'M':
+        case 'j':
+        case 'J':
+        case 'x':
+        case 'X':
         case 'h':
         case 'H':
         return true;
@@ -601,8 +635,8 @@ void setOptionsWithLetter( Pr* opt, char letter )
     //char* fnOut;
     switch( letter )
     {
-        case 'q':
-        case 'Q':
+        case 'x':
+        case 'X':
             exit( EXIT_SUCCESS );
         case 'i':
         case 'I':
@@ -757,7 +791,7 @@ void setOptionsWithLetter( Pr* opt, char letter )
         case 'f':
         case 'F':
             if (!opt->ci) {
-                opt->nbSampling = getInputInteger("Enter the number of sampling> ");
+                opt->nbSampling = getInputInteger("Enter the number of sampling for calculating confidence intervals> ");
                 opt->ci=true;
             }
             else{
@@ -767,15 +801,16 @@ void setOptionsWithLetter( Pr* opt, char letter )
         case 'j':
         case 'J':
             opt->verbose = !opt->verbose;
+            break;
+        case 'm':
+        case 'M':
+            if (opt->e>0){
+                opt->m = getInputInteger("Enter the number of sampling dated nodes for outliers detection> ");
+            }
+            break;
         case 'e':
         case 'E':
-            if (opt->k==-1){
-               opt->k = getInputPositiveReal("Enter a positive number k for outliers detection in Tukey method> ");
-            }
-            else {
-                opt->k = -1;
-            }
-            
+            opt->e = getInputReal("Enter the Zscore threshold for outliers detection> ");
         case 'h':
         case 'H':
             printHelp();

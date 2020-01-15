@@ -134,8 +134,6 @@ void readDateFile(Pr* pr,Node** &nodes,bool& constraintConsistent){
     }
     string w1="";//store temporal constraints that are not in the tree;
     string w2="";//store nodes that have more than 1 temporal constraints.
-    string w3="";//store internal nodes that have temporal constraints in the case estimating outliers
-
     for (int i=0;i<ino;i++){
         string s=readWord(dateFile,pr->inDateFile);
         int type='n';
@@ -143,22 +141,26 @@ void readDateFile(Pr* pr,Node** &nodes,bool& constraintConsistent){
         double v2=0;
         int k = getPosition(nodes,s,0,pr->nbBranches+1);
         vector<int> mr;
+        string ld=s;
         if (k==-1 && (s.compare("mrca")==0)){
             char c='(';
+            ld="";
             while (c!=')'){
                 string ss="";
                 c=readCommaBracket(dateFile,pr->inDateFile,ss);
                 int k1=getPosition(nodes,ss,0,pr->nbBranches+1);
                 if (k1!=-1){
                     mr.push_back(k1);
+                    if (ld=="") ld=ld+ss;
+                    else ld=ld+","+ss;
                 }
             }
-            if (mr.size()>0){ k=mrca(nodes,mr);}
+            ld="mrca("+ld+")";
+            if (mr.size()>0){
+                k=mrca(nodes,mr);
+            }
         }
         if (k!=-1){
-            if (k < pr->nbINodes && k!=0 && pr->k >=0){
-                w3=w3+" "+s;
-            }
             if (nodes[k]->type!='n'){
                 w2=w2+" "+s;
             }
@@ -216,10 +218,10 @@ void readDateFile(Pr* pr,Node** &nodes,bool& constraintConsistent){
             }
             Date* newdate;
             if (mr.size()>0){
-                newdate = new Date(type,v1,v2,mr);
+                newdate = new Date(ld,type,v1,v2,mr);
             }
             else{
-                newdate = new Date(type,v1,v2,k);
+                newdate = new Date(ld,type,v1,v2,k);
             }
             if (k<pr->nbINodes){
                 pr->internalConstraints.push_back(newdate);
@@ -240,20 +242,14 @@ void readDateFile(Pr* pr,Node** &nodes,bool& constraintConsistent){
     }
     if (w1!=""){
         std::ostringstream oss;
-        if (pr->verbose) oss<<" - The nodes"+w1+" in the input date file are not present in the input tree.\n";
-        else oss<<" - There are some nodes in the input date file that are not present in the input tree.\n";
+        if (pr->verbose) oss<<"- The nodes"+w1+" in the input date file are not present in the input tree.\n";
+        else oss<<"- There are some nodes in the input date file that are not present in the input tree.\n";
         pr->warningMessage.push_back(oss.str());
     }
     if (w2!=""){
         std::ostringstream oss;
-        if (pr->verbose) oss<<" - There nodes"+w2+" have more than one temporal constraint.\n";
-        else oss<<" - There nodes that have more than one temporal constraint.\n";
-        pr->warningMessage.push_back(oss.str());
-    }
-    if (w3!=""){
-        std::ostringstream oss;
-        if (pr->verbose) oss<<" - The temporal constraint of internal nodes"+w3+" can not be included in estimating outliers.\n";
-        else oss<<" - The temporal constraint of internal nodes can not be included in estimating outliers.\n";
+        if (pr->verbose) oss<<"- There nodes"+w2+" have more than one temporal constraint.\n";
+        else oss<<"- There nodes that have more than one temporal constraint.\n";
         pr->warningMessage.push_back(oss.str());
     }
     fclose(dateFile);

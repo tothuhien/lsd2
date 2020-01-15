@@ -76,8 +76,8 @@ bool without_constraint(Pr* pr,Node** nodes){
             }
         }
     }
-    list<int> pre = preorder_polytomy(pr,nodes);
-    for (list<int>::iterator iter = pre.begin();iter!=pre.end();iter++){
+    vector<int> pre = preorder_polytomy(pr,nodes);
+    for (vector<int>::iterator iter = pre.begin();iter!=pre.end();iter++){
         int i = *iter;
         if (i!=0 && !leaf(nodes[i])){
             C[i]=W[i]*C[nodes[i]->P]+C[i];
@@ -401,7 +401,7 @@ bool starting_pointQP(Pr* pr,Node** nodes,list<int> &active_set){
     without_constraint_active_set(pr,nodes);
     double* lowerX = new double[pr->nbBranches+1];
     bool* bl = new bool[pr->nbBranches+1];
-    list<int> pre = preorder_polytomy(pr,nodes);
+    vector<int> pre = preorder_polytomy(pr,nodes);
     for (int i=0;i<=pr->nbBranches;i++){
         if (nodes[i]->type=='l' || nodes[i]->type=='b'){
             bl[i]=true;
@@ -413,7 +413,7 @@ bool starting_pointQP(Pr* pr,Node** nodes,list<int> &active_set){
         }
         else bl[i]=false;
     }
-    for (list<int>::iterator iter = pre.begin();iter!=pre.end();iter++){
+    for (vector<int>::iterator iter = pre.begin();iter!=pre.end();iter++){
         int i=*iter;
         if (bl[i]){
             for (vector<int>::iterator iter=nodes[i]->suc.begin(); iter!=nodes[i]->suc.end(); iter++) {
@@ -547,7 +547,7 @@ bool with_constraint(Pr* pr,Node** &nodes,list<int> active_set,list<double>& ld)
     reduceTree_polytomy(pr,nodes,Pre,Suc,internal);
     
     list<int> pos = postorder_polytomy(pr,nodes);
-    list<int> pre = preorder_polytomy(pr,nodes);
+    vector<int> pre = preorder_polytomy(pr,nodes);
     double *W= new double[pr->nbINodes];//nodes[i]->D=W[i].T[a(i)]+C[i]+X[i]/rho
     double *C = new double[pr->nbINodes];
     double *X =new double[pr->nbINodes];
@@ -606,7 +606,7 @@ bool with_constraint(Pr* pr,Node** &nodes,list<int> active_set,list<double>& ld)
         }
     }
     delete[] Suc;
-    for (list<int>::iterator iter = pre.begin();iter!=pre.end();iter++){
+    for (vector<int>::iterator iter = pre.begin();iter!=pre.end();iter++){
         int i = *iter;
         if (Pre[i]!=-1 && nodes[i]->status==0){
             C[i]=W[i]*C[Pre[i]]+C[i];
@@ -660,7 +660,7 @@ bool with_constraint(Pr* pr,Node** &nodes,list<int> active_set,list<double>& ld)
         delete[] F;
         delete[] G;
     }
-    for (list<int>::iterator iter = pre.begin();iter!=pre.end();iter++){
+    for (vector<int>::iterator iter = pre.begin();iter!=pre.end();iter++){
         int i = *iter;
         nodes[i]->D = C[i]+X[i]/pr->rho;
     }
@@ -979,9 +979,11 @@ bool without_constraint_multirates(Pr* pr,Node** nodes,bool reassign){
             nodes[r]->V = V[r]/m/m;
         }
     }
-    for (int i=1;i<pr->multiplierRate.size();i++) cout<<pr->multiplierRate[i]<<" ";
-    cout<<endl;
+    if (pr->verbose){
+        for (int i=1;i<pr->multiplierRate.size();i++) cout<<pr->multiplierRate[i]<<" ";
+    }
     bool val = without_constraint_active_set(pr,nodes);
+    if (pr->verbose) cout<<pr->rho<<endl;
     if (!val) return false;
     if (pr->ratePartition.size()>0) {
         double old_phi = 0;
@@ -1007,8 +1009,10 @@ bool without_constraint_multirates(Pr* pr,Node** nodes,bool reassign){
                 nodes[r]->V = V[r]/m/m;
             }
             val = without_constraint_active_set(pr,nodes);
-            for (int i=1;i<pr->multiplierRate.size();i++) cout<<pr->multiplierRate[i]<<" ";
-            cout<<pr->rho<<endl;
+            if (pr->verbose){
+                for (int i=1;i<pr->multiplierRate.size();i++) cout<<pr->multiplierRate[i]<<" ";
+                cout<<pr->rho<<endl;
+            }
             cont = val && (myabs((old_rho-pr->rho)/pr->rho) >= 1e-5);
             for (int r=1; r<=pr->ratePartition.size(); r++) {
                 cont = cont || (pr->multiplierRate[r]>0 && myabs((old_multi[r]*old_rho-pr->multiplierRate[r]*pr->rho)/pr->multiplierRate[r]/pr->rho)>=1e-5);
@@ -1040,9 +1044,11 @@ bool with_constraint_multirates(Pr* pr,Node** nodes,bool reassign){
             nodes[r]->V = V[r]/m/m;
         }
     }
-    for (int i=1;i<pr->multiplierRate.size();i++) cout<<pr->multiplierRate[i]<<" ";
-    cout<<endl;
+    if (pr->verbose) {
+        for (int i=1;i<pr->multiplierRate.size();i++) cout<<pr->multiplierRate[i]<<" ";
+    }
     bool val = with_constraint_active_set(pr,nodes);
+    if (pr->verbose) cout<<pr->rho<<endl;
     if (pr->ratePartition.size()>0) {
         /*printf("ROUND 0 , objective function %.15e , rate %.15f ",pr->objective,pr->rho);
         for (int r=1; r<=pr->ratePartition.size(); r++) {
@@ -1082,8 +1088,10 @@ bool with_constraint_multirates(Pr* pr,Node** nodes,bool reassign){
             else {
                 val = with_constraint_active_set(pr,nodes);
             }
-            for (int i=1;i<pr->multiplierRate.size();i++) cout<<pr->multiplierRate[i]<<" ";
-            cout<<pr->rho<<endl;
+            if (pr->verbose){
+                for (int i=1;i<pr->multiplierRate.size();i++) cout<<pr->multiplierRate[i]<<" ";
+                cout<<pr->rho<<endl;
+            }
             cont = val && (myabs((old_rho-pr->rho)/pr->rho) >= 1e-5);
             for (int r=1; r<=pr->ratePartition.size(); r++) {
                 cont = cont || (pr->multiplierRate[r]>0 && myabs((old_multi[r]*old_rho-pr->multiplierRate[r]*pr->rho)/pr->multiplierRate[r]/pr->rho)>=1e-5);

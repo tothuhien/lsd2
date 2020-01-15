@@ -118,7 +118,7 @@ Note that if the internal nodes don't have labels, then they can be defined by m
 ## Caution in using variance
 
 Simulation data show that using variance (option `-v`) gives better result on strict clock data. 
-However for relaxed clock data, variances may not be well estimated since they are not necessarily be linear with the branch lengths. In this case, you can try to reduce the effect of variance by increasing parameter `-b` (which is 10 by default). This parameter should be between 1 and 100, the bigger it is the more it looks like no variance. Using varaince is still useful though to penalize long branch lengths.
+However for relaxed clock data, variances may not be well estimated since they are not necessarily be linear with the branch lengths. In this case, you can try to reduce the effect of variance by increasing parameter `-b` (which is 10 by default). This parameter should be between 1 and 100, the bigger it is the more it looks like no variance. Using variance is still useful though to penalize long branch lengths. Also, option `-v 2` may only be usefull with strict clock tree.
 
 ## Some examples of command lines:
 
@@ -128,9 +128,7 @@ However for relaxed clock data, variances may not be well estimated since they a
 
     `./lsd2 -i rootedtree_file -d date_file -c -v 1`
 
-	  (The sequence length of the multiple alignments which are used to build the tree is required via option -s to calculate variances. Without specifying this, it will use 1000 by default.)
-
-	- You want to remove outlier tips with k=3 in Tukey's fences:
+	- You want to remove outlier nodes with Zscore threshold 3:
 
     `./lsd2 -i rootedtree_file -d date_file -c -v 1 -e 3`
 
@@ -146,7 +144,7 @@ However for relaxed clock data, variances may not be well estimated since they a
 
     `./lsd2 -i rootedtree_file -d date_file -c -r l -f 100 -s 1700`
     
-    (To calculate confidence intervals, sequence length is also required via option -s. The program will use the sequence length (or 1000 if the sequence length is greater) to generate branch lengths of simulated trees.)
+    (To calculate confidence intervals, sequence length is required via option -s. The program will use the sequence length (or 1000 if the sequence length is greater) to generate branch lengths of simulated trees, using a Poisson distrubtion.)
 
 	- If all tips are supposed to have the same date, you can still estimate the rate but only relative dates.
 	
@@ -172,7 +170,9 @@ However for relaxed clock data, variances may not be well estimated since they a
 
 *.nexus* : trees in nexus format which contain information about the dates of internal nodes, branch lengths, and the confidence intervals (CI) if option -f was used.
     
-*.date.nexus* : trees in nexus format where branch lengths are rescaled to time unit by multiplying with the estimated rate. 
+*.date.nexus* : similar to *.nexus* trees, but branch lengths are rescaled to time unit by multiplying with the estimated rate. 
+
+*.nwk* : trees in newick format 
 
 ## Citation
 If you use this software, please cite: “ Fast dating using least-squares criteria and algorithms”, T-H. To, M. Jung, S. Lycett, O. Gascuel, Syst Biol. 2016 Jan;65(1):82-97.

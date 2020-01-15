@@ -253,16 +253,23 @@ void computeIC(double br,Pr* pr,Node** nodes,double* &T_left,double* &T_right,do
     delete[] HD_simul;
 }
 
-void output(double br,int y, Pr* pr,Node** nodes,FILE* f,FILE* tree1,FILE* tree2){
-    
+void output(double br,int y, Pr* pr,Node** nodes,FILE* f,FILE* tree1,FILE* tree2,FILE* tree3){
+    if (pr->outlier.size()>0){
+        std::ostringstream oss;
+        oss<<"- There are "<<pr->outlier.size()<<" nodes that are considered as outliers and were excluded from the analysis:\n";
+        for (int i=0;i<pr->outlier.size();i++){
+            oss<<"    "<<nodes[pr->outlier[i]]->L<<", suggesting date "<<nodes[pr->outlier[i]]->D<<"\n";
+        }
+        pr->resultMessage.push_back(oss.str());
+    }
     if (!pr->constraint && pr->ci) {
         std::ostringstream oss;
-        oss<<" - Confidence intervals are not warranted under non-constraint mode.\n";
+        oss<<"- Confidence intervals are not warranted under non-constraint mode.\n";
         pr->warningMessage.push_back(oss.str());
     }
     if (pr->relative) {
         std::ostringstream oss;
-        oss<<" - The results correspond to the estimation of relative dates when T[mrca]="<<pr->mrca<<" and T[tips]="<<pr->leaves<<"\n";
+        oss<<"- The results correspond to the estimation of relative dates when T[mrca]="<<pr->mrca<<" and T[tips]="<<pr->leaves<<"\n";
         pr->warningMessage.push_back(oss.str());
     }
     if (pr->ratePartition.size()==0) {
@@ -355,7 +362,7 @@ void output(double br,int y, Pr* pr,Node** nodes,FILE* f,FILE* tree1,FILE* tree2
         
         if (count>0) {
             std::ostringstream oss;
-            oss<<" - Number of violated temporal constraints (nodes having date smaller than the one of its parent):  "<<count<<" ("<<(count*100)/(double)pr->nbBranches<<"%%). Try option -c to impose temporal constraints on the estimated trees.\n";
+            oss<<"- Number of violated temporal constraints (nodes having date smaller than the one of its parent):  "<<count<<" ("<<(count*100)/(double)pr->nbBranches<<"%%). Try option -c to impose temporal constraints on the estimated trees.\n";
             pr->warningMessage.push_back(oss.str());
         }
         
@@ -367,7 +374,7 @@ void output(double br,int y, Pr* pr,Node** nodes,FILE* f,FILE* tree1,FILE* tree2
         fprintf(tree1,"%s",nexus(0,pr,nodes).c_str());
         fprintf(tree2,"tree %d = ",y);
         fprintf(tree2,"%s",nexusDate(0,pr,nodes).c_str());
-        //fprintf(tree3,"%s",newickDate(0,pr,nodes).c_str());
+        fprintf(tree3,"%s",newick(0,0,pr,nodes).c_str());
     }
     else{
         double* T_min = new double[pr->nbBranches+1];
@@ -411,7 +418,7 @@ void output(double br,int y, Pr* pr,Node** nodes,FILE* f,FILE* tree1,FILE* tree2
         fprintf(tree2,"tree %d = ",y);
         fprintf(tree1,"%s",nexusIC(0,pr,nodes,T_min,T_max,H_min,H_max).c_str());
         fprintf(tree2,"%s",nexusICDate(0,pr,nodes,T_min,T_max,HD_min,HD_max).c_str());
-        //fprintf(tree2,"%s",newick(0,0,pr,nodes).c_str());
+        fprintf(tree3,"%s",newick(0,0,pr,nodes).c_str());
         //fprintf(tree3,"%s",newickDate(0,pr,nodes).c_str());
         
         delete[] T_min;
@@ -422,11 +429,9 @@ void output(double br,int y, Pr* pr,Node** nodes,FILE* f,FILE* tree1,FILE* tree2
     
     if (pr->rho==pr->rho_min) {
         std::ostringstream oss;
-        oss<<" - The estimated rate reaches the given lower bound. To change the lower bound, use option -t.\n";
+        oss<<"- The estimated rate reaches the given lower bound. To change the lower bound, use option -t.\n";
         pr->warningMessage.push_back(oss.str());
     }
-    
-    
     if ((pr->warningMessage).size()>0){
         fprintf(f,"*WARNINGS:\n");
         printf("*WARNINGS:\n");

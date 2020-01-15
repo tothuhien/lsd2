@@ -1,478 +1,193 @@
 #include "outliers.h"
 #include "dating.h"
+#include "estimate_root.h"
 
 bool calculateOutliers(Pr* & pr,Node** & nodes){
     pr->outlier.clear();
     if (pr->partitionFile!="") {
         std::ostringstream oss;
-        oss<<" - Rate partition can not be included in estimating outliers.\n";
+        oss<<"- Rate partition can not be included in estimating outliers.\n";
         pr->warningMessage.push_back(oss.str());
     }
-    if (pr->estimate_root==""){
-        cout<<"Calculating the outlier tips ..."<<endl;
-        outlier(pr,nodes,pr->k);
-        if (pr->outlier.size()>0){
-            std::ostringstream oss;
-            oss<<"- There are "<<pr->outlier.size()<<" tips that are considered as outliers and were excluded from the analysis: ";
-            for (int i=0;i<pr->outlier.size();i++){
-                oss<<" "<<(nodes[pr->outlier[i]]->L).c_str();
-            }
-            oss<<"\n";
-            pr->resultMessage.push_back(oss.str());
-            bool bl = remove_outlier_tips(pr,nodes);
-            if (!bl) {
-                cout<<"Removing outliers will make the root lost. Check the root position and the dates of the outlier tips: ";
-                for (int i=0;i<pr->outlier.size();i++){
-                    cout<<(nodes[pr->outlier[i]]->L).c_str()<<" ";
-                }
-                cout<<". You can also try to not remove outliers or increase value of option -e to exclude some outliers."<<endl;
-                return false;
-            }
-        }
-        else{
-            std::ostringstream oss;
-            oss<<"- There is not any outlier tip.\n";
-            pr->resultMessage.push_back(oss.str());
-        }
-    }
-    else {
-        cout<<"Calculating the outlier tips ..."<<endl;
-        if (pr->estimate_root=="l"){
-            estimate_root_local_rtt(pr,nodes);
-        } else if (pr->estimate_root=="a" || pr->estimate_root=="as"){
-            estimate_root_rtt(pr,nodes);
-        }
-        outlier(pr,nodes,pr->k);
-        if (pr->outlier.size()>0){
-            std::ostringstream oss;
-            oss<<"- There are "<<pr->outlier.size()<<" tips that are considered as outliers and were excluded from the analysis: ";
-            for (int i=0;i<pr->outlier.size();i++){
-                oss<<" "<<(nodes[pr->outlier[i]]->L).c_str();
-            }
-            oss<<"\n";
-            pr->resultMessage.push_back(oss.str());
-            bool bl = remove_outlier_tips(pr,nodes);
-            if (!bl) {
-                cout<<"Removing outliers will make the root lost. Check the root position and the dates of the outlier tips: ";
-                for (int i=0;i<pr->outlier.size();i++){
-                    cout<<(nodes[pr->outlier[i]]->L).c_str()<<" ";
-                }
-                cout<<". You can also try to not remove outliers or increase value of option -e to exclude some outliers."<<endl;
-                return false;
-            }
-        }
-        else{
-            std::ostringstream oss;
-            oss<<"- There is not any outlier tip.\n";
-            pr->resultMessage.push_back(oss.str());
-        }
-    }
-    return true;
-}
-
-double regression_lambda(double br,double &lambda,Pr* pr, Node** nodes){
-    //double regression_lambda(int n,double* paths,double* paths_lambda,double* dates,double & lambda){
-    /*double* dates = new double[pr->nbBranches-pr->nbINodes+1];
-    for (int i=0;i<=pr->nbBranches-pr->nbINodes;i++) {
-        dates[i] = nodes[i+pr->nbINodes]->D;
-    }*/
-    //double* paths = new double[pr->nbBranches-pr->nbINodes+1];
-    //double* paths_lambda = new double[pr->nbBranches-pr->nbINodes+1];
-    vector<double> paths;
-    vector<double> dates;
-    vector<double> paths_lambda;
-    double slope = 0;
-    double slope_lambda = 0;
-    double intercept = 0;
-    double intercept_lambda = 0;
-    double det = 0;
-    //for (int i=pr->nbINodes;i<=pr->nbBranches;i++) cout<<nodes[i]->D<<" ";
-    //cout<<br<<endl;
-    if (br == 0){
-        vector<int> s = nodes[0]->suc;
-        int s1 = s[0];
-        int s2 = s[1];
-        nodes[s1]->B = br/2;
-        nodes[s2]->B = br/2;
-        calculateRtt(pr,nodes,paths,dates);
-        regression(pr,nodes,paths,dates,slope,intercept);
-        double* res = residus_rtt(paths,dates,slope,intercept);
-        double resSquare = 0;
-        for (int i=0; i<= pr->nbBranches-pr->nbINodes; i++){
-            resSquare += res[i]*res[i];
-        }
-        return resSquare;
-    }
-    calculateRtt_lambda(br,pr,nodes,paths,paths_lambda,dates);
-    double mean_dates = 0;
-    double mean_paths = 0;
-    double mean_paths_lambda = 0;
-    int n = dates.size();
-    for (int i=0;i<n;i++){
-        mean_dates += dates[i];
-        mean_paths += paths[i];
-        mean_paths_lambda += paths_lambda[i];
-    }
-    mean_dates /= n;
-    mean_paths /= n;
-    mean_paths_lambda /= n;
-    
-    if (pr->givenRate[0] && nodes[0]->type=='p'){
-        slope = pr->rho;
-        slope_lambda = 0;
-        intercept = -slope*nodes[0]->D;
-        intercept_lambda = 0;
-    }
-    else if (pr->relative){
-        slope = (mean_paths)/(pr->leaves - pr->mrca);
-        slope_lambda = (mean_paths_lambda)/(pr->leaves - pr->mrca);
-        intercept = -slope*pr->mrca;
-        intercept_lambda = -slope_lambda*pr->mrca;
-    }
-    else if (pr->givenRate[0]){
-        slope = pr->rho;
-        slope_lambda = 0;
-        intercept =  mean_paths - slope*mean_dates;
-        intercept_lambda = mean_paths_lambda;
-    }
-    else if (nodes[0]->type=='p'){
-        intercept = nodes[0]->D;
-        intercept_lambda = 0;
-        for (int i=0;i<n;i++){
-            det += dates[i]*dates[i];
-            slope += dates[i]*(paths[i] - intercept);
-            slope_lambda += dates[i]*(paths_lambda[i]);
-        }
-        slope = slope / det;
-        slope_lambda = slope_lambda / det;
-    }
-    else{
-        for (int i=0;i<n;i++){
-            slope += (dates[i] - mean_dates)*(paths[i] - mean_paths);
-            slope_lambda += (dates[i] - mean_dates)*(paths_lambda[i] - mean_paths_lambda);
-            det += (dates[i] - mean_dates)*(dates[i] - mean_dates);
-        }
-        slope /= det;
-        slope_lambda /= det;
-        intercept =  mean_paths - slope*mean_dates;
-        intercept_lambda = mean_paths_lambda - slope_lambda*mean_dates;
-    }
-
-    double A = 0;
-    double B = 0;
-    double C = 0;
-    //square_residus = A*lambda^2 + B*lambda + C
-    for (int i=0;i<n;i++){
-        A += (paths_lambda[i] - slope_lambda*dates[i] - intercept_lambda)*(paths_lambda[i] - slope_lambda*dates[i] - intercept_lambda);
-        B += 2*(paths_lambda[i] - slope_lambda*dates[i] - intercept_lambda)*(paths[i] - slope*dates[i] - intercept);
-        C += (paths[i] - slope*dates[i] - intercept)*(paths[i] - slope*dates[i] - intercept);
-    }
-    lambda = -B/2/A;
-    if (lambda <0) lambda = 0;
-    if (lambda >1) lambda = 1;
-    return (A*lambda*lambda + B*lambda + C);
-}
-
-void estimate_root_rtt(Pr* pr, Node** & nodes){
-    //only apply for non-flexible given dates and non internal node date
-    double phi1;
-    Node** nodes_new = cloneLeaves(pr,nodes,0);
-    int y=1;
-    double l=0;
-    double br=0;
-    int r=0;
-    double L=0;
-    double BR=0;
-    vector<int> s=nodes[0]->suc;
-    int s1=s[0];
-    int s2=s[1];
-    vector<double> originalD;
-    for (int i=0;i<=pr->nbBranches;i++) originalD.push_back(nodes[i]->D);
-    bool bl=reroot_rootedtree(br,y,s1,s2,pr,nodes,nodes_new);
-    for (int i=pr->nbINodes;i<=pr->nbBranches;i++){
-        if (nodes_new[i]->type=='p') nodes_new[i]->D = originalD[i];
-    }
-    phi1 = regression_lambda(br,l,pr,nodes_new);
-    r=y;
-    BR=br;
-    L=l;
-    y++;
-    double phi;
-    while (y<=pr->nbBranches){
-        for (int i=pr->nbINodes; i<=pr->nbBranches; i++) {
-            nodes_new[i]->status=nodes[i]->status;
-        }
-        bl=reroot_rootedtree(br,y,s1,s2,pr,nodes,nodes_new);
-        for (int i=pr->nbINodes;i<=pr->nbBranches;i++){
-            if (nodes_new[i]->type=='p') nodes_new[i]->D = originalD[i];
-        }
-        phi = regression_lambda(br,l,pr,nodes_new);
-        if (phi1>phi || r==0){
-            phi1=phi;
-            r=y;
-            L=l;
-            BR=br;
-        }
-        y++;
-    }
-    nodes_new = cloneLeaves(pr,nodes,0);
-    for (int i=pr->nbINodes; i<=pr->nbBranches; i++) {
-        nodes_new[i]->status=nodes[i]->status;
-    }
-    reroot_rootedtree(BR,r,s1,s2,pr,nodes,nodes_new);
-    nodes = nodes_new;
-    s = nodes[0]->suc;
-    s1 = s[0];
-    s2 = s[1];
-    nodes[s1]->B = L*BR;
-    nodes[s2]->B = BR-L*BR;
-}
-
-void estimate_root_local_rtt(Pr* pr, Node** & nodes){
-    //only apply for non-flexible given dates and non internal node date
-    double phi1,phi;
-    Node** nodes_new = cloneLeaves(pr,nodes,0);
-    double* cv = new double[pr->nbBranches+1];
-    for (int i=0;i<=pr->nbBranches;i++) cv[i]=0;
-    double l=0;
-    double br=0;
-    int r=0;
-    double L=0;
-    double BR=0;
-    vector<int> s=nodes[0]->suc;
-    int s1=s[0];
-    int s2=s[1];
-    vector<double> originalD;
-    for (int i=0;i<=pr->nbBranches;i++) originalD.push_back(nodes[i]->D);
-    bool bl=reroot_rootedtree(br,s1,s1,s2,pr,nodes,nodes_new);
-    for (int i=pr->nbINodes;i<=pr->nbBranches;i++){
-        if (nodes_new[i]->type=='p') nodes_new[i]->D = originalD[i];
-    }
-    phi1 = regression_lambda(br,l,pr,nodes_new);
-    cv[s1]=phi1;
-    cv[s2]=cv[s1];
-    phi1=cv[s1];
-    r=s1;
-    BR = br;
-    L = l;
-    list<int> next;
-    if (s1<pr->nbINodes){
-        for (vector<int>::iterator iter=nodes[s1]->suc.begin(); iter!=nodes[s1]->suc.end(); iter++) {
-            next.push_back(*iter);
-        }
-    }
-    if (s2<pr->nbINodes){
-        for (vector<int>::iterator iter=nodes[s2]->suc.begin(); iter!=nodes[s2]->suc.end(); iter++) {
-            next.push_back(*iter);
-        }
-    }
-    while (!next.empty()){
-        int i = next.back();
-        for (int i=pr->nbINodes; i<=pr->nbBranches; i++) {
-            nodes_new[i]->status=nodes[i]->status;
-        }
-        bl=reroot_rootedtree(br,i,s1,s2,pr,nodes,nodes_new);
-        for (int i=pr->nbINodes;i<=pr->nbBranches;i++){
-            if (nodes_new[i]->type=='p') nodes_new[i]->D = originalD[i];
-        }
-        phi = regression_lambda(br,l,pr,nodes_new);
-        cv[i]=phi;
-        if (cv[i]<cv[nodes[i]->P]+maxNumError || r==0){
-            if (i<pr->nbINodes){
-                for (vector<int>::iterator iter=nodes[i]->suc.begin(); iter!=nodes[i]->suc.end(); iter++) {
-                    next.push_back(*iter);
-                }
-            }
-            if (cv[i]<phi1 || r==0){
-                phi1=cv[i];
-                r=i;
-                L=l;
-                BR=br;
-            }
-        }
-        next.remove(i);
-    }
-    nodes_new = cloneLeaves(pr,nodes,0);
-    for (int i=pr->nbINodes; i<=pr->nbBranches; i++) {
-        nodes_new[i]->status=nodes[i]->status;
-    }
-    reroot_rootedtree(BR,r,s1,s2,pr,nodes,nodes_new);
-    nodes = nodes_new;
-    s = nodes[0]->suc;
-    s1 = s[0];
-    s2 = s[1];
-    nodes[s1]->B = L*BR;
-    nodes[s2]->B = BR-L*BR;
-}
-
-void regression(Pr* pr,Node** & nodes,vector<double> paths,vector<double> dates,double & slope,double & intercept){
-    int n = paths.size();
-    double mean_dates = 0;
-    double mean_paths = 0;
-    double det = 0;
-    for (int i=0;i<n;i++){
-        mean_dates += dates[i];
-        mean_paths += paths[i];
-    }
-    mean_dates /= n;
-    mean_paths /= n;
-    slope = 0;
-    if (pr->givenRate[0] && nodes[0]->type=='p'){
-        slope = pr->rho;
-        intercept = -slope*nodes[0]->D;
-    }
-    else if (pr->relative){
-        slope = (mean_paths)/(pr->leaves - pr->mrca);
-        intercept = -slope*pr->mrca;
-    }
-    else if (pr->givenRate[0]){
-        slope = pr->rho;
-        intercept =  mean_paths - slope*mean_dates;
-    }
-    else if (nodes[0]->type=='p'){
-        intercept = nodes[0]->D;
-        for (int i=0;i<n;i++){
-            det += dates[i]*dates[i];
-            slope += dates[i]*(paths[i] - intercept);
-        }
-        slope = slope / det;
-    }
-    else{
-        for (int i=0;i<n;i++){
-            slope += (paths[i] - mean_paths)*(dates[i] - mean_dates);
-            det += (dates[i] - mean_dates)*(dates[i] - mean_dates);
-        }
-        slope = slope / det;
-        intercept =  mean_paths - slope*mean_dates;
-    }
-}
-
-void calculateRtt(Pr* pr,Node** nodes,vector<double> &paths,vector<double> &dates){
-    for (int i=pr->nbINodes;i<=pr->nbBranches;i++){
-        if (nodes[i]->type == 'p'){
-            int k=i;
-            double rtt = 0;
-            while (k!=0){
-                rtt += nodes[k]->B;
-                k = nodes[k]->P;
-            }
-            paths.push_back(rtt);
-            dates.push_back(nodes[i]->D);
-        }
-    }
-}
-
-void calculateRtt_lambda(double br,Pr* pr,Node** nodes,vector<double> & paths, vector<double> & paths_lambda,vector<double> & dates){
-    //double* rtt = new double[pr->nbBranches-pr->nbINodes+1];
-    //double* rtt_lambda = new double[pr->nbBranches-pr->nbINodes+1];
-    vector<int> s = nodes[0]->suc;
-    int s1 = s[0];
-    int s2 = s[1];
-    for (int i=pr->nbINodes;i<=pr->nbBranches;i++){
-        if (nodes[i]->type == 'p'){
-            int k=i;
-            double rtt = 0;
-            double rtt_lambda = 0;
-            while (k != s1 && k!= s2){
-                rtt += nodes[k]->B;
-                k = nodes[k]->P;
-            }
-            if (k == s1){
-                rtt_lambda = br;
-            }
-            if (k == s2){
-                rtt += br;
-                rtt_lambda = -br;
-            }
-            paths.push_back(rtt);
-            paths_lambda.push_back(rtt_lambda);
-            dates.push_back(nodes[i]->D);
-        }
-    }
-}
-
-
-double* residus_rtt(vector<double> paths,vector<double> dates,double slope,double intercept){
-    int n = paths.size();
-    double* res = new double[n];
-    for (int i=0;i<n;i++){
-        res[i] = (intercept + slope*dates[i]) - paths[i];
-    }
-    return res;
-}
-
-void outlier(Pr* pr,Node** nodes,double k){
-    vector<double> paths, dates;
+    cout<<"Calculating the outlier nodes ..."<<endl;
     string nodes_imprecise_date="";
     for (int i = pr->nbINodes; i <= pr->nbBranches; i++){
-        if (nodes[i]->type != 'p'){
+        if (nodes[i]->type != 'p' && nodes[i]->type != 'n'){
             nodes_imprecise_date = nodes_imprecise_date+" "+nodes[i]->L;
+        }
+    }
+    for (int i = 0; i < pr->internalConstraints.size(); i++){
+        Date* no = pr->internalConstraints[i];
+        if (nodes[no->id]->type != 'p' && nodes[no->id]->type != 'n'){
+            nodes_imprecise_date = nodes_imprecise_date+" "+no->label;
         }
     }
     if (nodes_imprecise_date.size()>0){
         std::ostringstream oss;
-        oss<<" - The tip(s)"+nodes_imprecise_date+" do not have precise date value, so will not be included in estimating outliers.\n";
+        oss<<"- The node(s)"+nodes_imprecise_date+" do not have precise date value, so will not be included in estimating outliers.\n";
         pr->warningMessage.push_back(oss.str());
     }
-    calculateRtt(pr,nodes,paths,dates);
-    double slope,intercept;
-    regression(pr,nodes,paths,dates,slope,intercept);
-    double* res = residus_rtt(paths,dates,slope,intercept);
-    double mi=0;
-    double ma=0;
-    double* sortedTab = sortTab(res,pr->nbBranches - pr->nbINodes + 1);
-    getOulier(sortedTab,mi,ma,pr->nbBranches - pr->nbINodes + 1,k);
-    delete[] sortedTab;
-    pr->outlier.clear();
-    for (int i=0;i<pr->nbBranches - pr->nbINodes + 1;i++){
-        if (res[i]<mi || res[i]>ma){
-            pr->outlier.push_back(i+pr->nbINodes);
+    bool givenRate = pr->givenRate[0];
+    if (pr->estimate_root=="" || pr->estimate_root=="k"){
+        vector<double> dates;
+        vector<int> index;
+        for (int i=pr->nbINodes;i<=pr->nbBranches;i++) {
+            if (nodes[i]->type == 'p') {
+                dates.push_back(nodes[i]->D);
+            }
+        }
+        for (int i=0; i< pr->nbINodes;i++) {
+            if (nodes[i]->type == 'p') {
+                dates.push_back(nodes[i]->D);
+            }
+        }
+        for (int i=0;i<dates.size();i++){
+            index.push_back(i);
+        }
+        if (pr->m > (index.size()-1)){
+            pr->m = index.size()-1;
+        }
+        vector<int>* samples = new vector<int>[index.size()];
+        for (int i = 0; i< index.size();i++){
+            samples[i] = sampleNoRepeat(index, i ,pr->m);
+        }
+        if (pr->estimate_root==""){
+            pr->outlier = outliers_rooted(pr,nodes,samples,dates,false);
+        }
+        if (pr->estimate_root=="k"){
+            double br=0;
+            int s1,s2;
+            vector<int>::iterator iter=nodes[0]->suc.begin();
+            s1=(*iter);
+            iter++;
+            s2=(*iter);
+            br=nodes[s1]->B+nodes[s2]->B;
+            nodes[s1]->B = 0;
+            nodes[s2]->B = br;
+            vector<int> outliers1 = outliers_rooted(pr,nodes,samples,dates,false);
+            nodes[s1]->B = br;
+            nodes[s2]->B = 0;
+            vector<int> outliers2 = outliers_rooted(pr,nodes,samples,dates,false);
+            pr->outlier = intersect(outliers1,outliers2);
+        }
+        delete[] samples;
+        if (pr->outlier.size()>0){
+            std::ostringstream oss;
+            oss<<"- The input dates associated with the following nodes are considered as outliers and were removed from the analysis: ";
+            for (int i=0;i<pr->outlier.size();i++){
+                if (pr->outlier[i] >= pr->nbINodes){
+                    oss<<" "<<(nodes[pr->outlier[i]]->L).c_str();
+                } else {
+                    oss<<" "<<pr->internalConstraints[pr->outlier[i]]->label;
+                }
+            }
+            oss<<"\n";
+            pr->resultMessage.push_back(oss.str());
+            bool bl = remove_outlier_nodes(pr,nodes);
+            if (!bl) {
+                std::ostringstream oss;
+                oss<<"- Removing outliers make the initial root lost. If you don't want that, you can try to reroot the tree or increase the Zscore threshold in option -q to exclude some outliers.\n"<<endl;
+                pr->warningMessage.push_back(oss.str());
+            }
+            
+        }
+        else{
+            std::ostringstream oss;
+            oss<<"- There is not any outlier date.\n";
+            pr->resultMessage.push_back(oss.str());
+        }
+        return true;
+    }
+    else {
+        bool bl = outliers_unrooted(pr,nodes);
+        if (bl){
+            if (pr->outlier.size()>0){
+                std::ostringstream oss;
+                oss<<"- The input dates associated with the following nodes that are considered as outliers and were excluded from the analysis: ";
+                for (int i=0;i<pr->outlier.size();i++){
+                    if (pr->outlier[i] >= pr->nbINodes){
+                        oss<<" "<<(nodes[pr->outlier[i]]->L).c_str();
+                    } else {
+                        oss<<" "<<pr->internalConstraints[pr->outlier[i]]->label;
+                    }
+                }
+                oss<<"\n";
+                pr->resultMessage.push_back(oss.str());
+                remove_outlier_nodes(pr,nodes);
+            }
+            else{
+                std::ostringstream oss;
+                oss<<"- There is not any outlier date.\n";
+                pr->resultMessage.push_back(oss.str());
+            }
+        } else {
+            return false;
         }
     }
-    delete[] res;
-    //check if outliers form a clan under the root
+    pr->givenRate[0] = givenRate;
+    return true;
 }
 
 
 bool remove_one_tip(Pr* pr,Node** nodes,int t,int* &tab){//return false if remove outlier tip would remove the root
-    int p = nodes[t]->P;
-    if (p==0){
-        return false;
-    }
     tab[t] = -1;
+    int p = nodes[t]->P;
     vector<int> suct;
     for (int i=0;i<nodes[p]->suc.size();i++){
         int ps = nodes[p]->suc[i];
-        if (ps!=t) suct.push_back(ps);
+        if (ps!=t) {
+            suct.push_back(ps);
+        }
     }
     if (suct.size()==1){
         int sibling_t = suct[0];
-        tab[p] = -1;
-        if (p>0){
-            int pp = nodes[p]->P;
-            nodes[sibling_t]->B = nodes[sibling_t]->B + nodes[p]->B;
-            nodes[sibling_t]->P = pp;
-            vector<int> sucpp;
-            sucpp.push_back(sibling_t);
-            for (int i=0;i<nodes[pp]->suc.size();i++){
-                int ps = nodes[pp]->suc[i];
-                if (ps!=p) sucpp.push_back(ps);
+        if (p==0) {
+            tab[sibling_t] = -1;
+            nodes[0]->L = nodes[sibling_t]->L;
+            nodes[0]->V = nodes[sibling_t]->V;
+            nodes[0]->type = nodes[sibling_t]->type;
+            nodes[0]->lower = nodes[sibling_t]->lower;
+            nodes[0]->upper = nodes[sibling_t]->upper;
+            nodes[0]->D = nodes[sibling_t]->D;
+            nodes[0]->rateGroup = nodes[sibling_t]->rateGroup;
+            nodes[0]->status = nodes[sibling_t]->status;
+            nodes[0]->suc.clear();
+            for (int i=0;i<nodes[sibling_t]->suc.size();i++){
+                nodes[nodes[sibling_t]->suc[i]]->P = 0;
+                nodes[0]->suc.push_back(nodes[sibling_t]->suc[i]);
             }
-            nodes[pp]->suc = sucpp;
-            if (nodes[p]->type!='n'){
-                nodes[sibling_t]->addConstraintOfP(nodes[p]);
-                nodes[pp]->addConstraintOfS(nodes[p]);
+            return false;
+        }
+        else {
+            tab[p] = -1;
+            if (p>0){
+                int pp = nodes[p]->P;
+                nodes[sibling_t]->B = nodes[sibling_t]->B + nodes[p]->B;
+                nodes[sibling_t]->P = pp;
+                vector<int> sucpp;
+                sucpp.push_back(sibling_t);
+                for (int i=0;i<nodes[pp]->suc.size();i++){
+                    int ps = nodes[pp]->suc[i];
+                    if (ps!=p) sucpp.push_back(ps);
+                }
+                nodes[pp]->suc = sucpp;
+                if (nodes[p]->type!='n'){
+                    nodes[sibling_t]->addConstraintOfP(nodes[p]);
+                    nodes[pp]->addConstraintOfS(nodes[p]);
+                }
+            }
+            else{
+                nodes[sibling_t]->P = -1;
             }
         }
-        else{
-            nodes[sibling_t]->P = -1;
-        }
-        
+    } else{
+        nodes[p]->suc = suct;
     }
     return true;
 }
 
-void shift_node_id(Pr* &pr,Node** &nodes,int* &tab){//t is a tip
+
+void shift_node_id(Pr* &pr,Node** &nodes,int* &tab){
     int shift = 0;
     int inodes_shift=0;
     for (int i=0; i<= pr->nbBranches;i++){
@@ -495,12 +210,14 @@ void shift_node_id(Pr* &pr,Node** &nodes,int* &tab){//t is a tip
     nodesReduced[0]->lower=nodes[0]->lower;
     nodesReduced[0]->upper=nodes[0]->upper;
     nodesReduced[0]->D=nodes[0]->D;
+    nodesReduced[0]->L=nodes[0]->L;
     for (int i=1; i<=pr->nbBranches; i++) {
         if (tab[i]!=-1) {
             nodesReduced[tab[i]]=new Node();
             nodesReduced[tab[i]]->P=tab[nodes[i]->P];
             nodesReduced[tab[i]]->B=nodes[i]->B;
             nodesReduced[tab[i]]->type=nodes[i]->type;
+            nodesReduced[tab[i]]->status=nodes[i]->status;
             nodesReduced[tab[i]]->lower=nodes[i]->lower;
             nodesReduced[tab[i]]->upper=nodes[i]->upper;
             nodesReduced[tab[i]]->D=nodes[i]->D;
@@ -516,48 +233,288 @@ void shift_node_id(Pr* &pr,Node** &nodes,int* &tab){//t is a tip
     }
     for (int i=0;i<pr->internalConstraints.size();i++){
         Date* d = pr->internalConstraints[i];
-        d->id = tab[d->id];
-        prReduced->internalConstraints.push_back(d);
+        if (!isIn(d->id,pr->outlier)){
+            int m = d->mrca.size();
+            if (m>0 && pr->estimate_root!="" && pr->estimate_root!="k"){
+                vector<int> ignoredNodes;
+                for (int j=0;j<d->mrca.size();j++){
+                    if (tab[d->mrca[j]]==-1){
+                        d->mrca.erase(d->mrca.begin()+j);
+                        ignoredNodes.push_back(d->mrca[j]);
+                    } else {
+                        d->mrca[j] = tab[d->mrca[j]];
+                    }
+                }
+                if (m>=2 && d->mrca.size()<2){
+                    ostringstream ss;
+                    ss<<"- The input date constraint of the node "<<d->label<<" was ignored due to outliers removal.\n";
+                    prReduced->warningMessage.push_back(ss.str());
+                } else if (ignoredNodes.size()>0){
+                    ostringstream ss;
+                    ss<<"- The tips ";
+                    for (int j=0;j<ignoredNodes.size();j++){
+                        ss<<nodes[ignoredNodes[j]]->L<<" ";
+                    }
+                    ss<<"are outliers and were removed, that might effect the input date constraint of the node "<<d->label<<"\n";
+                    prReduced->warningMessage.push_back(ss.str());
+                    nodesReduced[tab[d->id]]->type = 'n';
+                    nodesReduced[tab[d->id]]->status = 0;
+                } else {
+                    d->id = tab[d->id];
+                    prReduced->internalConstraints.push_back(d);
+                }
+            } else {
+                d->id = tab[d->id];
+                d->mrca.clear();
+                prReduced->internalConstraints.push_back(d);
+            }
+        }
     }
     computeSuc_polytomy(prReduced, nodesReduced);
     computeVariance(prReduced,nodesReduced);
     nodes = nodesReduced;
     pr = prReduced;
+    initConstraint(pr, nodes);
 }
 
-bool remove_outlier_tips(Pr* &pr,Node** &nodes){
+bool remove_outlier_nodes(Pr* &pr,Node** &nodes){
     int* tab = new int[pr->nbBranches+1];
     for (int i=0;i<=pr->nbBranches;i++) tab[i] = i;
-    bool canRemove = true;
+    bool keepRoot = true;
     int i=0;
-    while (i<pr->outlier.size() && canRemove){
-        canRemove = canRemove && remove_one_tip(pr,nodes,pr->outlier[i],tab);
+    int shift = 0;
+    while (i<pr->outlier.size()){
+        if (pr->outlier[i] >= pr->nbINodes){
+            keepRoot = keepRoot && remove_one_tip(pr,nodes,pr->outlier[i],tab);
+        } else {//ignored the input date of the node
+            pr->internalConstraints.erase(pr->internalConstraints.begin()+pr->outlier[i] - shift);
+            shift++;
+        }
         i++;
     }
-    if (canRemove){
-        shift_node_id(pr,nodes,tab);
-        return true;
+    shift_node_id(pr,nodes,tab);
+    delete[] tab;
+    return keepRoot;
+}
+
+vector<int> sampleNoRepeat(vector<int> array,int ex, int size){
+    swap(array[ex],array[array.size()-1]);
+    vector<int> result;
+    for (int i=0; i< size;i++){
+        int a = std::rand() % (array.size()-1-i);
+        result.push_back(array[a]);
+        swap(array[a],array[array.size()-2-i]);
+    }
+    return result;
+}
+
+vector<double> residus_lsd(Pr* pr,Node** nodes,double& mean_res, double& var_res){
+    vector<double> res;
+    for (int i=1;i<=pr->nbBranches;i++){
+        double r = (nodes[i]->B - pr->rho*(nodes[i]->D - nodes[nodes[i]->P]->D))/sqrt(nodes[i]->V);
+        res.push_back(r);
+        mean_res += r;
+    }
+    mean_res /= pr->nbBranches;
+    for (int i=0;i<pr->nbBranches;i++){
+        var_res += (res[i] - mean_res)*(res[i] - mean_res);
+    }
+    var_res /= (pr->nbBranches-1);
+    return res;
+}
+
+void calculateRoot2DatedNode(Pr* pr,Node** nodes,vector<double> &paths){
+    for (int i=pr->nbINodes;i<=pr->nbBranches;i++){
+        if (nodes[i]->type == 'p'){
+            int k=i;
+            double rtt = 0;
+            while (k!=0){
+                rtt += nodes[k]->B;
+                k = nodes[k]->P;
+            }
+            paths.push_back(rtt);
+        }
+    }
+    for (int i=0;i<pr->nbINodes;i++){
+        if (nodes[i]->type == 'p'){
+            int k=i;
+            double rtt = 0;
+            while (k!=0){
+                rtt += nodes[k]->B;
+                k = nodes[k]->P;
+            }
+            paths.push_back(rtt);
+        }
+    }
+}
+
+void calculateRoot2DatedNode(Pr* pr,Node** nodes,vector<double> &paths,vector<double> &dates){
+    for (int i=pr->nbINodes;i<=pr->nbBranches;i++){
+        if (nodes[i]->type == 'p'){
+            int k=i;
+            double rtt = 0;
+            while (k!=0){
+                rtt += nodes[k]->B;
+                k = nodes[k]->P;
+            }
+            paths.push_back(rtt);
+        }
+    }
+    vector<int> visited;
+    for (int i=0;i<pr->internalConstraints.size();i++){
+        Date* no = pr->internalConstraints[i];
+        if (no->type=='p' && !isIn(no->id,visited)){
+            int k=no->id;
+            double rtt = 0;
+            while (k!=0){
+                rtt += nodes[k]->B;
+                k = nodes[k]->P;
+            }
+            paths.push_back(rtt);
+            dates.push_back(nodes[no->id]->D);
+            visited.push_back(no->id);
+        }
+    }
+}
+
+double median_rate(Pr* pr,Node** nodes, vector<double> dates, vector<int>* samples,bool addInternalDates){
+    if (pr->givenRate[0]){
+        return pr->rho;
     }
     else{
+        vector<double> paths;
+        if (addInternalDates) calculateRoot2DatedNode(pr,nodes,paths,dates);
+        else calculateRoot2DatedNode(pr,nodes,paths);
+        vector<double> rates;
+        for (int i = 0; i< paths.size();i++){
+            vector<double> slopeI;
+            for (vector<int>::iterator iter = samples[i].begin(); iter != samples[i].end(); iter++){
+                if ((*iter < paths.size()) && dates[*iter] != dates[i]){
+                    double slope1 = (paths[*iter] - paths[i])/(dates[*iter] - dates[i]);
+                    slopeI.push_back(slope1);
+                }
+            }
+            if (!slopeI.empty()){
+                rates.push_back(median(slopeI));
+            }
+        }
+        return median(rates);
+    }
+}
+
+vector<int> outliers_rooted(Pr* pr,Node** nodes,vector<int>* samples, vector<double> dates,bool addInternalDates){
+    double rate =  median_rate(pr,nodes,dates,samples,addInternalDates);
+    pr->givenRate[0] = true;
+    pr->rho = rate;
+    without_constraint(pr,nodes);
+    //with_constraint_active_set(pr,nodes);
+    double mean_res = 0;
+    double var_res = 0;
+    vector<double> res = residus_lsd(pr,nodes,mean_res,var_res);
+    for (int i=0;i<res.size();i++) res[i] = (res[i]-mean_res)/sqrt(var_res);
+    vector<int> outliers;
+    for (int i=pr->nbINodes;i<=pr->nbBranches;i++){
+        if (myabs(res[i-1])>pr->e){
+            if (nodes[i]->type != 'n'){
+                outliers.push_back(i);
+            }
+        }
+    }
+    for (int k=0;k<pr->internalConstraints.size();k++){
+        Date* no = pr->internalConstraints[k];
+        int i = no->id;
+        bool bl = false;
+        if (i>0){
+            bl = (myabs(res[i-1])>pr->e);
+        }
+        for (int j=0;j<nodes[i]->suc.size();j++){
+                int s = nodes[i]->suc[j];
+                bl = bl || (myabs(res[s-1])>pr->e);
+        }
+        if (bl){
+            outliers.push_back(k);
+        }
+    }
+    return outliers;
+}
+
+bool outliers_unrooted(Pr* &pr,Node** &nodes){
+    Node** nodes_new = cloneLeaves(pr,nodes,0);
+    double br=0;
+    vector<int>::iterator iter=nodes[0]->suc.begin();
+    int s1=(*iter);
+    iter++;
+    int s2=(*iter);
+    vector<double> originalD;
+    int nbFixedNodes = 0;
+    int nbDates = 0;
+    for (int i=pr->nbINodes;i<=pr->nbBranches;i++) {
+        if (nodes[i]->type == 'p') {
+            originalD.push_back(nodes[i]->D);
+            nbFixedNodes++;
+        }
+        if (nodes[i]->type != 'n') nbDates++;
+    }
+    nbDates += pr->internalConstraints.size();
+    bool bl = false;
+    int y=1;
+    while (!bl && y<=pr->nbBranches){
+        bl=reroot_rootedtree(br,y,s1,s2,pr,nodes,nodes_new);
+        y++;
+    }
+    if (bl){
+        for (int i=0; i< pr->internalConstraints.size();i++){
+            if (pr->internalConstraints[i]->type == 'p') nbFixedNodes++;
+        }
+        vector<int> index;
+        for (int i=0;i<nbFixedNodes;i++){
+            index.push_back(i);
+        }
+        if (pr->m > (index.size()-1)){
+            pr->m = index.size()-1;
+        }
+        vector<int>* samples = new vector<int>[index.size()];
+        for (int i = 0; i< index.size();i++){
+            samples[i] = sampleNoRepeat(index, i ,pr->m);
+        }
+        vector<int> outliersFreq;
+        for (int i=0;i<=pr->nbBranches;i++){
+            outliersFreq.push_back(0);
+        }
+        nodes_new[y]->B = 0;
+        nodes_new[nodes[y]->P]->B = br;
+        bool givenRate = pr->givenRate[0];
+        vector<int> outs=outliers_rooted(pr,nodes_new,samples,originalD,true);
+        for (int i=0;i<outs.size();i++){
+            outliersFreq[outs[i]] ++;
+        }
+        pr->givenRate[0] = givenRate;
+        y++;
+        while (y<=pr->nbBranches){
+            bl=reroot_rootedtree(br,y,s1,s2,pr,nodes,nodes_new);
+            if (bl){
+                nodes_new[y]->B = 0;
+                nodes_new[nodes[y]->P]->B = br;
+                vector<int> outs=outliers_rooted(pr,nodes_new,samples,originalD,true);
+                for (int i=0;i<outs.size();i++){
+                    outliersFreq[outs[i]] ++;
+                }
+            }
+            pr->givenRate[0] = givenRate;
+            y++;
+        }
+        delete[] samples;
+        for (int i=0;i<=pr->nbBranches;i++) delete nodes_new[i];
+        delete[] nodes_new;
+        pr->outlier.clear();
+        for (int i=0;i<outliersFreq.size();i++){
+            if ((outliersFreq[i])>pr->e){
+                pr->outlier.push_back(i);
+            }
+        }
+        return true;
+    } else {
         return false;
     }
 }
-
-/*double slope2(double* paths,double* dates,int i,int j){
- return (paths[j]-paths[i])/(dates[j]-dates[i]);
- }
- 
- double intercept2(double* paths,double* dates,int i,int j){
- return (dates[j]*paths[i]-dates[i]*paths[j])/(dates[j]-dates[i]);
- }
- */
-
-void getOulier(double* sortedArray,double& mi,double& ma,int size,double k){
-    int q1 = round(size/4);
-    int q3 = round(3*size/4);
-    double iqr = sortedArray[q3-1]-sortedArray[q1-1];
-    mi = sortedArray[q1-1]-k*iqr;
-    ma = sortedArray[q3-1]+k*iqr;
-}
-
 

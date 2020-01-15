@@ -1,11 +1,7 @@
 Something new lsd2:
 - Compute confidence intervals, use option -f, e.g. -f 100 to calculate confidence intervals by generating 100 simulated trees. The Possion distribution is used to generate the branch lengths from the time-scaled tree.
-- The input dates are more flexible, can be either applied for an internal node or a tip. 
-A temporal constraint can be either a fix value, a lower bound, an upper bound or an interval. 
-Moreover, if some tip dates are missing, the program will use the maximal subtree containing all known date tips and nodes for the estimation. 
-- Estimate several substitution rates, use option -p to specify the input partition file. 
-A partition file defines subtrees where each one is supposed to have a different rate.
+- The input dates are more flexible, can be either applied for an internal node or a tip. It can be either a fix value, a lower bound, an upper bound or an interval. Some tip dates could be missing, the program will use the maximal subtree containing all given dated nodes for the estimation; and refer the dates for unknown tips.
+- Estimate outliers dates by repeating randomly selecting dated given nodes to have a median rate. This rate is then used to calculate residus of each branch. The residus are normalized and compared to the given Zscore threshold to decide if the related nodes are outliers.
+- Estimate several substitution rates, use option -p to specify the input partition file. A partition file defines subtrees where each one is supposed to have a different rate.
 - Use variance in estimating the root position.
 - Can be applied on non-binary tree
-- When outgroups are given, either remove the outgroups or keep them. In the former case, the root position is estimated on only the branch defined by the outgroups.
-- Estimate outliers tips using standard regression of root-to-tip paths and remove them before estimating dates and rates.

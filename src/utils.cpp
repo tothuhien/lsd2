@@ -879,6 +879,11 @@ bool integrateConstrainU(Date* d1,Node* n2){//n1 is a child of n2
 
 bool initConstraintReRooted(Pr* pr,Node** nodes,int r,int p_r){
     bool constraintConsistent=true;
+    for (int i=0;i<pr->nbINodes;i++){
+        nodes[i]->type = 'n';
+        nodes[i]->status = 0;
+        nodes[i]->L = "";
+    }
     for (vector<Date*>::iterator iter=pr->internalConstraints.begin();iter!=pr->internalConstraints.end();iter++){
         Date* no = (*iter);
         int k=-1;
@@ -891,6 +896,7 @@ bool initConstraintReRooted(Pr* pr,Node** nodes,int r,int p_r){
         }
         else{
             k=mrca(nodes,(*iter)->mrca);
+            no->id = k;
         }
         bool bl = (nodes[k]->addConstraint(*iter));
         constraintConsistent = constraintConsistent && bl;
@@ -906,12 +912,91 @@ bool initConstraintReRooted(Pr* pr,Node** nodes,int r,int p_r){
                 activeUpper(nodes[i]);
             }
         }
+        return checkAllConstraintConsistent(pr,nodes);
+    } else {
+        return false;
     }
-    return constraintConsistent;
 }
 
-bool initConstraint(Pr* pr,Node** nodes){//internalConstraints of the old tree, to assign for new rerooted tree
+bool checkAllConstraintConsistent(Pr* pr,Node** nodes){
+    double* lowerX = new double[pr->nbBranches+1];
+    bool* bl = new bool[pr->nbBranches+1];
+    double* dates = new double[pr->nbBranches+1];
+    double* lower = new double[pr->nbBranches+1];
+    for (int i=0;i<=pr->nbBranches;i++){
+        dates[i] = nodes[i]->D;
+        lower[i] = nodes[i]->lower;
+        if (nodes[i]->type=='l' || nodes[i]->type=='b'){
+            bl[i]=true;
+            lowerX[i]=nodes[i]->lower;
+        }
+        else if (nodes[i]->type=='p'){
+            bl[i]=true;
+            lowerX[i]=dates[i];
+        }
+        else {
+            bl[i]=false;
+        }
+    }
+    vector<int> pre = preorder_polytomy(pr,nodes);
+    for (vector<int>::iterator iter = pre.begin();iter!=pre.end();iter++){
+        int i=*iter;
+        if (bl[i]){
+            for (vector<int>::iterator iter=nodes[i]->suc.begin(); iter!=nodes[i]->suc.end(); iter++) {
+                int s=*iter;
+                if (!bl[s] || (nodes[s]->type=='l' && (nodes[s]->lower<lowerX[i]))){
+                    lowerX[s]=lowerX[i];
+                    lower[s]=lowerX[i];
+                    bl[s]=true;
+                }
+                else if (nodes[s]->type=='u' && nodes[s]->upper<lowerX[i]){
+                    delete[] lowerX;
+                    delete[] bl;
+                    delete[] dates;
+                    delete[] lower;
+                    return false;
+                }
+                else if (nodes[s]->type=='b'){
+                    if (nodes[s]->upper>=lowerX[i]){
+                        if (nodes[s]->lower<lowerX[i]){
+                            lowerX[s]=lowerX[i];
+                            lower[s]=lowerX[i];
+                            bl[s]=true;
+                        }
+                    }
+                    else {
+                        delete[] lowerX;
+                        delete[] bl;
+                        delete[] dates;
+                        delete[] lower;
+                        return false;
+                    }
+                }
+                else if ((nodes[s]->type=='p') && nodes[s]->D<lowerX[i]){
+                    delete[] lowerX;
+                    delete[] bl;
+                    delete[] dates;
+                    delete[] lower;
+                    return false;
+                }
+                if (nodes[s]->D<lowerX[s]){
+                    dates[s]=lowerX[s];
+                }
+            }
+        }
+    }
+    delete[] lower;
+    delete[] dates;
+    delete[] lowerX;
+    delete[] bl;
+    return true;
+}
+bool initConstraint(Pr* pr,Node** nodes){
     bool constraintConsistent=true;
+    for (int i=0;i<pr->nbINodes;i++){
+        nodes[i]->type = 'n';
+        nodes[i]->status = 0;
+    }
     for (vector<Date*>::iterator iter=pr->internalConstraints.begin();iter!=pr->internalConstraints.end();iter++){
         Date* no = (*iter);
         int k=-1;
@@ -920,6 +1005,7 @@ bool initConstraint(Pr* pr,Node** nodes){//internalConstraints of the old tree, 
         }
         else{
             k=mrca(nodes,no->mrca);
+            no->id = k;
         }
         bool bl = (nodes[k]->addConstraint(*iter));
         constraintConsistent = constraintConsistent && bl;
@@ -935,8 +1021,10 @@ bool initConstraint(Pr* pr,Node** nodes){//internalConstraints of the old tree, 
                 activeUpper(nodes[i]);
             }
         }
+        return checkAllConstraintConsistent(pr,nodes);
+    } else {
+        return false;
     }
-    return constraintConsistent;
 }
 
 
@@ -1230,46 +1318,7 @@ void computeObjectiveEstimateRoot(int r,int p_r,double br,Pr* pr,Node** nodes){
         }
     }//p = -(log likelihood)
 }
-/*
- double phi_lambda(int n,int m,int* &P,double* &B,double* &V,double* &T,double rho){
- double p=0;
- for (int i=1;i<=m;i++){
- if (P[i]!=0){
- p+=(B[i]-rho*T[i]+rho*T[P[i]])*(B[i]-rho*T[i]+rho*T[P[i]])/(V[i]);
- }
- }
- return p;
- }
- double phi(int n,int m,double &rho,int* & P,double* & B,double* & V,double* & T){
- double a=0;
- double b=0;
- double c=0;
- for (int i=1;i<=m;i++){
- a+=(T[P[i]]-T[i])*(T[P[i]]-T[i])/V[i];
- b+=2*(T[P[i]]-T[i])*B[i]/V[i];
- c+=B[i]*B[i]/V[i];
- }
- rho=-b/a/2;
- return a*rho*rho+b*rho+c;
- }*/
 
-string newick(int i,int n,int* & P,int* & Suc1,int* & Suc2,string* & Labels,double* & B){
-    ostringstream b;
-    b<<B[i];
-    if (i>=n) return Labels[i]+":"+b.str();
-    else{
-        int s1=Suc1[i];
-        int s2=Suc2[i];
-        string l1=newick(s1,n,P,Suc1,Suc2,Labels,B);
-        string l2=newick(s2,n,P,Suc1,Suc2,Labels,B);
-        if (P[i]!=-1){
-            return "("+l1+","+l2+")"+Labels[i]+":"+b.str();
-        }
-        else{
-            return "("+l1+","+l2+")"+Labels[i]+";\n";
-        }
-    }
-}
 
 string newick(int i,int terminate,Pr* pr,Node** nodes){;
     ostringstream b;
@@ -1286,29 +1335,6 @@ string newick(int i,int terminate,Pr* pr,Node** nodes){;
             else newLabel+=","+l;
         }
         if (i!=terminate) {
-            return newLabel+")"+nodes[i]->L+":"+b.str();
-        }
-        else{
-            return newLabel+")"+nodes[i]->L+";\n";
-        }
-    }
-}
-
-string newickDate(int i,Pr* pr,Node** nodes){
-    ostringstream b;
-    if (i>0){
-        b<<(nodes[i]->D-nodes[nodes[i]->P]->D);
-    }
-    if (i>=pr->nbINodes) return nodes[i]->L+":"+b.str();
-    else{
-        string newLabel="(";
-        for (vector<int>::iterator iter=nodes[i]->suc.begin(); iter!=nodes[i]->suc.end(); iter++) {
-            int s = *iter;
-            string l=newickDate(s,pr,nodes);
-            if (iter==nodes[i]->suc.begin()) newLabel+=l;
-            else newLabel+=","+l;
-        }
-        if (i>0) {
             return newLabel+")"+nodes[i]->L+":"+b.str();
         }
         else{
@@ -1562,6 +1588,7 @@ void computeSuc_polytomy(Pr* pr,Node** nodes){
         }
         v = vt-1; 
     }
+    delete[] visited;
 }
 
 list<int> pos_polytomy(int i,Pr* pr,Node** nodes){
@@ -1589,15 +1616,15 @@ list<int> postorder_polytomy(Pr* pr,Node** nodes){
     return pos_polytomy(root,pr,nodes);
 }
 
-list<int> pre_polytomy(int i,Pr* pr,Node** nodes){
-    list<int> l;
+vector<int> pre_polytomy(int i,Pr* pr,Node** nodes){
+    vector<int> l;
     if (i>=pr->nbINodes) return l;
     else{
         l.push_back(i);
         for (vector<int>::iterator iter = nodes[i]->suc.begin();iter!=nodes[i]->suc.end();iter++){
             if (*iter<pr->nbINodes) {
-                list<int> l1 = pre_polytomy(*iter,pr,nodes);
-                for (list<int>::iterator iter1=l1.begin();iter1!=l1.end();iter1++){
+                vector<int> l1 = pre_polytomy(*iter,pr,nodes);
+                for (vector<int>::iterator iter1=l1.begin();iter1!=l1.end();iter1++){
                     l.push_back(*iter1);
                 }
             }
@@ -1606,7 +1633,7 @@ list<int> pre_polytomy(int i,Pr* pr,Node** nodes){
     }
 }
 
-list<int> preorder_polytomy(Pr* pr,Node** nodes){
+vector<int> preorder_polytomy(Pr* pr,Node** nodes){
     int root=0;
     for (root=0;root<pr->nbINodes;root++){
         if (nodes[root]->P==-1) break;
@@ -1899,10 +1926,11 @@ void assignRateGroupToTree(Pr* pr,Node** nodes){
     
     for (int i=0; i<pr->ratePartition.size(); i++) {
         Part* group = pr->ratePartition[i];
+        cout<<group->subtrees.size()<<endl;
         for (int j=0; j<group->subtrees.size(); j++) {
             Pair* root = group->subtrees[j]->root;
             int r = getInternalNodeId(pr,nodes,root->name);
-            if (contain(r,subroot)) {
+            if (contain(r,subroot)) {cout<<r<<" "<<root->name<<" "<<subroot.size()<<endl;
                 cout<<"Warning: "<<group->name<<" there are overlapped subtrees in the partition file"<<endl;
             }
             else{
@@ -1970,8 +1998,8 @@ void calculate_tree_height(Pr* pr,Node** & nodes){
             }
         }
     }
-    list<int> pre = preorder_polytomy(pr,nodes);
-    for (list<int>::iterator iter = pre.begin();iter!=pre.end();iter++){
+    vector<int> pre = preorder_polytomy(pr,nodes);
+    for (vector<int>::iterator iter = pre.begin();iter!=pre.end();iter++){
         int i = *iter;
         if (i==0){
             nodes[i]->H = 0;
@@ -1998,5 +2026,76 @@ void calculate_tree_height(Pr* pr,Node** & nodes){
     }
 }
 
+void plitExternalBranches(Pr* pr,Node** nodes){
+    pr->ratePartition.clear();
+    Part* part = new Part("externalBranches");
+    for (int i=pr->nbINodes;i<=pr->nbBranches;i++){
+        Pair* node = new Pair(false, nodes[i]->L);
+        Subtree* subtree = new Subtree(node);
+        part->subtrees.push_back(subtree);
+    }
+    pr->ratePartition.push_back(part);
+    pr->multiplierRate.clear();
+    pr->multiplierRate.push_back(1);
+    pr->multiplierRate.push_back(1);
+}
 
+void splitLongBranches(Pr* pr,Node** nodes,double th){
+    pr->ratePartition.clear();
+    Part* part = new Part("longBranches");
+    for (int i=pr->nbINodes;i<=pr->nbBranches;i++){
+        if (nodes[i]->B > th){
+            Pair* node = new Pair(false, nodes[i]->L);
+            Subtree* subtree = new Subtree(node);
+            part->subtrees.push_back(subtree);
+            cout<<nodes[i]->L<<endl;
+        }
+    }
+    for (int i=1;i<pr->nbINodes;i++){
+        if (nodes[i]->B > th){
+            int p = nodes[i]->P;
+            ostringstream np,ni;
+            np<<p;
+            if (nodes[p]->L == "") nodes[p]->L = "longBranch"+np.str();
+            ni<<i;
+            if (nodes[i]->L == "") nodes[i]->L = "longBranch"+ni.str();
+            cout<<nodes[i]->L<<" "<<nodes[p]->L<<endl;
+            Pair* root = new Pair(false,nodes[p]->L);
+            Pair* tip = new Pair(false,nodes[i]->L);
+            vector<Pair*> tips;
+            tips.push_back(tip);
+            Subtree* subtree = new Subtree(root,tips);
+            part->subtrees.push_back(subtree);
+        }
+    }
+    pr->ratePartition.push_back(part);
+    pr->multiplierRate.clear();
+    pr->multiplierRate.push_back(1);
+    pr->multiplierRate.push_back(1);
+}
 
+bool isIn(int i,vector<int> v){
+    for (int j=0;j<v.size();j++){
+        if (v[j]==i) return true;
+    }
+    return false;
+}
+
+vector<int> intersect(vector<int> v1, vector<int> v2){
+    vector<int> intersect;
+    for (int i=0;i<v2.size();i++){
+        if (isIn(v2[i],v1)){
+            intersect.push_back(v2[i]);
+        }
+    }
+    return intersect;
+}
+
+double median(vector<double> array){
+    sort(array.begin(), array.begin()+array.size());
+    if (array.size() % 2 == 0){
+        return (array[(array.size()/2)-1] + array[array.size()/2])/2;
+    } else {
+        return array[(array.size()-1)/2];
+    }
+}

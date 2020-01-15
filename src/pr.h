@@ -24,6 +24,7 @@ typedef struct Pr
     string  outFile;        //Nom du fichier de resultats.
     string treeFile1;       //Nom du fichier d'abres sorties Nexus
     string treeFile2;       //Nom du fichier d'arbres sorties Nexus avec des longueurs de branches mesures par des temps ecoules
+    string treeFile3;       //Nom du fichier d'arbres sorties Newick
     bool relative;         //=true if all the leaves have the same date, the program estimate the relative dates
     double mrca;
     double leaves;
@@ -47,7 +48,8 @@ typedef struct Pr
     double objective;
     int nbSampling;
     bool keepOutgroup;
-    double k;
+    int m;
+    double e;
     vector<Part* > ratePartition;
     vector<Date*> internalConstraints;
     vector<int> outlier;
@@ -81,6 +83,8 @@ typedef struct Pr
         variance=pr->variance;  
         ci=pr->ci;     
         c=pr->c;
+        e=pr->e;
+        m=pr->m;
         verbose=pr->verbose;
         rho=pr->rho;
         rho_min=pr->rho_min;
@@ -94,7 +98,7 @@ typedef struct Pr
             }
         }
         keepOutgroup = pr->keepOutgroup;
-        k = pr->k;
+        m = pr->m;
         warningMessage = pr->warningMessage;
         resultMessage = pr->resultMessage;
     }
@@ -125,7 +129,8 @@ typedef struct Pr
         ratePartition = vector<Part* >();
         internalConstraints = vector<Date* >();
         outlier = vector<int>();
-        k = -1;
+        e = -1;
+        m = 10;
         verbose = false;
         nbINodes = 0;
         nbBranches = 0;

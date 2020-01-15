@@ -1,0 +1,33 @@
+
+LEAST-SQUARE METHODS TO ESTIMATE RATES AND DATES - v1.4 
+
+
+Input files:
+  I                                 Input tree file : ../examples/rooted_tree/h1n1_phyml.tree
+  D                                 Input date file : ../examples/rooted_tree/h1n1_flexible.date
+  P                                  Partition file : ../examples/rooted_tree/h1n1_partition
+Output file:
+  O                                    Output file  : ../examples/rooted_tree/h1n1_phyml.tree.result
+Parameters:
+  C                                With constraints : Yes
+  T                        Lower bound for the rate : 1.000e-10
+  V                                  With variances : No
+  S                                 Sequence Length : 1000
+  R                               Estimate the root : No
+  W                         Given substitution rate : No
+  G                                 Given outgroups : No
+  N                               Multiple data set : No
+  F                    Compute confidence intervals : No
+  E                            Exclude outlier tips : No
+
+  H to print Help 
+  Y to accept or type a letter to change an option (Q = Exit) 
+
+Tree 1 
+*RESULTS:
+- Dating results:
+ rate 0.00291199, rate group1  0.00330133, rate group2  0.00579472, rate group3  0.00436932, tMRCA 2008.86, objective function 0.533572
+
+*********************************************************
+
+TOTAL ELAPSED TIME: 41.86 seconds

@@ -167,9 +167,9 @@ bool without_constraint_lambda(double br,Pr* &par,Node** &nodes,list<int> active
             
         }
         
-        list<int> pre = preorder_polytomy(par,nodes);
+        vector<int> pre = preorder_polytomy(par,nodes);
         
-        for (list<int>::iterator iter = pre.begin();iter!=pre.end();iter++){
+        for (vector<int>::iterator iter = pre.begin();iter!=pre.end();iter++){
             int i = *iter;
             if (leaf(nodes[i])){
                 C[i]=nodes[i]->D;
@@ -197,7 +197,7 @@ bool without_constraint_lambda(double br,Pr* &par,Node** &nodes,list<int> active
             double *G = new double[par->nbBranches+1];
             F[0]=-2*C[0];
             G[0]=-2*X[0];
-            for (list<int>::iterator iter = pre.begin();iter!=pre.end();iter++){
+            for (vector<int>::iterator iter = pre.begin();iter!=pre.end();iter++){
                 int i = *iter;
                 if (i==r || i==pr){
                     F[0]+=C[i];
@@ -244,7 +244,7 @@ bool without_constraint_lambda(double br,Pr* &par,Node** &nodes,list<int> active
             delete[] F;
             delete[] G;
         }
-        for (list<int>::iterator iter = pre.begin();iter!=pre.end();iter++){
+        for (vector<int>::iterator iter = pre.begin();iter!=pre.end();iter++){
             int i = *iter;
             nodes[i]->D = C[i]+X[i]/par->rho;
         }
@@ -356,7 +356,7 @@ bool starting_point_without_constraint_lambda(double br,Pr* &pr,Node** &nodes,li
     without_constraint(pr,nodes);
     double* lowerX = new double[pr->nbBranches+1];
     bool* bl = new bool[pr->nbBranches+1];
-    list<int> pre = preorder_polytomy(pr,nodes);
+    vector<int> pre = preorder_polytomy(pr,nodes);
     for (int i=0;i<=pr->nbBranches;i++){
         if (nodes[i]->type=='l' || nodes[i]->type=='b'){
             bl[i]=true;
@@ -368,7 +368,7 @@ bool starting_point_without_constraint_lambda(double br,Pr* &pr,Node** &nodes,li
         }
         else bl[i]=false;
     }
-    for (list<int>::iterator iter = pre.begin();iter!=pre.end();iter++){
+    for (vector<int>::iterator iter = pre.begin();iter!=pre.end();iter++){
         int i=*iter;
         if (bl[i]){
             for (vector<int>::iterator iter=nodes[i]->suc.begin(); iter!=nodes[i]->suc.end(); iter++) {
@@ -554,7 +554,7 @@ bool with_constraint_lambda(double br,Pr* &pr,Node** &nodes,list<int> active_set
         list<int>* internal = new list<int>[top.size()];
         reduceTree_polytomy(pr,nodes,Pre,Suc,internal);
         list<int> pos = postorder_polytomy(pr,nodes);
-        list<int> pre = preorder_polytomy(pr,nodes);
+        vector<int> pre = preorder_polytomy(pr,nodes);
         double *W= new double[pr->nbINodes];//nodes[i]->D=W[i].T[a(i)]+C[i]+X[i]/rho
         double *C = new double[pr->nbINodes];
         double *X =new double[pr->nbINodes];
@@ -767,7 +767,7 @@ bool with_constraint_lambda(double br,Pr* &pr,Node** &nodes,list<int> active_set
                 }
             }
         }
-        for (list<int>::iterator iter = pre.begin();iter!=pre.end();iter++){
+        for (vector<int>::iterator iter = pre.begin();iter!=pre.end();iter++){
             int i = *iter;
             if (markLeaf(nodes[i])){
                 C[i]=nodes[i]->D;
@@ -796,7 +796,7 @@ bool with_constraint_lambda(double br,Pr* &pr,Node** &nodes,list<int> active_set
         if (!pr->givenRate[0]){
             F[0]=-2*C[0];
             G[0]=-2*X[0];
-            for (list<int>::iterator iter = pre.begin();iter!=pre.end();iter++){
+            for (vector<int>::iterator iter = pre.begin();iter!=pre.end();iter++){
                 int i = *iter;
                 if (i==r || i==p_r){
                     F[0]+=C[i];
@@ -843,7 +843,7 @@ bool with_constraint_lambda(double br,Pr* &pr,Node** &nodes,list<int> active_set
             delete[] F;
             delete[] G;
         }
-        for (list<int>::iterator iter = pre.begin();iter!=pre.end();iter++){
+        for (vector<int>::iterator iter = pre.begin();iter!=pre.end();iter++){
             int i = *iter;
             nodes[i]->D = C[i]+X[i]/pr->rho;
         }
@@ -1153,7 +1153,6 @@ int estimate_root_without_constraint_local_rooted(Pr* &pr,Node** &nodes){
     //P: rooted tree, recherche la nouvelle racine autour de l'ancien racine.
     //estimate root locally with LD algorithm for rooted tree////////////////////////
     //cout<<"Re-estimating the root without constraints around the given root ... ";
-    cout<<"Estimating the root position locally around the given root ..."<<endl;
     double phi1=-1;
     Node** nodes_new = cloneLeaves(pr,nodes,0);
     double* cv = new double[pr->nbBranches+1];
@@ -1189,7 +1188,7 @@ int estimate_root_without_constraint_local_rooted(Pr* &pr,Node** &nodes){
         }
     }
     else{
-        if (pr->verbose) printf("Ignoring due to undetermined solution.\n");
+        if (pr->verbose) printf("Ignoring due to conflict temporal constraints.\n");
     }
     list<int> next;
     if (s1<pr->nbINodes){
@@ -1241,7 +1240,7 @@ int estimate_root_without_constraint_local_rooted(Pr* &pr,Node** &nodes){
             }
         }
         else{
-            if (pr->verbose) printf("Ignoring due to undetermined solution\n");
+            if (pr->verbose) printf("Ignoring due to conflict temporal constraints.\n");
             if (i<pr->nbINodes){
                 for (vector<int>::iterator iter=nodes[i]->suc.begin(); iter!=nodes[i]->suc.end(); iter++) {
                     next.push_back(*iter);
@@ -1269,8 +1268,6 @@ int estimate_root_without_constraint_rooted(Pr* &pr,Node** &nodes){
     //P: rooted tree
     //estimate root with LD algorithm for rooted tree//////////////////////////////////////////
     //cout<<"Re-estimating the root without constraints on all branches... ";
-    
-    cout<<"Estimating the root position on all branches ..."<<endl;
     double phi1;
     Node** nodes_new = cloneLeaves(pr,nodes,0);
     int y=1;
@@ -1357,7 +1354,6 @@ int estimate_root_with_constraint_local_rooted(Pr* &pr,Node** &nodes){
     //P: rooted tree, recherche la nouvelle racine autour de l'ancienne racine.
     /////////////estimate root locally with QPD algorithm for rooted tree////////////////////////////////////////////////////////////
     //    cout<<"Re-estimating the root with constraints around the given root ... ";
-    cout<<"Estimating the root position locally around the given root ..."<<endl;
     Node** nodes_new = cloneLeaves(pr,nodes,0);
     double* cv = new double[pr->nbBranches+1];
     for (int i=0;i<=pr->nbBranches;i++) cv[i]=0;
@@ -1597,7 +1593,6 @@ int estimate_root_with_constraint_fast_rooted(Pr* &pr,Node** &nodes){
 int estimate_root_with_constraint_rooted(Pr* &pr,Node** &nodes){
     //P: rooted tree
     //estimate root with QPD algorithm for rooted tree//////////////////////////////////
-    cout<<"Estimating the root position on all branches ..."<<endl;
     int y=1;
     Node** nodes_new = cloneLeaves(pr,nodes,0);
     double br=0;

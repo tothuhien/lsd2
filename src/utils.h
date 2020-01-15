@@ -8,6 +8,7 @@
 #include <string.h>
 #include "stdarg.h"
 #include <math.h>
+#include <algorithm>
 #ifndef maxIter
 #define maxIter 1000
 #endif
@@ -162,11 +163,7 @@ void computeObjectiveMultiRates(Pr* pr,Node** nodes,double* B, double* V);
 
 void computeObjectiveEstimateRoot(int r,int p_r,double br,Pr* pr,Node** nodes);
 
-string newick(int i,int n,int* & P,int* & Suc1,int* & Suc2,string* & Labels,double* & B);
-
 string newick(int i,int terminate,Pr* pr,Node** nodes);
-
-string newickDate(int i,Pr* pr,Node** nodes);
 
 string nexus(int i,Pr* pr,Node** nodes);
 
@@ -205,9 +202,9 @@ list<int> pos_polytomy(int i,Pr* pr,Node** nodes);
 
 list<int> postorder_polytomy(Pr* pr,Node** nodes);
 
-list<int> pre_polytomy(int i,Pr* pr,Node** nodes);
+vector<int> pre_polytomy(int i,Pr* pr,Node** nodes);
 
-list<int> preorder_polytomy(Pr* pr,Node** nodes);
+vector<int> preorder_polytomy(Pr* pr,Node** nodes);
 
 stack<int>* computeFeuilles_polytomy(list<int> ls,Pr* pr,Node** nodes);
 
@@ -244,3 +241,15 @@ double* sortTab(double* tab,int size);
 bool outlierCheck(Pr* pr,Node** nodes);
 
 void calculate_tree_height(Pr* pr,Node** & nodes);
+
+void plitExternalBranches(Pr* pr,Node** nodes);
+
+void splitLongBranches(Pr* pr,Node** nodes,double th);
+
+bool isIn(int i,vector<int> v);
+
+vector<int> intersect(vector<int> v1, vector<int> v2);
+
+bool checkAllConstraintConsistent(Pr* pr,Node** nodes);
+
+double median(vector<double> array);

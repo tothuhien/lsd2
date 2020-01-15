@@ -18,12 +18,14 @@ typedef struct Date
 	double upper;
     double date;
 	int id;
+    string label;
     vector<int> mrca;
     Date(){
         type='n';
         id=-1;
     }
-    Date(char t,double v1,double v2,int k){
+    Date(string l,char t,double v1,double v2,int k){
+        label = l;
         id=k;
         if (t=='l'){
             type=t;
@@ -46,7 +48,8 @@ typedef struct Date
             cout<<"unrecognized temporal constraint type"<<endl;
         }
     }
-    Date(char t,double v1,double v2,vector<int> mr){
+    Date(string l,char t,double v1,double v2,vector<int> mr){
+        label =l;
         mrca.clear();
         for (vector<int>::iterator iter=mr.begin();iter!=mr.end();iter++){
             mrca.push_back(*iter);

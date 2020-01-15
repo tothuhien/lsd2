@@ -57,22 +57,22 @@ int main( int argc, char** argv ){
     }
     opt->treeFile1=opt->outFile+".nexus";
     opt->treeFile2=opt->outFile+".date.nexus";
+    opt->treeFile3=opt->outFile+".nwk";
     FILE * tree1 = fopen(opt->treeFile1.c_str(),"wt");
     FILE * tree2 = fopen(opt->treeFile2.c_str(),"wt");
+    FILE * tree3 = fopen(opt->treeFile3.c_str(),"wt");
     ifstream gr(opt->rate.c_str());
     if (tree1==NULL || tree2==NULL){
         cout<<"Error: can not create the output tree files."<<endl;
     }
     fprintf(tree1,"#NEXUS\n");
     fprintf(tree2,"#NEXUS\n");
-    
     bool constraintConsistent=true;
     int s=0;
     if (opt->partitionFile!="") {
         readPartitionFile(opt);
         for (int i=0;i<=opt->ratePartition.size();i++){
             opt->givenRate.push_back(false);
-            //opt->multiplierRate.push_back(1);
         }
     }
     for (int y=1;y<=opt->nbData;y++){
@@ -94,16 +94,20 @@ int main( int argc, char** argv ){
             for (int i=opt->nbINodes;i<=opt->nbBranches;i++){
                 nodes[i]->newPConstraint('p',opt->leaves);
             }
-            Date* dateRoot = new Date('p',opt->mrca,0,0);
+            Date* dateRoot = new Date("", 'p',opt->mrca,0,0);
             opt->internalConstraints.clear();
             opt->internalConstraints.push_back(dateRoot);
+            if (opt->e){
+                std::ostringstream oss;
+                oss<<"- Estimating outliers are not available with relative dates.\n";
+                opt->warningMessage.push_back(oss.str());
+            }
         }
         if (y==1){
             fprintf(tree1,"Begin trees;\n");
             fprintf(tree2,"Begin trees;\n");
         }
         computeVariance(opt,nodes);
-        constraintConsistent=initConstraint(opt, nodes);
         double br=0;
         if (opt->givenRate[0]){
             string line;
@@ -120,110 +124,114 @@ int main( int argc, char** argv ){
                 }
             } else{
                 std::ostringstream oss;
-                oss<<" - There are less given rates than the number of given trees.\n";
+                oss<<"- There are less given rates than the number of given trees.\n";
                 opt->warningMessage.push_back(oss.str());
                 opt->givenRate[0] = false;
             }
         }
-        bool canRemoveOutlier = true;
-        if (opt->k >0) {
-            canRemoveOutlier = calculateOutliers(opt,nodes);
-        }
-        if (canRemoveOutlier){
-            if (!opt->constraint){//LD without constraints
-                if (opt->estimate_root==""){//keep the given root
-                    if (constraintConsistent){
-                        cout<<"Dating without temporal constraints ..."<<endl;
-                        without_constraint_multirates(opt,nodes,true);
-                        output(br,y,opt,nodes,result,tree1,tree2);
-                    }
-                    else{
-                        cout<<"There's conflict in the input temporal constraints. Try the option -r to re-estimate the root position."<<endl;
-                    }
+        constraintConsistent=initConstraint(opt, nodes);
+        if (!opt->constraint){//LD without constraints
+            if (opt->e) constraintConsistent = calculateOutliers(opt,nodes);
+            if (!constraintConsistent){
+                ostringstream oss;
+                oss<<"- There's conflict in the input temporal constraints.\n";
+                opt->warningMessage.push_back(oss.str());
+            }
+            if (opt->estimate_root==""){//keep the given root
+                cout<<"Dating without temporal constraints ..."<<endl;
+                without_constraint_multirates(opt,nodes,true);
+                output(br,y,opt,nodes,result,tree1,tree2,tree3);
+            }
+            else if (opt->estimate_root=="k"){
+                cout<<"Estimating the root position on the branch defined by given root ..."<<endl;
+                double br=0;
+                vector<int>::iterator iter=nodes[0]->suc.begin();
+                int s1=(*iter);
+                iter++;
+                int s2=(*iter);
+                br=nodes[s1]->B+nodes[s2]->B;
+                nodes[s1]->V=variance(opt,br);
+                nodes[s2]->V=nodes[s1]->V;
+                without_constraint_active_set_lambda_multirates(br,opt,nodes,true);
+                output(br,y,opt,nodes,result,tree1,tree2,tree3);
+            }
+            else{//estimate the root
+                int r;
+                if (opt->estimate_root.compare("l")==0){//improve locally the root around the given root
+                    cout<<"Estimating the root position locally around the given root ..."<<endl;
+                    r=estimate_root_without_constraint_local_rooted(opt,nodes);
                 }
-                else if (opt->estimate_root=="k"){
-                    cout<<"Estimating the root position on the branch defined by given root ..."<<endl;
-                    double br=0;
+                else{ //forget the given root and re-estimate the position of the root over all branhces
+                    cout<<"Estimating the root position on all branches ..."<<endl;
+                    r=estimate_root_without_constraint_rooted(opt,nodes);
+                }
+                if (r>0){
+                    Node** nodes_new = cloneLeaves(opt,nodes,0);
                     vector<int>::iterator iter=nodes[0]->suc.begin();
                     int s1=(*iter);
                     iter++;
                     int s2=(*iter);
-                    br=nodes[s1]->B+nodes[s2]->B;
-                    nodes[s1]->V=variance(opt,br);
-                    nodes[s2]->V=nodes[s1]->V;
-                    without_constraint_active_set_lambda_multirates(br,opt,nodes,true);
-                    output(br,y,opt,nodes,result,tree1,tree2);
+                    for (int i=opt->nbINodes; i<=opt->nbBranches; i++) {
+                        nodes_new[i]->status=nodes[i]->status;
+                    }
+                    reroot_rootedtree(br,r,s1,s2,opt,nodes,nodes_new);
+                    without_constraint_active_set_lambda_multirates(br,opt,nodes_new,true);
+                    output(br,y,opt,nodes_new,result,tree1,tree2,tree3);
+                    for (int i=0;i<opt->nbBranches+1;i++) delete nodes_new[i];
+                    delete[] nodes_new;
                 }
-                else{//estimate the root
-                    int r;
-                    if (opt->estimate_root.compare("l")==0){//improve locally the root around the given root
-                        r=estimate_root_without_constraint_local_rooted(opt,nodes);
-                    }
-                    else{ //forget the given root and re-estimate the position of the root over all branhces
-                        r=estimate_root_without_constraint_rooted(opt,nodes);
-                    }
-                    if (r!=0){
-                        Node** nodes_new = cloneLeaves(opt,nodes,0);
-                        vector<int>::iterator iter=nodes[0]->suc.begin();
-                        int s1=(*iter);
-                        iter++;
-                        int s2=(*iter);
-                        for (int i=opt->nbINodes; i<=opt->nbBranches; i++) {
-                            nodes_new[i]->status=nodes[i]->status;
-                        }
-                        reroot_rootedtree(br,r,s1,s2,opt,nodes,nodes_new);
-                        
-                        without_constraint_active_set_lambda_multirates(br,opt,nodes_new,true);
-                        
-                        output(br,y,opt,nodes_new,result,tree1,tree2);
-                        for (int i=0;i<opt->nbBranches+1;i++) delete nodes_new[i];
-                        delete[] nodes_new;
-                    }
-                }
-                
             }
-            else {//QPD with temporal constrains
-                if (opt->estimate_root==""){//keep the given root
-                    if (constraintConsistent){
-                        cout<<"Dating under temporal constraints mode ..."<<endl;
-                        bool consistent = with_constraint_multirates(opt,nodes,true);
-                        if (consistent) {
-                            output(br,y,opt,nodes,result,tree1,tree2);
+        }
+        else {//QPD with temporal constrains
+            if (constraintConsistent || (opt->estimate_root!="" && opt->estimate_root!="k")){
+                if (opt->e) constraintConsistent = calculateOutliers(opt,nodes);
+                if (constraintConsistent){
+                    if (opt->estimate_root==""){//keep the given root
+                        if (constraintConsistent){
+                            cout<<"Dating under temporal constraints mode ..."<<endl;
+                            constraintConsistent = with_constraint_multirates(opt,nodes,true);
+                        }
+                        if (constraintConsistent) {
+                            output(br,y,opt,nodes,result,tree1,tree2,tree3);
                         }
                         else{
-                            cout<<"There's conflict in the input temporal constraints. Try the option -r to re-estimate the root position."<<endl;
+                            cout<<"*WARNING: There's conflict in the input temporal constraints."<<endl;
                         }
                     }
-                    else{
-                        cout<<"There's conflict in the input temporal constraints. Try the option -r to re-estimate the root position."<<endl;
+                    else if (opt->estimate_root=="k"){
+                        if (constraintConsistent){
+                            cout<<"Estimating the root position on the branch defined by given outgroups ..."<<endl;
+                            double br=0;
+                            vector<int>::iterator iter=nodes[0]->suc.begin();
+                            int s1=(*iter);
+                            iter++;
+                            int s2=(*iter);
+                            br=nodes[s1]->B+nodes[s2]->B;
+                            nodes[s1]->V=variance(opt,br);
+                            nodes[s2]->V=nodes[s1]->V;
+                            constraintConsistent = with_constraint_active_set_lambda_multirates(br,opt,nodes,true);
+                        }
+                        if (constraintConsistent) {
+                            output(br,y,opt,nodes,result,tree1,tree2,tree3);
+                        } else {
+                            cout<<"*WARNING: There's conflict in the input temporal constraints."<<endl;
+                        }
                     }
-                }
-                else if (opt->estimate_root=="k"){
-                    cout<<"Estimating the root position on the branch defined by given outgroups ..."<<endl;
-                    double br=0;
-                    vector<int>::iterator iter=nodes[0]->suc.begin();
-                    int s1=(*iter);
-                    iter++;
-                    int s2=(*iter);
-                    br=nodes[s1]->B+nodes[s2]->B;
-                    nodes[s1]->V=variance(opt,br);
-                    nodes[s2]->V=nodes[s1]->V;
-                    with_constraint_active_set_lambda_multirates(br,opt,nodes,true);
-                    output(br,y,opt,nodes,result,tree1,tree2);
-                }
-                else{//estimate the root
-                    int r;
-                    if (opt->estimate_root.compare("l")==0){//improve locally the root around the given root
-                        r=estimate_root_with_constraint_local_rooted(opt,nodes);
-                    }
-                    else if (opt->estimate_root.compare("a")==0){
-                        //forget the given root and re-estimate the position of the root over all branhces using fast method
-                        r=estimate_root_with_constraint_fast_rooted(opt,nodes);
-                    }
-                    else{ //forget the given root and re-estimate the position of the root over all branches
-                        r=estimate_root_with_constraint_rooted(opt,nodes);
-                    }
-                    if (r>0){
+                    else{//estimate the root
+                        int r;
+                        if (opt->estimate_root.compare("l")==0){//improve locally the root around the given root
+                            cout<<"Estimating the root position locally around the given root ..."<<endl;
+                            r=estimate_root_with_constraint_local_rooted(opt,nodes);
+                        }
+                        else if (opt->estimate_root.compare("a")==0){
+                            //forget the given root and re-estimate the position of the root over all branhces using fast method
+                            cout<<"Estimating the root position on all branches using fast methode ..."<<endl;
+                            r=estimate_root_with_constraint_fast_rooted(opt,nodes);
+                        }
+                        else{ //forget the given root and re-estimate the position of the root over all branches
+                            cout<<"Estimating the root position on all branches ..."<<endl;
+                            r=estimate_root_with_constraint_rooted(opt,nodes);
+                        }
                         Node** nodes_new = cloneLeaves(opt,nodes,0);
                         vector<int>::iterator iter=nodes[0]->suc.begin();
                         int s1=(*iter);
@@ -233,14 +241,16 @@ int main( int argc, char** argv ){
                             nodes_new[i]->status=nodes[i]->status;
                         }
                         reroot_rootedtree(br,r,s1,s2,opt,nodes,nodes_new);
-                        
                         with_constraint_active_set_lambda_multirates(br,opt,nodes_new,true);
-                        output(br,y,opt,nodes_new,result,tree1,tree2);
+                        output(br,y,opt,nodes_new,result,tree1,tree2,tree3);
                         for (int i=0;i<opt->nbBranches+1;i++) delete nodes_new[i];
                         delete[] nodes_new;
-                        
                     }
+                } else {
+                    cout<<"*WARNING: There's conflict in the input temporal constraints."<<endl;
                 }
+            } else {
+                cout<<"*WARNING: There's conflict in the input temporal constraints."<<endl;
             }
         }
         for (int i=0;i<=opt->nbBranches;i++) delete nodes[i];
@@ -257,7 +267,7 @@ int main( int argc, char** argv ){
     fclose(result);
     fclose(tree1);
     fclose(tree2);
-    //fclose(tree3);
+    fclose(tree3);
     gr.close();
     return EXIT_SUCCESS;
 }
