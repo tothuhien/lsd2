@@ -97,7 +97,7 @@ int main( int argc, char** argv ){
             Date* dateRoot = new Date("", 'p',opt->mrca,0,0);
             opt->internalConstraints.clear();
             opt->internalConstraints.push_back(dateRoot);
-            if (opt->e){
+            if (opt->e>0){
                 std::ostringstream oss;
                 oss<<"- Estimating outliers are not available with relative dates.\n";
                 opt->warningMessage.push_back(oss.str());
@@ -131,7 +131,7 @@ int main( int argc, char** argv ){
         }
         constraintConsistent=initConstraint(opt, nodes);
         if (!opt->constraint){//LD without constraints
-            if (opt->e) constraintConsistent = calculateOutliers(opt,nodes);
+            if (opt->e>0) constraintConsistent = calculateOutliers(opt,nodes);
             if (!constraintConsistent){
                 ostringstream oss;
                 oss<<"- There's conflict in the input temporal constraints.\n";
@@ -184,7 +184,7 @@ int main( int argc, char** argv ){
         }
         else {//QPD with temporal constrains
             if (constraintConsistent || (opt->estimate_root!="" && opt->estimate_root!="k")){
-                if (opt->e) constraintConsistent = calculateOutliers(opt,nodes);
+                if (opt->e>0) constraintConsistent = calculateOutliers(opt,nodes);
                 if (constraintConsistent){
                     if (opt->estimate_root==""){//keep the given root
                         if (constraintConsistent){
