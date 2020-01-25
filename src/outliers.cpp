@@ -27,8 +27,8 @@ bool calculateOutliers(Pr* & pr,Node** & nodes){
         oss<<"- The node(s)"+nodes_imprecise_date+" do not have precise date value, so will not be included in estimating outliers.\n";
         pr->warningMessage.push_back(oss.str());
     }
-    bool givenRate = pr->givenRate[0];
     if (pr->estimate_root=="" || pr->estimate_root=="k"){
+        bool givenRate = pr->givenRate[0];
         vector<double> dates;
         vector<int> index;
         for (int i=pr->nbINodes;i<=pr->nbBranches;i++) {
@@ -70,6 +70,7 @@ bool calculateOutliers(Pr* & pr,Node** & nodes){
             vector<int> outliers2 = outliers_rooted(pr,nodes,samples,dates,false);
             pr->outlier = intersect(outliers1,outliers2);
         }
+        pr->givenRate[0] = givenRate;
         delete[] samples;
         if (pr->outlier.size()>0){
             std::ostringstream oss;
@@ -124,7 +125,6 @@ bool calculateOutliers(Pr* & pr,Node** & nodes){
             return false;
         }
     }
-    pr->givenRate[0] = givenRate;
     return true;
 }
 
@@ -233,7 +233,7 @@ void shift_node_id(Pr* &pr,Node** &nodes,int* &tab){
     }
     for (int i=0;i<pr->internalConstraints.size();i++){
         Date* d = pr->internalConstraints[i];
-        if (!isIn(d->id,pr->outlier)){
+        if (tab[d->id] != -1){
             int m = d->mrca.size();
             if (m>0 && pr->estimate_root!="" && pr->estimate_root!="k"){
                 vector<int> ignoredNodes;
@@ -323,6 +323,16 @@ vector<double> residus_lsd(Pr* pr,Node** nodes,double& mean_res, double& var_res
     return res;
 }
 
+vector<double> residus_lsd_rtt(Pr* pr,Node** nodes,double& mean_res, double& var_res){
+    vector<double> res;
+    for (int i=1;i<=pr->nbBranches;i++){
+        double r = (nodes[i]->B - pr->rho*(nodes[i]->D - nodes[nodes[i]->P]->D))/sqrt(nodes[i]->V);
+        res.push_back(r);
+    }
+    //TODO
+    return res;
+}
+
 void calculateRoot2DatedNode(Pr* pr,Node** nodes,vector<double> &paths){
     for (int i=pr->nbINodes;i<=pr->nbBranches;i++){
         if (nodes[i]->type == 'p'){
@@ -402,6 +412,8 @@ double median_rate(Pr* pr,Node** nodes, vector<double> dates, vector<int>* sampl
     }
 }
 
+
+
 vector<int> outliers_rooted(Pr* pr,Node** nodes,vector<int>* samples, vector<double> dates,bool addInternalDates){
     double rate =  median_rate(pr,nodes,dates,samples,addInternalDates);
     pr->givenRate[0] = true;
@@ -415,7 +427,7 @@ vector<int> outliers_rooted(Pr* pr,Node** nodes,vector<int>* samples, vector<dou
     vector<int> outliers;
     for (int i=pr->nbINodes;i<=pr->nbBranches;i++){
         if (myabs(res[i-1])>pr->e){
-            if (nodes[i]->type != 'n'){
+            if (nodes[i]->type == 'p'){
                 outliers.push_back(i);
             }
         }
@@ -423,16 +435,18 @@ vector<int> outliers_rooted(Pr* pr,Node** nodes,vector<int>* samples, vector<dou
     for (int k=0;k<pr->internalConstraints.size();k++){
         Date* no = pr->internalConstraints[k];
         int i = no->id;
-        bool bl = false;
-        if (i>0){
-            bl = (myabs(res[i-1])>pr->e);
-        }
-        for (int j=0;j<nodes[i]->suc.size();j++){
+        if (nodes[i]->type == 'p'){
+            bool bl = false;
+            if (i>0){
+                bl = (myabs(res[i-1])>pr->e);
+            }
+            for (int j=0;j<nodes[i]->suc.size();j++){
                 int s = nodes[i]->suc[j];
                 bl = bl || (myabs(res[s-1])>pr->e);
-        }
-        if (bl){
-            outliers.push_back(k);
+            }
+            if (bl){
+                outliers.push_back(k);
+            }
         }
     }
     return outliers;
