@@ -18,7 +18,7 @@ bool without_constraint(Pr* pr,Node** nodes);
 
 bool conditions(list<double>& ldLagrange,Pr* pr,Node** nodes);
 
-bool starting_point(Pr* pr,Node** nodes,list<int> & active_set);
+void starting_point(Pr* pr,Node** nodes,list<int> & active_set);
 
 list<double> computeLambda(list<int> active_set,Pr* pr,Node** nodes);
 

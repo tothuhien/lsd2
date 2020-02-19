@@ -154,44 +154,21 @@ bool conditions(list<double>& ldLagrange,Pr* pr,Node** nodes){
     return true;
 }
 
-bool starting_point(Pr* pr,Node** nodes,list<int> & active_set){
-    bool val = without_constraint(pr,nodes);
-    if (!val) return false;
-    for (int i =0;i<pr->nbINodes;i++) {
-        if (lower(nodes[i]) || upper(nodes[i])) {
-            active_set.push_back(-i);
-        }
-        else if (nodes[i]->type!='p') {
-            if ((nodes[i]->type=='l' || nodes[i]->type=='b') && nodes[i]->D<nodes[i]->lower) {
+void starting_point(Pr* pr,Node** nodes,list<int> & active_set){
+    for (int i =0;i<=pr->nbBranches;i++) {
+        if (nodes[i]->type!='p') {
+            if (nodes[i]->type=='l' || nodes[i]->type=='b') {
                 activeLower(nodes[i]);
                 nodes[i]->D=nodes[i]->lower;
                 active_set.push_back(-i);
             }
-            else if ((nodes[i]->type=='u' || nodes[i]->type=='b') && nodes[i]->D>nodes[i]->upper) {
+            else if (nodes[i]->type=='u') {
                 activeUpper(nodes[i]);
                 nodes[i]->D=nodes[i]->upper;
                 active_set.push_back(-i);
             }
         }
     }
-    for (int i=pr->nbINodes; i<=pr->nbBranches; i++) {
-        if (lower(nodes[i]) || upper(nodes[i])) {
-            active_set.push_back(i);
-        }
-        else if (nodes[i]->type!='p') {
-            if ((nodes[i]->type=='l' || nodes[i]->type=='b') && nodes[i]->D<nodes[i]->lower) {
-                activeLower(nodes[i]);
-                nodes[i]->D=nodes[i]->lower;
-                active_set.push_back(-i);
-            }
-            else if ((nodes[i]->type=='u' || nodes[i]->type=='b') && nodes[i]->D>nodes[i]->upper) {
-                activeUpper(nodes[i]);
-                nodes[i]->D=nodes[i]->upper;
-                active_set.push_back(-i);
-            }
-        }
-    }
-    return true;
 }
 
 list<double> computeLambda(list<int> active_set,Pr* pr,Node** nodes){
@@ -293,13 +270,12 @@ bool without_constraint_active_set(Pr* pr,Node** nodes){
     //this methods implements the LD algorithm (active set method)
     initialize_status(pr,nodes);
     list<int> active_set;
-    bool val = starting_point(pr,nodes,active_set);
-    if (!val) return false;
+    starting_point(pr,nodes,active_set);
     double* D_old = new double[pr->nbBranches+1];
     for (int i=0; i<=pr->nbBranches; i++) {
         D_old[i]=nodes[i]->D;
     }
-    val = without_constraint(pr,nodes);
+    bool val = without_constraint(pr,nodes);
     if (!val) return false;
     list<double> lambda = computeLambda(active_set,pr,nodes);
     int nb_iter=0;
@@ -517,7 +493,9 @@ bool with_constraint(Pr* pr,Node** &nodes,list<int> active_set,list<double>& ld)
     int* Pre=new int[pr->nbBranches+1];
     for (int i=0;i<=pr->nbBranches;i++){
         Pre[i]=-1;
-        if (leaf(nodes[i])) activeMarkLeaf(nodes[i]);
+        if (leaf(nodes[i])) {
+            activeMarkLeaf(nodes[i]);
+        }
         else desactiveMarkLeaf(nodes[i]);
     }
     list<int> ls;
@@ -602,6 +580,8 @@ bool with_constraint(Pr* pr,Node** &nodes,list<int> active_set,list<double>& ld)
                 W[i]=wtemp/coefs;
                 C[i]=ctemp/coefs;
                 X[i]=xtemp/coefs;
+                //if (i==66 | i==1)
+                //{cout<<i<<" "<<W[i]<<" "<<C[i]<<" "<<X[i]<<endl;}
             }
         }
     }

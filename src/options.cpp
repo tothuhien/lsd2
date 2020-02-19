@@ -119,7 +119,7 @@ Pr* getCommandLine( int argc, char** argv)
                 if( !isInteger(optarg) )
                     myExit("Argument of option -m must be an integer.\n");
                 opt->m = atof( optarg );
-                if (opt->m<0) myExit("Argument of option -m can not be negative.\n");
+                if (opt->m<2) myExit("Argument of option -m must be >= 2.\n");
                 break;
             case 't':
                 if( !isReal(optarg) )

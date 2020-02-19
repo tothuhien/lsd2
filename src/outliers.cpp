@@ -44,8 +44,9 @@ bool calculateOutliers(Pr* & pr,Node** & nodes){
         for (int i=0;i<dates.size();i++){
             index.push_back(i);
         }
-        if (pr->m > (index.size()-1)){
-            pr->m = index.size()-1;
+        if ((pr->m +1) > index.size()){
+            cout<<"Error: there are "<<index.size()<<" input precise dates, not enough to estimate outliers. The number of input precise dates must be bigger than "<<pr->m<<" (option settable by -m)."<<endl;
+            exit(EXIT_FAILURE);
         }
         vector<int>* samples = new vector<int>[index.size()];
         for (int i = 0; i< index.size();i++){
