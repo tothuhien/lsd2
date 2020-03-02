@@ -132,7 +132,7 @@ void computeIC(double br,Pr* pr,Node** nodes,double* &T_left,double* &T_right,do
             minB=nodesReduced[i]->B;
         }
     }
-    int seqLength_forIC = min(pr->seqLength,1000);
+    int seqLength_forIC = pr->seqLength;//min(pr->seqLength,1000);
     for (int i=1;i<=prReduced->nbBranches;i++){
         std::poisson_distribution<int> distribution(nodesReduced[i]->B*seqLength_forIC);
         for (int j=0;j<pr->nbSampling;j++){

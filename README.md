@@ -142,9 +142,9 @@ However for relaxed clock data, variances may not be well estimated since they a
 
 	- You want to calculate confidence intervals from 100 simulated trees. 
 
-    `./lsd2 -i rootedtree_file -d date_file -c -r l -f 100 -s 1700`
+    `./lsd2 -i rootedtree_file -d date_file -c -r l -f 100`
     
-    (To calculate confidence intervals, sequence length is required via option -s. The program will use the sequence length (or 1000 if the sequence length is greater) to generate branch lengths of simulated trees, using a Poisson distrubtion.)
+    (To calculate confidence intervals, the program generates simulated branch lengths using Poisson distributions whose mean equal to the estimated ones multiplied with sequence length. The default sequence length 1000 is used if nothing specified via option -s).
 
 	- If all tips are supposed to have the same date, you can still estimate the rate but only relative dates.
 	
