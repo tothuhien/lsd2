@@ -88,7 +88,7 @@ bool calculateOutliers(Pr* & pr,Node** & nodes){
             bool bl = remove_outlier_nodes(pr,nodes);
             if (!bl) {
                 std::ostringstream oss;
-                oss<<"- Removing outliers make the initial root lost. If you don't want that, you can try to reroot the tree or increase the Zscore threshold in option -q to exclude some outliers.\n"<<endl;
+                oss<<"- Removing outliers make the initial root lost. If you don't want that, you can try to reroot the tree or increase the Zscore threshold in option -e to exclude some outliers.\n"<<endl;
                 pr->warningMessage.push_back(oss.str());
             }
             
@@ -134,6 +134,7 @@ bool remove_one_tip(Pr* pr,Node** nodes,int t,int* &tab){//return false if remov
     tab[t] = -1;
     int p = nodes[t]->P;
     vector<int> suct;
+    bool bl = true;
     for (int i=0;i<nodes[p]->suc.size();i++){
         int ps = nodes[p]->suc[i];
         if (ps!=t) {
@@ -157,7 +158,7 @@ bool remove_one_tip(Pr* pr,Node** nodes,int t,int* &tab){//return false if remov
                 nodes[nodes[sibling_t]->suc[i]]->P = 0;
                 nodes[0]->suc.push_back(nodes[sibling_t]->suc[i]);
             }
-            return false;
+            bl = false;
         }
         else {
             tab[p] = -1;
@@ -184,7 +185,7 @@ bool remove_one_tip(Pr* pr,Node** nodes,int t,int* &tab){//return false if remov
     } else{
         nodes[p]->suc = suct;
     }
-    return true;
+    return bl;
 }
 
 
@@ -286,7 +287,7 @@ bool remove_outlier_nodes(Pr* &pr,Node** &nodes){
     int shift = 0;
     while (i<pr->outlier.size()){
         if (pr->outlier[i] >= pr->nbINodes){
-            keepRoot = keepRoot && remove_one_tip(pr,nodes,pr->outlier[i],tab);
+            keepRoot = remove_one_tip(pr,nodes,pr->outlier[i],tab) && keepRoot;
         } else {//ignored the input date of the node
             pr->internalConstraints.erase(pr->internalConstraints.begin()+pr->outlier[i] - shift);
             shift++;
