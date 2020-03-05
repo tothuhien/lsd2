@@ -10,7 +10,7 @@
 #include "utils.h"
 
 #ifndef VERSION
-#define VERSION "v1.4.2.3"
+#define VERSION "v1.4.2.4"
 #endif
 #ifndef BOLD
 #define BOLD      "\033[00;01m"
