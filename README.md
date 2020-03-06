@@ -118,7 +118,7 @@ Note that if the internal nodes don't have labels, then they can be defined by m
 ## Caution in using variance
 
 Simulation data show that using variance (option `-v`) gives better result on strict clock data. 
-However for relaxed clock data, variances may not be well estimated since they are not necessarily be linear with the branch lengths. In this case, you can try to reduce the effect of variance by increasing parameter `-b` (which is 10 by default). This parameter should be between 1 and 100, the bigger it is the more it looks like no variance. Using variance is still useful though to penalize long branch lengths. Also, option `-v 2` may only be usefull with strict clock tree.
+However for relaxed clock data, variances may not necessarily be linear with the branch lengths. In this case, you can try to reduce the effect of variances by increasing parameter `-b` (which is 0.1 by default). This parameter (between 0 and 1) should be adjusted based on the distribution of your branch lengths, and normally a bit greater than the smallest branch length. The bigger it is the less effect of branch lengths on variances. Using variance is still useful though to penalize long branch lengths. Also, option `-v 2` may only be usefull with strict clock tree.
 
 ## Some examples of command lines:
 

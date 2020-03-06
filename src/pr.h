@@ -37,7 +37,7 @@ typedef struct Pr
     bool constraint;       //Impose the constraints or not
     int variance;         //Use the variances or not
     bool ci;         //Compute confidence interval or not
-    int  c;                //var = b+c/s;
+    double  c;                //var = b+c/s;
     bool verbose;
     double rho_min;
     int nbINodes;
@@ -120,7 +120,7 @@ typedef struct Pr
         estimate_root = "";
         constraint = false;
         variance = 0;
-        c = 10;
+        c = 0.1;
         rho_min = 1e-10;
         ci = false;
         nbSampling=100;

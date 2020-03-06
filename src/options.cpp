@@ -99,11 +99,11 @@ Pr* getCommandLine( int argc, char** argv)
                 opt->constraint = true;
                 break;
             case 'b':
-                if( !isInteger(optarg) )
-                    myExit("Argument of option -b must be an integer.\n");
-                opt->c = atoi( optarg );
-                if (opt->c<0)
-                    myExit("Argument of option -b must not be negative.\n");
+                if( !isReal(optarg) )
+                    myExit("Argument of option -b must be a real.\n");
+                opt->c = atof( optarg );
+                if (opt->c<0 || opt->c>1)
+                    myExit("Argument of option -b must be between 0 and 1, see the help page of lsd2 -h for more information.\n");
                 break;
             case 'e':
                 if( !isReal(optarg) )
@@ -281,7 +281,7 @@ void printInterface( FILE* in, Pr* opt)
     else {
         if (opt->variance==1) fprintf(in,"Yes, use variances based on original branches\n");
         else if (opt->variance==2) fprintf(in,"Yes, use variances based on branches estimated by LSD\n");
-        fprintf(in,"  B                Adjusted parameter for variances : %d\n",opt->c);
+        fprintf(in,"  B                Adjusted parameter for variances : %f\n",opt->c);
     }
     fprintf(in,"  R                               Estimate the root : ");
     if (opt->estimate_root==""){
@@ -368,9 +368,12 @@ void printHelp( void )
            FLAT"\t   In this case, the input date file can be omitted, and the program estimates only the relative dates based on the given\n"
            FLAT"\t   root date and tips date. By default, T[root]=0 and T[tips]=1.\n"
            FLAT"\t" BOLD"-b " LINE"varianceParameter\n"
-           FLAT"\t   The parameter (between 1 and 100 - which is the proportion to the sequence length) to compute the variances in option -v.\n"
-           FLAT"\t   By default b=10. The smaller it is the more variance would be linear to branch length, which is relevant for strict clock.\n"
-           FLAT"\t   The bigger it is the less effect of branch length on variance which might be better for relaxed clock.\n"
+           FLAT"\t   The parameter (between 0 and 1) to compute the variances in option -v. It is the pseudo positive constant to add to the branch lengths\n"
+           FLAT"\t   when calculating variances, to avoid over estimate variances for too small branch lengths and to adjust the dependency of variances to\n"
+           FLAT"\t   branch lengths. By default b=0.1; but should be adjusted based on the ditribution of your tree branch lengths, normally a bit greater \n"
+           FLAT"\t   than the smallest branch lengths. \n"
+           FLAT"\t   The smaller it is the more variances would be linear to branch lengths, which is relevant for strict clock.\n"
+           FLAT"\t   The bigger it is the less effect of branch lengths on variances, which might be better for relaxed clock.\n"
            FLAT"\t" BOLD"-c \n"
            FLAT"\t   By using this option, we impose the constraints that the date of every node is equal or smaller then\n"
            FLAT"\t   the dates of its descendants. Without constraints, the runtime is linear (LD). With constraints, the\n"
@@ -464,7 +467,7 @@ void printHelp( void )
            FLAT"\t   This option corresponds to the lower bound for the estimating rate. It is 1e-10 by default.\n"
            FLAT"\t" BOLD"-v " LINE"variance\n"
            FLAT"\t   Use this option if you want to apply variances for the branch lengths in order to recompense big errors on long estimated branch lengths. \n"
-           FLAT"\t   The variance of the branch Bi is Vi = (Bi+b/100) where b is specified by option -b.\n"
+           FLAT"\t   The variance of the branch Bi is Vi = (Bi+b) where b is specified by option -b.\n"
            FLAT"\t   If " FLAT LINE"variance" FLAT"=1, then LSD uses the input branch lengths to calculate variances. If " FLAT LINE"variance" FLAT"=2, then LSD\n"
            FLAT"\t   runs twice where the second time it calculates the variances based on the estimated branch lengths of the first run. However -v 2 only \n"
            FLAT"\t   improves the result in the case variances were well estimated in the first run, most of the case it means your data follows a strict clock. \n"

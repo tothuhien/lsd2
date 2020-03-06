@@ -495,7 +495,7 @@ Node** unrooted2rootedS(Pr* &pr,Node** nodes,int s){//simplier version, use only
 void computeVariance(Pr* pr,Node** nodes){
     if (pr->variance==1 || pr->variance==2){
         for (int i=1;i<=pr->nbBranches;i++){
-            nodes[i]->V=(nodes[i]->B+(double)(pr->c)/100);
+            nodes[i]->V=(nodes[i]->B+pr->c);
         }
     }
     else{
@@ -509,7 +509,7 @@ void computeVarianceEstimateRoot(Pr* pr,Node** nodes,double br){
     if (pr->variance==1 || pr->variance==2){
         for (int i=1;i<=pr->nbBranches;i++){
             if (nodes[i]->P!=0) {
-                nodes[i]->V=(nodes[i]->B+(double)(pr->c)/100);
+                nodes[i]->V=(nodes[i]->B+pr->c);
             }
             else nodes[i]->V=variance(pr,br);
         }
@@ -522,7 +522,7 @@ void computeVarianceEstimateRoot(Pr* pr,Node** nodes,double br){
 }
 
 double variance(Pr* pr,double b){
-    if (pr->variance==1 || pr->variance==2) return (b+(double)(pr->c)/100);
+    if (pr->variance==1 || pr->variance==2) return (b+pr->c);
     else return 1./(double)(pr->seqLength);
 }
 
@@ -530,10 +530,10 @@ void computeNewVariance(Pr* pr,Node** nodes){
     if (pr->variance){
         for (int i=1;i<=pr->nbBranches;i++){
             if (nodes[i]->D>=nodes[nodes[i]->P]->D){
-                nodes[i]->V=(pr->rho*nodes[i]->D-pr->rho*nodes[nodes[i]->P]->D+(double)(pr->c)/100);
+                nodes[i]->V=(pr->rho*nodes[i]->D-pr->rho*nodes[nodes[i]->P]->D+pr->c);
             }
             else{
-                nodes[i]->V=((double)(pr->c)/100);
+                nodes[i]->V=(pr->c);
             }
         }
     } else {
@@ -554,15 +554,15 @@ void computeNewVarianceEstimateRoot(Pr* pr,Node** nodes){
                 nodes[i]->V=variance(pr,br);
             }
             else{
-                nodes[i]->V=((double)(pr->c)/100);
+                nodes[i]->V=pr->c;
             }
         }
         else{
             if (nodes[i]->D>=nodes[nodes[i]->P]->D){
-                nodes[i]->V=(pr->rho*nodes[i]->D-pr->rho*nodes[nodes[i]->P]->D+(double)(pr->c)/100);
+                nodes[i]->V=pr->rho*nodes[i]->D - pr->rho*nodes[nodes[i]->P]->D + pr->c;
             }
             else{
-                nodes[i]->V=((double)(pr->c)/100);
+                nodes[i]->V=pr->c;
             }
         }
     }
