@@ -527,12 +527,18 @@ double variance(Pr* pr,double b){
 }
 
 void computeNewVariance(Pr* pr,Node** nodes){
-    for (int i=1;i<=pr->nbBranches;i++){
-        if (nodes[i]->D>=nodes[nodes[i]->P]->D){
-            nodes[i]->V=(pr->rho*nodes[i]->D-pr->rho*nodes[nodes[i]->P]->D+(double)(pr->c)/100);
+    if (pr->variance){
+        for (int i=1;i<=pr->nbBranches;i++){
+            if (nodes[i]->D>=nodes[nodes[i]->P]->D){
+                nodes[i]->V=(pr->rho*nodes[i]->D-pr->rho*nodes[nodes[i]->P]->D+(double)(pr->c)/100);
+            }
+            else{
+                nodes[i]->V=((double)(pr->c)/100);
+            }
         }
-        else{
-            nodes[i]->V=((double)(pr->c)/100);
+    } else {
+        for (int i=1;i<=pr->nbBranches;i++){
+            nodes[i]->V=1./(double)(pr->seqLength);
         }
     }
 }
