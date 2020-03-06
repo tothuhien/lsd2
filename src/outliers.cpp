@@ -12,13 +12,13 @@ bool calculateOutliers(Pr* & pr,Node** & nodes){
     cout<<"Calculating the outlier nodes ..."<<endl;
     string nodes_imprecise_date="";
     for (int i = pr->nbINodes; i <= pr->nbBranches; i++){
-        if (nodes[i]->type != 'p' && nodes[i]->type != 'n'){
+        if (nodes[i]->type == 'l' || nodes[i]->type == 'u'){
             nodes_imprecise_date = nodes_imprecise_date+" "+nodes[i]->L;
         }
     }
     for (int i = 0; i < pr->internalConstraints.size(); i++){
         Date* no = pr->internalConstraints[i];
-        if (nodes[no->id]->type != 'p' && nodes[no->id]->type != 'n'){
+        if (nodes[no->id]->type == 'l' || nodes[no->id]->type == 'u'){
             nodes_imprecise_date = nodes_imprecise_date+" "+no->label;
         }
     }
@@ -29,19 +29,33 @@ bool calculateOutliers(Pr* & pr,Node** & nodes){
     }
     if (pr->estimate_root=="" || pr->estimate_root=="k"){
         bool givenRate = pr->givenRate[0];
-        vector<double> dates;
+        vector<double> dates_min;
+        vector<double> dates_max;
         vector<int> index;
+        bool both = false;
         for (int i=pr->nbINodes;i<=pr->nbBranches;i++) {
-            if (nodes[i]->type == 'p') {
-                dates.push_back(nodes[i]->D);
+            if (nodes[i]->type == 'p'){
+                dates_min.push_back(nodes[i]->D);
+                dates_max.push_back(nodes[i]->D);
+            }
+            if (nodes[i]->type == 'b'){
+                both = true;
+                dates_min.push_back(nodes[i]->lower);
+                dates_max.push_back(nodes[i]->upper);
             }
         }
         for (int i=0; i< pr->nbINodes;i++) {
-            if (nodes[i]->type == 'p') {
-                dates.push_back(nodes[i]->D);
+            if (nodes[i]->type == 'p'){
+                dates_min.push_back(nodes[i]->D);
+                dates_max.push_back(nodes[i]->D);
+            }
+            if (nodes[i]->type == 'b') {
+                both = true;
+                dates_min.push_back(nodes[i]->lower);
+                dates_max.push_back(nodes[i]->upper);
             }
         }
-        for (int i=0;i<dates.size();i++){
+        for (int i=0;i<dates_min.size();i++){
             index.push_back(i);
         }
         if ((pr->m +1) > index.size()){
@@ -53,7 +67,7 @@ bool calculateOutliers(Pr* & pr,Node** & nodes){
             samples[i] = sampleNoRepeat(index, i ,pr->m);
         }
         if (pr->estimate_root==""){
-            pr->outlier = outliers_rooted(pr,nodes,samples,dates,false);
+            pr->outlier = outliers_rooted(pr,nodes,samples,dates_min,dates_max,false,both);
         }
         if (pr->estimate_root=="k"){
             double br=0;
@@ -65,10 +79,10 @@ bool calculateOutliers(Pr* & pr,Node** & nodes){
             br=nodes[s1]->B+nodes[s2]->B;
             nodes[s1]->B = 0;
             nodes[s2]->B = br;
-            vector<int> outliers1 = outliers_rooted(pr,nodes,samples,dates,false);
+            vector<int> outliers1 = outliers_rooted(pr,nodes,samples,dates_min,dates_max,false,both);
             nodes[s1]->B = br;
             nodes[s2]->B = 0;
-            vector<int> outliers2 = outliers_rooted(pr,nodes,samples,dates,false);
+            vector<int> outliers2 = outliers_rooted(pr,nodes,samples,dates_min,dates_max,false,both);
             pr->outlier = intersect(outliers1,outliers2);
         }
         pr->givenRate[0] = givenRate;
@@ -337,7 +351,7 @@ vector<double> residus_lsd_rtt(Pr* pr,Node** nodes,double& mean_res, double& var
 
 void calculateRoot2DatedNode(Pr* pr,Node** nodes,vector<double> &paths){
     for (int i=pr->nbINodes;i<=pr->nbBranches;i++){
-        if (nodes[i]->type == 'p'){
+        if (nodes[i]->type == 'p' || nodes[i]->type == 'b'){
             int k=i;
             double rtt = 0;
             while (k!=0){
@@ -348,7 +362,7 @@ void calculateRoot2DatedNode(Pr* pr,Node** nodes,vector<double> &paths){
         }
     }
     for (int i=0;i<pr->nbINodes;i++){
-        if (nodes[i]->type == 'p'){
+        if (nodes[i]->type == 'p' || nodes[i]->type == 'b'){
             int k=i;
             double rtt = 0;
             while (k!=0){
@@ -375,7 +389,7 @@ void calculateRoot2DatedNode(Pr* pr,Node** nodes,vector<double> &paths,vector<do
     vector<int> visited;
     for (int i=0;i<pr->internalConstraints.size();i++){
         Date* no = pr->internalConstraints[i];
-        if (no->type=='p' && !isIn(no->id,visited)){
+        if ((no->type=='p') && !isIn(no->id,visited)){
             int k=no->id;
             double rtt = 0;
             while (k!=0){
@@ -389,9 +403,44 @@ void calculateRoot2DatedNode(Pr* pr,Node** nodes,vector<double> &paths,vector<do
     }
 }
 
-double median_rate(Pr* pr,Node** nodes, vector<double> dates, vector<int>* samples,bool addInternalDates){
+void calculateRoot2DatedNode(Pr* pr,Node** nodes,vector<double> &paths,vector<double> &dates_min,vector<double> &dates_max){
+    for (int i=pr->nbINodes;i<=pr->nbBranches;i++){
+        if (nodes[i]->type == 'p' || nodes[i]->type == 'b'){
+            int k=i;
+            double rtt = 0;
+            while (k!=0){
+                rtt += nodes[k]->B;
+                k = nodes[k]->P;
+            }
+            paths.push_back(rtt);
+        }
+    }
+    vector<int> visited;
+    for (int i=0;i<pr->internalConstraints.size();i++){
+        Date* no = pr->internalConstraints[i];
+        if ((no->type=='p' || no->type=='b') && !isIn(no->id,visited)){
+            int k=no->id;
+            double rtt = 0;
+            while (k!=0){
+                rtt += nodes[k]->B;
+                k = nodes[k]->P;
+            }
+            paths.push_back(rtt);
+            if (no->type == 'p'){
+                dates_min.push_back(nodes[no->id]->D);
+                dates_max.push_back(nodes[no->id]->D);
+            } else {
+                dates_min.push_back(nodes[no->id]->lower);
+                dates_max.push_back(nodes[no->id]->upper);
+            }
+            visited.push_back(no->id);
+        }
+    }
+}
+
+void median_rate(Pr* pr,Node** nodes, vector<double> dates, vector<int>* samples,bool addInternalDates,double& rate){
     if (pr->givenRate[0]){
-        return pr->rho;
+        rate = pr->rho;
     }
     else{
         vector<double> paths;
@@ -399,45 +448,83 @@ double median_rate(Pr* pr,Node** nodes, vector<double> dates, vector<int>* sampl
         else calculateRoot2DatedNode(pr,nodes,paths);
         vector<double> rates;
         for (int i = 0; i< paths.size();i++){
-            vector<double> slopeI;
+            vector<double> slopes;
             for (vector<int>::iterator iter = samples[i].begin(); iter != samples[i].end(); iter++){
                 if ((*iter < paths.size()) && dates[*iter] != dates[i]){
-                    double slope1 = (paths[*iter] - paths[i])/(dates[*iter] - dates[i]);
-                    slopeI.push_back(slope1);
+                    double slope = (paths[*iter] - paths[i])/(dates[*iter] - dates[i]);
+                    slopes.push_back(slope);
                 }
             }
-            if (!slopeI.empty()){
-                rates.push_back(median(slopeI));
+            if (!slopes.empty()){
+                rates.push_back(median(slopes));
             }
         }
-        return median(rates);
+        rate = median(rates);
+    }
+}
+
+
+void median_rate(Pr* pr,Node** nodes, vector<double> dates_min,vector<double> dates_max, vector<int>* samples,bool addInternalDates,double& rate1, double& rate2){
+    if (pr->givenRate[0]){
+        rate1 = pr->rho;
+        rate2 = pr->rho;
+    }
+    else{
+        vector<double> paths;
+        if (addInternalDates) calculateRoot2DatedNode(pr,nodes,paths,dates_min,dates_max);
+        else calculateRoot2DatedNode(pr,nodes,paths);
+        vector<double> rates_min;
+        vector<double> rates_max;
+        for (int i = 0; i< paths.size();i++){
+            vector<double> slopeMin;
+            vector<double> slopeMax;
+            for (vector<int>::iterator iter = samples[i].begin(); iter != samples[i].end(); iter++){
+                if ((*iter < paths.size()) && dates_min[*iter] != dates_min[i]){
+                    double slope_min = (paths[*iter] - paths[i])/(dates_min[*iter] - dates_min[i]);
+                    slopeMin.push_back(slope_min);
+                }
+                if ((*iter < paths.size()) && dates_max[*iter] != dates_max[i]){
+                    double slope_max = (paths[*iter] - paths[i])/(dates_max[*iter] - dates_max[i]);
+                    slopeMax.push_back(slope_max);
+                }
+            }
+            if (!slopeMin.empty()){
+                rates_min.push_back(median(slopeMin));
+                rates_max.push_back(median(slopeMax));
+            }
+        }
+        rate1 = median(rates_min);
+        rate2 = median(rates_max);
     }
 }
 
 
 
-vector<int> outliers_rooted(Pr* pr,Node** nodes,vector<int>* samples, vector<double> dates,bool addInternalDates){
-    double rate =  median_rate(pr,nodes,dates,samples,addInternalDates);
+vector<int> outliers_rooted(Pr* pr,Node** nodes,vector<int>* samples, vector<double> dates_min, vector<double> dates_max, bool addInternalDates, bool both){
+    double rate_min, rate_max;
+    if (!both) median_rate(pr,nodes,dates_min, samples,addInternalDates, rate_min);
+    else median_rate(pr,nodes,dates_min, dates_max,samples,addInternalDates, rate_min, rate_max);
+    
     pr->givenRate[0] = true;
-    pr->rho = rate;
+    
+    pr->rho = rate_min;
     without_constraint(pr,nodes);
-    //with_constraint_active_set(pr,nodes);
     double mean_res = 0;
     double var_res = 0;
     vector<double> res = residus_lsd(pr,nodes,mean_res,var_res);
     for (int i=0;i<res.size();i++) res[i] = (res[i]-mean_res)/sqrt(var_res);
-    vector<int> outliers;
+    vector<int> outliers_min;
     for (int i=pr->nbINodes;i<=pr->nbBranches;i++){
         if (myabs(res[i-1])>pr->e){
-            if (nodes[i]->type == 'p'){
-                outliers.push_back(i);
+            if (nodes[i]->type == 'p' || nodes[i]->type == 'b'){
+                outliers_min.push_back(i);
             }
         }
     }
     for (int k=0;k<pr->internalConstraints.size();k++){
         Date* no = pr->internalConstraints[k];
         int i = no->id;
-        if (nodes[i]->type == 'p'){
+        if (nodes[i]->type == 'p' || nodes[i]->type == 'b'){
             bool bl = false;
             if (i>0){
                 bl = (myabs(res[i-1])>pr->e);
@@ -447,11 +534,45 @@ vector<int> outliers_rooted(Pr* pr,Node** nodes,vector<int>* samples, vector<dou
                 bl = bl || (myabs(res[s-1])>pr->e);
             }
             if (bl){
-                outliers.push_back(k);
+                outliers_min.push_back(k);
             }
         }
     }
-    return outliers;
+    if (!both) return outliers_min;
+    else {
+        pr->rho = rate_max;
+        without_constraint(pr,nodes);
+        mean_res = 0;
+        var_res = 0;
+        res = residus_lsd(pr,nodes,mean_res,var_res);
+        for (int i=0;i<res.size();i++) res[i] = (res[i]-mean_res)/sqrt(var_res);
+        vector<int> outliers_max;
+        for (int i=pr->nbINodes;i<=pr->nbBranches;i++){
+            if (myabs(res[i-1])>pr->e){
+                if (nodes[i]->type == 'p' || nodes[i]->type == 'b'){
+                    outliers_max.push_back(i);
+                }
+            }
+        }
+        for (int k=0;k<pr->internalConstraints.size();k++){
+            Date* no = pr->internalConstraints[k];
+            int i = no->id;
+            if (nodes[i]->type == 'p' || nodes[i]->type == 'b'){
+                bool bl = false;
+                if (i>0){
+                    bl = (myabs(res[i-1])>pr->e);
+                }
+                for (int j=0;j<nodes[i]->suc.size();j++){
+                    int s = nodes[i]->suc[j];
+                    bl = bl || (myabs(res[s-1])>pr->e);
+                }
+                if (bl){
+                    outliers_max.push_back(k);
+                }
+            }
+        }
+        return intersect(outliers_min,outliers_max);
+    }
 }
 
 bool outliers_unrooted(Pr* &pr,Node** &nodes){
@@ -461,17 +582,23 @@ bool outliers_unrooted(Pr* &pr,Node** &nodes){
     int s1=(*iter);
     iter++;
     int s2=(*iter);
-    vector<double> originalD;
+    vector<double> originalD_min;
+    vector<double> originalD_max;
     int nbFixedNodes = 0;
-    int nbDates = 0;
+    bool both;
     for (int i=pr->nbINodes;i<=pr->nbBranches;i++) {
         if (nodes[i]->type == 'p') {
-            originalD.push_back(nodes[i]->D);
+            originalD_min.push_back(nodes[i]->D);
+            originalD_max.push_back(nodes[i]->D);
             nbFixedNodes++;
         }
-        if (nodes[i]->type != 'n') nbDates++;
+        if (nodes[i]->type == 'b') {
+            originalD_min.push_back(nodes[i]->lower);
+            originalD_max.push_back(nodes[i]->upper);
+            nbFixedNodes++;
+            both = true;
+        }
     }
-    nbDates += pr->internalConstraints.size();
     bool bl = false;
     int y=1;
     while (!bl && y<=pr->nbBranches){
@@ -480,7 +607,7 @@ bool outliers_unrooted(Pr* &pr,Node** &nodes){
     }
     if (bl){
         for (int i=0; i< pr->internalConstraints.size();i++){
-            if (pr->internalConstraints[i]->type == 'p') nbFixedNodes++;
+            if (pr->internalConstraints[i]->type == 'p' || pr->internalConstraints[i]->type == 'b') nbFixedNodes++;
         }
         vector<int> index;
         for (int i=0;i<nbFixedNodes;i++){
@@ -500,7 +627,7 @@ bool outliers_unrooted(Pr* &pr,Node** &nodes){
         nodes_new[y]->B = 0;
         nodes_new[nodes[y]->P]->B = br;
         bool givenRate = pr->givenRate[0];
-        vector<int> outs=outliers_rooted(pr,nodes_new,samples,originalD,true);
+        vector<int> outs=outliers_rooted(pr,nodes_new,samples,originalD_min,originalD_max,true,both);
         for (int i=0;i<outs.size();i++){
             outliersFreq[outs[i]] ++;
         }
@@ -511,7 +638,7 @@ bool outliers_unrooted(Pr* &pr,Node** &nodes){
             if (bl){
                 nodes_new[y]->B = 0;
                 nodes_new[nodes[y]->P]->B = br;
-                vector<int> outs=outliers_rooted(pr,nodes_new,samples,originalD,true);
+                vector<int> outs=outliers_rooted(pr,nodes_new,samples,originalD_min,originalD_max,true,both);
                 for (int i=0;i<outs.size();i++){
                     outliersFreq[outs[i]] ++;
                 }
