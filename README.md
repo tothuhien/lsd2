@@ -115,10 +115,9 @@ As a consequence, in this example, the branches will be partitioned into 3 group
     
 Note that if the internal nodes don't have labels, then they can be defined by mrca of at least two tips, for example n1 is mrca(A,D)
 
-## Caution in using variance
+## Using variances
 
-Simulation data show that using variance (option `-v`) gives better result on strict clock data. 
-However for relaxed clock data, variances may not necessarily be linear with the branch lengths. In this case, you can try to reduce the effect of variances by increasing parameter `-b` (which is 0.1 by default). This parameter (between 0 and 1) should be adjusted based on the distribution of your branch lengths, and normally a bit greater than the smallest branch length. The bigger it is the less effect of branch lengths on variances. Using variance is still useful though to penalize long branch lengths. Also, option `-v 2` may only be usefull with strict clock tree.
+Variance is used to penalize long branch lengths. The variance formula of each branch v_i is proprtion to (b_i + b), where b (specified by option -b) is the pseudo constant added to adjust the dependency of variances to branch lengths. This parameter is a positive number < 1, and by defaul is the median branch length. It could be adjusted based on how much your input tree is relaxed. The smaller it is, the more variances are linear to branch lengths, which is more appropriate for strict clock tree. The bigger it is the less dependent of branch lengths on variances, which may be better for relaxed tree. Also, option `-v 2` may only be useful with strict clock tree.
 
 ## Some examples of command lines:
 

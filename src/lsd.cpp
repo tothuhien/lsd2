@@ -107,6 +107,20 @@ int main( int argc, char** argv ){
             fprintf(tree1,"Begin trees;\n");
             fprintf(tree2,"Begin trees;\n");
         }
+        vector<double> bl;
+        if (opt->c == -1){
+            for (int i=1;i<=opt->nbBranches;i++){
+                bl.push_back(nodes[i]->B);
+                if (opt->c < nodes[i]->B) opt->c = nodes[i]->B;
+            }
+            sort(bl.begin(), bl.begin()+bl.size());
+            opt->c = median(bl);
+            cout<<"Using the median branch length "<<opt->c<<" to adjust variances"<<endl;
+            fprintf(result,"Using the median branch length  %f to adjust variances\n",opt->c);
+        } else{
+            cout<<"Using the specified value "<<opt->c<<" to adjust variances"<<endl;
+            fprintf(result,"Using the specified value  %f to adjust variances\n",opt->c);
+        }
         computeVariance(opt,nodes);
         double br=0;
         if (opt->givenRate[0]){

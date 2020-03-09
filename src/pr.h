@@ -120,7 +120,7 @@ typedef struct Pr
         estimate_root = "";
         constraint = false;
         variance = 0;
-        c = 0.1;
+        c = -1;
         rho_min = 1e-10;
         ci = false;
         nbSampling=100;

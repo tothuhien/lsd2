@@ -102,8 +102,8 @@ Pr* getCommandLine( int argc, char** argv)
                 if( !isReal(optarg) )
                     myExit("Argument of option -b must be a real.\n");
                 opt->c = atof( optarg );
-                if (opt->c<0 || opt->c>1)
-                    myExit("Argument of option -b must be between 0 and 1, see the help page of lsd2 -h for more information.\n");
+                if (opt->c<=0 || opt->c>1)
+                    myExit("Argument of option -b must be a positive number samller than 1, see the help page of lsd2 -h for more information.\n");
                 break;
             case 'e':
                 if( !isReal(optarg) )
@@ -279,9 +279,14 @@ void printInterface( FILE* in, Pr* opt)
     fprintf(in,"  V                                  With variances : ");
     if (opt->variance==0) fprintf(in,"No\n");
     else {
-        if (opt->variance==1) fprintf(in,"Yes, use variances based on original branches\n");
-        else if (opt->variance==2) fprintf(in,"Yes, use variances based on branches estimated by LSD\n");
-        fprintf(in,"  B                Adjusted parameter for variances : %f\n",opt->c);
+        if (opt->variance==1) fprintf(in,"Yes, use variances based on input branch lengths\n");
+        else if (opt->variance==2) fprintf(in,"Yes, use variances based on estimated branch lengths\n");
+        fprintf(in,"  B                Adjusted parameter for variances : ");
+        if (opt->c==-1){
+            fprintf(in,"%s\n","median branch lengths");
+        } else{
+            fprintf(in,"%f\n",opt->c);
+        }
     }
     fprintf(in,"  R                               Estimate the root : ");
     if (opt->estimate_root==""){
@@ -369,11 +374,10 @@ void printHelp( void )
            FLAT"\t   root date and tips date. By default, T[root]=0 and T[tips]=1.\n"
            FLAT"\t" BOLD"-b " LINE"varianceParameter\n"
            FLAT"\t   The parameter (between 0 and 1) to compute the variances in option -v. It is the pseudo positive constant to add to the branch lengths\n"
-           FLAT"\t   when calculating variances, to avoid over estimate variances for too small branch lengths and to adjust the dependency of variances to\n"
-           FLAT"\t   branch lengths. By default b=0.1; but should be adjusted based on the ditribution of your tree branch lengths, normally a bit greater \n"
-           FLAT"\t   than the smallest branch lengths. \n"
-           FLAT"\t   The smaller it is the more variances would be linear to branch lengths, which is relevant for strict clock.\n"
-           FLAT"\t   The bigger it is the less effect of branch lengths on variances, which might be better for relaxed clock.\n"
+           FLAT"\t   when calculating variances, to adjust the dependency of variances to branch lengths. By default b is the median branch length; but it \n"
+           FLAT"\t   should be adjusted  based on how/whether the input tree is relaxed or strict. The smaller it is the more variances would be linear to \n"
+           FLAT"\t   branch lengths, which is relevant for strict clock. The bigger it is the less effect of branch lengths on variances, which might be \n"
+           FLAT"\t   better for relaxed clock.\n"
            FLAT"\t" BOLD"-c \n"
            FLAT"\t   By using this option, we impose the constraints that the date of every node is equal or smaller then\n"
            FLAT"\t   the dates of its descendants. Without constraints, the runtime is linear (LD). With constraints, the\n"
@@ -470,8 +474,7 @@ void printHelp( void )
            FLAT"\t   The variance of the branch Bi is Vi = (Bi+b) where b is specified by option -b.\n"
            FLAT"\t   If " FLAT LINE"variance" FLAT"=1, then LSD uses the input branch lengths to calculate variances. If " FLAT LINE"variance" FLAT"=2, then LSD\n"
            FLAT"\t   runs twice where the second time it calculates the variances based on the estimated branch lengths of the first run. However -v 2 only \n"
-           FLAT"\t   improves the result in the case variances were well estimated in the first run, most of the case it means your data follows a strict clock. \n"
-           FLAT"\t   If your tree is likely relaxed, don't use -v 2.\n"
+           FLAT"\t   may be only useful for a strict clock tree. If your tree is likely relaxed, don't use -v 2.\n"
            FLAT"\t" BOLD"-V \n"
            FLAT"\t   Get the actual version.\n"
            FLAT"\t" BOLD"-w " LINE"givenRte\n"
