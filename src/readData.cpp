@@ -78,7 +78,7 @@ Node** tree2data(FILE * tree,Pr* pr,int & s){
     if (nbChild==2) {
         pr->rooted=true;
         pr->nbINodes = internal_nodes.size()-1;
-        pr->nbBranches = leaves.size() + internal_nodes.size() - 3;
+        pr->nbBranches = leaves.size() + internal_nodes.size() - 3; 
         nodes = new Node*[pr->nbBranches+1];
         for (int i=0;i< pr->nbINodes;i++){
             nodes[i] = internal_nodes[pr->nbINodes-i];

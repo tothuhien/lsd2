@@ -126,6 +126,7 @@ void computeIC(double br,Pr* pr,Node** nodes,double* &T_left,double* &T_right,do
     }
     srand ( time(NULL) );
     std::default_random_engine generator;
+    
     double minB=nodesReduced[1]->B;
     for (int i=2;i<=prReduced->nbBranches;i++){
         if (nodesReduced[i]->B<minB && nodesReduced[i]->B>0) {
@@ -133,10 +134,15 @@ void computeIC(double br,Pr* pr,Node** nodes,double* &T_left,double* &T_right,do
         }
     }
     int seqLength_forIC = pr->seqLength;//min(pr->seqLength,1000);
+    double m = -log(prReduced->q*prReduced->q+1)/2;
+    double sigma = sqrt(log(prReduced->q*prReduced->q+1));
     for (int i=1;i<=prReduced->nbBranches;i++){
         std::poisson_distribution<int> distribution(nodesReduced[i]->B*seqLength_forIC);
+        //std::lognormal_distribution<double> distributionlogNormal(-0.01961036,0.1980422);
+        std::lognormal_distribution<double> distributionlogNormal(m,sigma);
         for (int j=0;j<pr->nbSampling;j++){
-            B_simul[j][i]=(double)distribution(generator)/(seqLength_forIC);
+            double coef = (double)distributionlogNormal(generator);
+            B_simul[j][i]=(double)distribution(generator)*coef/(seqLength_forIC);
         }
     }
     double maxD = nodesReduced[prReduced->nbINodes]->D; // the most recent tip date
@@ -386,7 +392,7 @@ void output(double br,int y, Pr* pr,Node** nodes,FILE* f,FILE* tree1,FILE* tree2
         double rho_left,rho_right;
         double* other_rhos_left = new double[pr->ratePartition.size()+1];
         double* other_rhos_right = new double[pr->ratePartition.size()+1];
-        cout<<"Computing confidence intervals ..."<<endl;
+        cout<<"Computing confidence intervals using sequence length "<<pr->seqLength<<" and a lognormal relaxed clock with mean 1, standard deviation "<<pr->q<<" ..."<<endl;
         computeIC(br,pr,nodes,T_min,T_max,H_min,H_max,HD_min,HD_max,rho_left,rho_right,other_rhos_left,other_rhos_right);
         //computeIC(br,pr,nodes,T_min,T_max,rho_left,rho_right,other_rhos_left,other_rhos_right);
         

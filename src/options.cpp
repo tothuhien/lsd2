@@ -32,8 +32,9 @@ Pr* getCommandLine( int argc, char** argv)
     dflag = false,
     flagA=false,
     flagZ=false,
+    sflag=false,
     fflag=false;
-    while ( (c = getopt(argc, argv, ":i:d:o:s:n:g:r:v:ct:w:b:ha:z:f:kje:m:p:V")) != -1 )
+    while ( (c = getopt(argc, argv, ":i:d:o:s:n:g:r:v:ct:w:b:ha:z:f:kje:m:p:q:V")) != -1 )
     {
         switch (c)
         {
@@ -63,6 +64,7 @@ Pr* getCommandLine( int argc, char** argv)
                 opt->seqLength = atoi(optarg);
                 if( opt->seqLength<1 )
                     myExit("Argument of option -s must be strictly positive.\n");
+                sflag = true;
                 break;
             case 'n':
                 if( !isInteger(optarg) )
@@ -128,6 +130,13 @@ Pr* getCommandLine( int argc, char** argv)
                 if (opt->rho_min<=0)
                     myExit("Argument of option -t must be strictly positive.\n");
                 break;
+            case 'q':
+                if (!isReal(optarg))
+                    myExit("Argument of option -q must be a real.\n");
+                opt->q = atof(optarg);
+                if (opt->q<0)
+                    myExit("Argument of option -q could not be negative.\n");
+                break;
             case 'w':
                 if( access( optarg, R_OK )!=0 )
                     myExit( "Cannot read the file named \"%s\"\n", optarg );
@@ -192,6 +201,9 @@ Pr* getCommandLine( int argc, char** argv)
             myExit("The root date must be strictly smaller than the tips date.\n");
         opt->relative=true;
     }
+    if (fflag && !sflag) {
+        myExit("Argument -s is required to calculate confidence intervals.\n");
+    }
     if (dflag)
         opt->relative=false;
     
@@ -200,7 +212,6 @@ Pr* getCommandLine( int argc, char** argv)
         opt->estimate_root="a";
     }
     if( opt->outFile=="") opt->outFile = opt->inFile + ".result";
-    
     return opt;
 }
 
@@ -244,13 +255,22 @@ Pr* getInterface()
     if (!opt->rooted) {
         opt->estimate_root="a";
     }
+    fgets( letter, 3, stdin );
+    printInterface( stdout, opt);
+    bool satisfied = true;
     do
     {
-        printInterface( stdout, opt);
-        cout<<endl;
         fgets( letter, 3, stdin );
         if( isOptionActivate( opt, *letter ) ) setOptionsWithLetter( opt, *letter);
-    } while( *letter!='y' && *letter!='Y' );
+        printInterface( stdout, opt);
+        cout<<endl;
+        if (opt->ci && opt->seqLength==0){
+            satisfied = false;
+            fprintf(stdout,"Please select option S to specify sequence length to calculate confidence interval\n");
+        } else {
+            satisfied = true;
+        }
+    } while(( *letter!='y' && *letter!='Y') || !satisfied);
     return opt;
 }
 
@@ -326,7 +346,8 @@ void printInterface( FILE* in, Pr* opt)
     fprintf(in,"  F                    Compute confidence intervals : ");
     if (opt->ci){
         fprintf(in,"Yes, sampling %d times\n",opt->nbSampling);
-        fprintf(in,"  S                                 Sequence Length : %i\n",opt->seqLength);
+        fprintf(in,"  S                                 Sequence Length : %i (for computing confidence intervals)\n",opt->seqLength);
+        fprintf(in,"  Q    Standard deviation of lognormal relaxed clock: %f (for computing confidence intervals)\n",opt->q);
     }
     else
         fprintf(in,"No\n");
@@ -453,6 +474,10 @@ void printHelp( void )
            FLAT"\t   then there are 3 rates: the first one includes the branches (n1,A), (n1,D), (n5,n4), (n5,n2), (n2,B), (n2,C); the second one \n"
            FLAT"\t   includes the branches (n3,F), (n3,G), and the last one includes all the remaining branches. If the internal nodes don't have labels,\n"
            FLAT"\t   then they can be defined by mrca of at least two tips, for example n1 is mrca(A,D)\n"
+           FLAT"\t" BOLD"-q " LINE"standardDeviationRelaxedClock\n"
+           FLAT"\t   This value is involved in calculating confidence intervals to simulate a lognormal relaxed clock. We multiply the simulated branch lengths\n"
+           FLAT"\t   with a lognormal distribution with mean 1, and standard deviation q. By default q is 0.2. The bigger q is, the more your tree is relaxed\n"
+           FLAT"\t   and give you bigger confidence intervals.\n"
            FLAT"\t" BOLD"-r " LINE"rootingMethod\n"
            FLAT"\t   This option is used to specify the rooting method to estimate the position of the root for unrooted trees, or\n"
            FLAT"\t   re-estimate the root for rooted trees. The principle is to search for the position of the root that minimizes\n"
@@ -637,7 +662,7 @@ bool isOptionActivate( Pr* opt, char l )
     return false;
 }
 
-void setOptionsWithLetter( Pr* opt, char letter )
+void setOptionsWithLetter( Pr* opt, char letter)
 {
     //char* fnOut;
     switch( letter )
@@ -722,7 +747,7 @@ void setOptionsWithLetter( Pr* opt, char letter )
             break;
         case 'b':
         case 'B':
-            if (opt->variance) opt->c = getPositiveInputInteger("Enter the parameter for the variances> ");
+            if (opt->variance) opt->c = getInputPositiveReal("Enter the parameter for the variances> ");
             break;
         case 'r':
         case 'R':
@@ -814,6 +839,10 @@ void setOptionsWithLetter( Pr* opt, char letter )
             if (opt->e>0){
                 opt->m = getInputInteger("Enter the number of sampling dated nodes for outliers detection> ");
             }
+            break;
+        case 'q':
+        case 'Q':
+            opt->q = getInputPositiveReal("Enter the standard deviation for lognormal relaxed clock to calculate confidence intervals> ");
             break;
         case 'e':
         case 'E':

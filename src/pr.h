@@ -38,6 +38,7 @@ typedef struct Pr
     int variance;         //Use the variances or not
     bool ci;         //Compute confidence interval or not
     double  c;                //var = b+c/s;
+    double q; //standard deviation of lognormal distribution to simulate relaxed branch lengths for calculating confidence intervals
     bool verbose;
     double rho_min;
     int nbINodes;
@@ -81,7 +82,8 @@ typedef struct Pr
         rooted=pr->rooted;
         constraint=pr->constraint;  
         variance=pr->variance;  
-        ci=pr->ci;     
+        ci=pr->ci;
+        q=pr->q;
         c=pr->c;
         e=pr->e;
         m=pr->m;
@@ -111,7 +113,7 @@ typedef struct Pr
         treeFile1 = "";
         treeFile2 = "";
         fnOutgroup = "";
-        seqLength = 1000;
+        seqLength = 0;
         nbData = 1;
         rate = "";
         relative = false;
@@ -121,6 +123,7 @@ typedef struct Pr
         constraint = false;
         variance = 0;
         c = -1;
+        q = 0.2;
         rho_min = 1e-10;
         ci = false;
         nbSampling=100;

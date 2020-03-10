@@ -141,9 +141,9 @@ Variance is used to penalize long branch lengths. The variance formula of each b
 
 	- You want to calculate confidence intervals from 100 simulated trees. 
 
-    `./lsd2 -i rootedtree_file -d date_file -c -r l -f 100`
+    `./lsd2 -i rootedtree_file -d date_file -c -r l -f 100 -s 1000`
     
-    (To calculate confidence intervals, the program generates simulated branch lengths using Poisson distributions whose mean equal to the estimated ones multiplied with sequence length. The default sequence length 1000 is used if nothing specified via option -s).
+    (To calculate confidence intervals, the sequence length is required via option -s. The program generates simulated branch lengths using Poisson distributions whose mean equal to the estimated ones multiplied with sequence length. In addition, a lognormal relaxed clock is also applied to the branch lengths. This ditribution has mean 1 and standard deviation settable by users with option -q, by default is 0.2. The bigger q is, the more your tree is relaxed and the bigger confidence intervals you should get).
 
 	- If all tips are supposed to have the same date, you can still estimate the rate but only relative dates.
 	

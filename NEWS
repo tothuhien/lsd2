@@ -1,7 +1,8 @@
 Something new lsd2:
-- Compute confidence intervals, use option -f, e.g. -f 100 to calculate confidence intervals by generating 100 simulated trees. The Possion distribution is used to generate the branch lengths from the time-scaled tree.
+- Compute confidence intervals, use option -f, e.g. -f 100 to calculate confidence intervals by generating 100 simulated trees. The Possion distribution is used to generate the branch lengths from the time-scaled tree. In addition, a lognormal relaxed clock is also applied, with mean 1 and standard deviation settable by users (0.2 by default).
 - The input dates are more flexible, can be either applied for an internal node or a tip. It can be either a fix value, a lower bound, an upper bound or an interval. Some tip dates could be missing, the program will use the maximal subtree containing all given dated nodes for the estimation; and refer the dates for unknown tips.
 - Estimate outliers dates by repeating randomly selecting dated given nodes to have a median rate. This rate is then used to calculate residus of each branch. The residus are normalized and compared to the given Zscore threshold to decide if the related nodes are outliers.
 - Estimate several substitution rates, use option -p to specify the input partition file. A partition file defines subtrees where each one is supposed to have a different rate.
 - Use variance in estimating the root position.
+- The adjusted paramater for variances is set be the same unit of branch length (instead of count as before), and set by default to the median branch length.
 - Can be applied on non-binary tree

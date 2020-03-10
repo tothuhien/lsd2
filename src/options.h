@@ -10,7 +10,7 @@
 #include "utils.h"
 
 #ifndef VERSION
-#define VERSION "v1.4.5"
+#define VERSION "v1.4.6"
 #endif
 #ifndef BOLD
 #define BOLD      "\033[00;01m"
@@ -37,7 +37,7 @@ void     printHelp( void );
 string    getInputFileName( string );
 string    getOutgroupFileName( string );
 void     printInterface( FILE*, Pr*);
-void     setOptionsWithLetter( Pr* , char );
+void     setOptionsWithLetter( Pr* , char);
 double   getInputReal( string );
 double   getInputPositiveReal( string );
 int      getInputInteger( string );
