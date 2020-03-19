@@ -495,7 +495,7 @@ Node** unrooted2rootedS(Pr* &pr,Node** nodes,int s){//simplier version, use only
 void computeVariance(Pr* pr,Node** nodes){
     if (pr->variance==1 || pr->variance==2){
         for (int i=1;i<=pr->nbBranches;i++){
-            nodes[i]->V=(nodes[i]->B+pr->c);
+            nodes[i]->V=(nodes[i]->B+pr->b);
         }
     }
     else{
@@ -509,7 +509,7 @@ void computeVarianceEstimateRoot(Pr* pr,Node** nodes,double br){
     if (pr->variance==1 || pr->variance==2){
         for (int i=1;i<=pr->nbBranches;i++){
             if (nodes[i]->P!=0) {
-                nodes[i]->V=(nodes[i]->B+pr->c);
+                nodes[i]->V=(nodes[i]->B+pr->b);
             }
             else nodes[i]->V=variance(pr,br);
         }
@@ -522,7 +522,7 @@ void computeVarianceEstimateRoot(Pr* pr,Node** nodes,double br){
 }
 
 double variance(Pr* pr,double b){
-    if (pr->variance==1 || pr->variance==2) return (b+pr->c);
+    if (pr->variance==1 || pr->variance==2) return (b+pr->b);
     else return 1./(double)(pr->seqLength);
 }
 
@@ -530,10 +530,10 @@ void computeNewVariance(Pr* pr,Node** nodes){
     if (pr->variance){
         for (int i=1;i<=pr->nbBranches;i++){
             if (nodes[i]->D>=nodes[nodes[i]->P]->D){
-                nodes[i]->V=(pr->rho*nodes[i]->D-pr->rho*nodes[nodes[i]->P]->D+pr->c);
+                nodes[i]->V=(pr->rho*nodes[i]->D-pr->rho*nodes[nodes[i]->P]->D+pr->b);
             }
             else{
-                nodes[i]->V=(pr->c);
+                nodes[i]->V=(pr->b);
             }
         }
     } else {
@@ -554,15 +554,15 @@ void computeNewVarianceEstimateRoot(Pr* pr,Node** nodes){
                 nodes[i]->V=variance(pr,br);
             }
             else{
-                nodes[i]->V=pr->c;
+                nodes[i]->V=pr->b;
             }
         }
         else{
             if (nodes[i]->D>=nodes[nodes[i]->P]->D){
-                nodes[i]->V=pr->rho*nodes[i]->D - pr->rho*nodes[nodes[i]->P]->D + pr->c;
+                nodes[i]->V=pr->rho*nodes[i]->D - pr->rho*nodes[nodes[i]->P]->D + pr->b;
             }
             else{
-                nodes[i]->V=pr->c;
+                nodes[i]->V=pr->b;
             }
         }
     }
@@ -1651,7 +1651,7 @@ list<int> down_polytomy(int i,Pr* pr,Node** nodes){
     list<int> result;
     result.push_back(i);
     activeMarkLeaf(nodes[i]);
-    nodes[i]->D=nodes[nodes[i]->P]->D;
+    nodes[i]->D = nodes[nodes[i]->P]->D + nodes[i]->minblen;
     if (i<pr->nbINodes){
         for (vector<int>::iterator iter=nodes[i]->suc.begin();iter!=nodes[i]->suc.end();iter++){
             if (tc(nodes[*iter])){
@@ -1676,7 +1676,7 @@ stack<int>* computeFeuilles_polytomy(list<int> ls,Pr* pr,Node** nodes){
                 ai.push_back(*iter);
             }
         }
-        if (!tc(nodes[i]) && (i>=pr->nbINodes || alone)){//nodes[i] is alone
+        if ((!tc(nodes[i])) && (i>=pr->nbINodes || alone)){//nodes[i] is alone
             feuilles[count].push(i);
         }
         else {
@@ -1691,7 +1691,7 @@ stack<int>* computeFeuilles_polytomy(list<int> ls,Pr* pr,Node** nodes){
                     j=nodes[j]->P;
                     if (j!=-1 && tc(nodes[k])){
                         activeMarkLeaf(nodes[j]);//leaf
-                        nodes[j]->D=nodes[i]->D;
+                        nodes[j]->D = nodes[k]->D - nodes[k]->minblen;
                         for (vector<int>::iterator iter=nodes[j]->suc.begin(); iter!=nodes[j]->suc.end(); iter++) {
                             if ((*iter)!=k && tc(nodes[*iter])) {
                                 ai.push_back(*iter);
@@ -1711,26 +1711,32 @@ stack<int>* computeFeuilles_polytomy(list<int> ls,Pr* pr,Node** nodes){
 }
 
 
-list<int> suc_polytomy(int i,int j,Pr* pr,Node** nodes,int* & Pre,list<int> &suc){
+list<int> suc_polytomy(int i,int j,Pr* pr,Node** nodes,int* & Pre,double* & add,list<int> &suc){
     list<int> result;
-    if (leaf(nodes[i])) {
-        nodes[j]->D=nodes[i]->D;
+    if (leaf(nodes[i]) && i!=j) {
+        nodes[j]->D = nodes[nodes[j]->P]->D + nodes[j]->minblen;
         activeMarkLeaf(nodes[j]);
     }
-    if (j>=pr->nbINodes) {
+    if (j >= pr->nbINodes) {
         result.push_back(j);
         Pre[j]=i;
-        if (markLeaf(nodes[j]) || j<pr->nbINodes) suc.push_back(j);
+        if (markLeaf(nodes[j])) suc.push_back(j);
     }
     else{
         for (vector<int>::iterator iter=nodes[j]->suc.begin(); iter!=nodes[j]->suc.end(); iter++) {
             int s=*iter;
             if (!tc(nodes[s])) {
+                if (i!=j) add[s] = add[j];
+                else add[s] = 0;
+                if (markLeaf(nodes[s]) || s<pr->nbINodes) {
+                    suc.push_back(s);
+                }
                 Pre[s]=i;
-                if (markLeaf(nodes[s]) || s<pr->nbINodes) suc.push_back(s);
             }
             else{
-                list<int> l1=suc_polytomy(i,s,pr,nodes,Pre,suc);
+                if (i!=j) add[s] = nodes[s]->minblen + add[j];
+                else add[s] = nodes[s]->minblen;
+                list<int> l1=suc_polytomy(i,s,pr,nodes,Pre,add,suc);
                 concatPos(l1,result);
             }
         }
@@ -1739,11 +1745,11 @@ list<int> suc_polytomy(int i,int j,Pr* pr,Node** nodes,int* & Pre,list<int> &suc
     return result;
 }
 
-void reduceTree_polytomy(Pr* pr,Node** nodes,int* &Pre,list<int>* & Suc,list<int>* &internal){
+void reduceTree_polytomy(Pr* pr,Node** nodes,int* &Pre,list<int>* & Suc,double* &add,list<int>* &internal){
     int count=0;
     Pre[0]=-1;
     for (int i=0;i<pr->nbINodes;i++){
-        if (!tc(nodes[i]) && (!markLeaf(nodes[i]) || nodes[i]->type=='p')){
+        if ((!tc(nodes[i])) && (!markLeaf(nodes[i]) || nodes[i]->type=='p')){
             bool bl=false;
             for (vector<int>::iterator iter=nodes[i]->suc.begin(); iter!=nodes[i]->suc.end(); iter++) {
                 if (tc(nodes[*iter])) {
@@ -1752,7 +1758,7 @@ void reduceTree_polytomy(Pr* pr,Node** nodes,int* &Pre,list<int>* & Suc,list<int
                 }
             }
             if (bl){
-                internal[count]=suc_polytomy(i,i,pr,nodes,Pre,Suc[i]);
+                internal[count]=suc_polytomy(i,i,pr,nodes,Pre,add,Suc[i]);
                 count++;
             }
             else {
@@ -1764,7 +1770,7 @@ void reduceTree_polytomy(Pr* pr,Node** nodes,int* &Pre,list<int>* & Suc,list<int
         }
         else {
             for (vector<int>::iterator iter=nodes[i]->suc.begin(); iter!=nodes[i]->suc.end(); iter++) {
-                Pre[*iter]=i;
+                if (Pre[*iter]==-1) Pre[*iter]=i;
                 if (markLeaf(nodes[*iter]) || *iter<pr->nbINodes) Suc[i].push_back(*iter);
             }
         }
@@ -2103,5 +2109,20 @@ double median(vector<double> array){
         return (array[(array.size()/2)-1] + array[array.size()/2])/2;
     } else {
         return array[(array.size()-1)/2];
+    }
+}
+
+void imposeMinBlen(Pr* pr, Node** nodes, double minblen){
+    double nullt = 0.5/pr->seqLength;
+    if (pr->nullblen>=0){
+        nullt = pr->nullblen;
+    } 
+    nodes[0]->minblen = minblen;
+    for (int i=1;i<=pr->nbBranches;i++){
+            if (nodes[i]->B > nullt){
+                nodes[i]->minblen = minblen;
+            } else {
+                nodes[i]->minblen = 0;
+            }
     }
 }

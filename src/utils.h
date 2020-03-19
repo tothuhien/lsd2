@@ -210,9 +210,9 @@ stack<int>* computeFeuilles_polytomy(list<int> ls,Pr* pr,Node** nodes);
 
 list<int> down_polytomy(int,int,int* &,list<int>* &,list<int>* &,bool* &,int* &,double* &);
 
-void reduceTree_polytomy(Pr* pr,Node** nodes,int* &Pre,list<int>* & Suc,list<int>* &internal);
+void reduceTree_polytomy(Pr* pr,Node** nodes,int* &Pre,list<int>* & Suc,double* & C,list<int>* &internal);
 
-list<int> suc_polytomy(int i,int j,Pr* pr,Node** nodes,int* & Pre,list<int> &suc);
+list<int> suc_polytomy(int i,int j,Pr* pr,Node** nodes,int* & Pre,double* & C,list<int> &suc);
 
 void computeVarianceEstimateRoot(Pr* pr,Node** nodes,double br);
 
@@ -253,3 +253,5 @@ vector<int> intersect(vector<int> v1, vector<int> v2);
 bool checkAllConstraintConsistent(Pr* pr,Node** nodes);
 
 double median(vector<double> array);
+
+void imposeMinBlen(Pr* pr, Node** nodes, double minblen);

@@ -33,8 +33,10 @@ Pr* getCommandLine( int argc, char** argv)
     flagA=false,
     flagZ=false,
     sflag=false,
-    fflag=false;
-    while ( (c = getopt(argc, argv, ":i:d:o:s:n:g:r:v:ct:w:b:ha:z:f:kje:m:p:q:V")) != -1 )
+    fflag=false,
+    lflag=false,
+    uflag=false;
+    while ( (c = getopt(argc, argv, ":i:d:o:s:n:g:r:v:ct:w:b:ha:z:f:kje:m:p:q:u:l:R:V")) != -1 )
     {
         switch (c)
         {
@@ -168,8 +170,31 @@ Pr* getCommandLine( int argc, char** argv)
                 opt->nbSampling = atoi( optarg );
                 if (opt->nbSampling<0)
                     myExit("Argument of option -f must be a positive integer.\n");
-                opt->ci=true;
                 fflag = true;
+                opt->ci=true;
+                break;
+            case 'u':
+                if ( !isReal(optarg))
+                    myExit("Argument of option -u must be a real\n");
+                opt->minblen = atof(optarg);
+                if (opt->minblen<0 || opt->minblen>1)
+                    myExit("Argument of option -u must be between 0 and 1\n");
+                uflag = true;
+                break;
+            case 'l':
+                if ( !isReal(optarg))
+                    myExit("Argument of option -l must be a real\n");
+                opt->nullblen = atof(optarg);
+                if (opt->nullblen<0 || opt->nullblen>1)
+                    myExit("Argument of option -l must be between 0 and 1\n");
+                lflag = true;
+                break;
+            case 'R':
+                if ( !isInteger(optarg))
+                    myExit("Argument of option -R must be a real\n");
+                opt->round_time = atoi(optarg);
+                if (opt->round_time<=0)
+                    myExit("Argument of option -R must be positive\n");
                 break;
             case 'V':
                 printf("lsd2 " VERSION"\n");
@@ -186,11 +211,13 @@ Pr* getCommandLine( int argc, char** argv)
     if( !(iflag) )
         myExit("Argument -i is necessary to continue.\n");
     if (!dflag && (flagA && !flagZ)){
-        myExit("The input date file is not provided, so option -z is required to use with option -a to estimate relative dates.\n");
+        myExit("The input date file is not provided, so option -z is required together with option -a to estimate relative dates.\n");
     }
     if (!dflag && (!flagA && flagZ)){
-        myExit("The input date file is not provided, so option -a is required to use with option -z to estimate relative dates.\n");
+        myExit("The input date file is not provided, so option -a is required together with option -z to estimate relative dates.\n");
     }
+    if ( !(sflag) && (fflag || !uflag || !lflag))
+        myExit("Argument -s is necessary to continue.\n");
     if (!dflag && (!flagA && !flagZ)){
         opt->relative=true;
         opt->mrca=0;
@@ -201,9 +228,7 @@ Pr* getCommandLine( int argc, char** argv)
             myExit("The root date must be strictly smaller than the tips date.\n");
         opt->relative=true;
     }
-    if (fflag && !sflag) {
-        myExit("Argument -s is required to calculate confidence intervals.\n");
-    }
+    
     if (dflag)
         opt->relative=false;
     
@@ -255,22 +280,16 @@ Pr* getInterface()
     if (!opt->rooted) {
         opt->estimate_root="a";
     }
+    opt->seqLength = getPositiveInputInteger("Enter the length of sequences that were used to build your tree>");
     fgets( letter, 3, stdin );
     printInterface( stdout, opt);
-    bool satisfied = true;
     do
     {
         fgets( letter, 3, stdin );
         if( isOptionActivate( opt, *letter ) ) setOptionsWithLetter( opt, *letter);
         printInterface( stdout, opt);
         cout<<endl;
-        if (opt->ci && opt->seqLength==0){
-            satisfied = false;
-            fprintf(stdout,"Please select option S to specify sequence length to calculate confidence interval\n");
-        } else {
-            satisfied = true;
-        }
-    } while(( *letter!='y' && *letter!='Y') || !satisfied);
+    } while(( *letter!='y' && *letter!='Y'));
     return opt;
 }
 
@@ -279,36 +298,36 @@ void printInterface( FILE* in, Pr* opt)
 {
     fprintf(in,"\nLEAST-SQUARE METHODS TO ESTIMATE RATES AND DATES - " VERSION" \n\n");
     fprintf(in,"\nInput files:\n");
-    fprintf(in,"  I                                 Input tree file : %s\n",opt->inFile.c_str());
+    fprintf(in,"  i                                               Input tree file : %s\n",opt->inFile.c_str());
     if (opt->relative==true)
-        fprintf(in,"  D                         Estimate relative dates : mrca date = %.2f, tips date =%.2f\n",opt->mrca,opt->leaves);
+        fprintf(in,"  d                                       Estimate relative dates : mrca date = %.2f, tips date =%.2f\n",opt->mrca,opt->leaves);
     else
-        fprintf(in,"  D                                 Input date file : %s\n",opt->inDateFile.c_str());
-    fprintf(in,"  P                                  Partition file : ");
+        fprintf(in,"  d                                               Input date file : %s\n",opt->inDateFile.c_str());
+    fprintf(in,"  p                                                Partition file : ");
     if (opt->partitionFile=="")        fprintf(in,"No\n");
     else fprintf(in,"%s\n",opt->partitionFile.c_str());
     fprintf(in,"Output file:\n");
-    fprintf(in,"  O                                    Output file  : %s\n",opt->outFile.c_str());
+    fprintf(in,"  o                                                  Output file  : %s\n",opt->outFile.c_str());
     fprintf(in,"Parameters:\n");
-    fprintf(in,"  C                                With constraints : ");
+    fprintf(in,"  c                                              With constraints : ");
     if (!opt->constraint) fprintf(in,"No\n");
     else {
         fprintf(in,"Yes\n");
     }
-    fprintf(in,"  T                        Lower bound for the rate : %.3e\n",opt->rho_min);
-    fprintf(in,"  V                                  With variances : ");
+    fprintf(in,"  t                                      Lower bound for the rate : %.3e\n",opt->rho_min);
+    fprintf(in,"  v                                                With variances : ");
     if (opt->variance==0) fprintf(in,"No\n");
     else {
         if (opt->variance==1) fprintf(in,"Yes, use variances based on input branch lengths\n");
         else if (opt->variance==2) fprintf(in,"Yes, use variances based on estimated branch lengths\n");
-        fprintf(in,"  B                Adjusted parameter for variances : ");
+        fprintf(in,"  b                              Adjusted parameter for variances : ");
         if (opt->c==-1){
-            fprintf(in,"%s\n","median branch lengths");
+            fprintf(in,"%s\n","Use median branch lengths");
         } else{
             fprintf(in,"%f\n",opt->c);
         }
     }
-    fprintf(in,"  R                               Estimate the root : ");
+    fprintf(in,"  r                                             Estimate the root : ");
     if (opt->estimate_root==""){
         fprintf(in,"No\n");
     }
@@ -324,44 +343,58 @@ void printInterface( FILE* in, Pr* opt)
     else if (opt->estimate_root.compare("as")==0){
         fprintf(in,"Use constrained mode on all branches\n");
     }
-    fprintf(in,"  W                         Given substitution rate : ");
+    fprintf(in,"  w                                       Given substitution rate : ");
     if (opt->rate=="") fprintf(in,"No\n");
     else fprintf(in,"%s\n",opt->rate.c_str());
     if (opt->fnOutgroup=="")
-        fprintf(in,"  G                                 Given outgroups : No\n");
+        fprintf(in,"  g                                               Given outgroups : No\n");
     else {
-        fprintf(in,"  G                         File contains outgroups : %s\n",opt->fnOutgroup.c_str());
+        fprintf(in,"  g                                       File contains outgroups : %s\n",opt->fnOutgroup.c_str());
         if (opt->keepOutgroup) {
-            fprintf(in,"  K           Keep outgroups in the estimating tree :  Yes\n");
+            fprintf(in,"  k                         Keep outgroups in the estimating tree :  Yes\n");
         }
         else{
-            fprintf(in,"  K           Keep outgroups in the estimating tree : No\n");
+            fprintf(in,"  k                         Keep outgroups in the estimating tree : No\n");
         }
     }
-    fprintf(in,"  N                               Multiple data set : ");
+    fprintf(in,"  n                                             Multiple data set : ");
     if( opt->nbData< 2 )
         fprintf(in,"No\n");
     else
         fprintf(in,"Yes, %i data sets\n",opt->nbData);
-    fprintf(in,"  F                    Compute confidence intervals : ");
+    fprintf(in,"  f                                  Compute confidence intervals : ");
     if (opt->ci){
         fprintf(in,"Yes, sampling %d times\n",opt->nbSampling);
-        fprintf(in,"  S                                 Sequence Length : %i (for computing confidence intervals)\n",opt->seqLength);
-        fprintf(in,"  Q    Standard deviation of lognormal relaxed clock: %f (for computing confidence intervals)\n",opt->q);
+        fprintf(in,"  q                  Standard deviation of lognormal relaxed clock: %f (for computing confidence intervals)\n",opt->q);
     }
     else
         fprintf(in,"No\n");
-    fprintf(in,"  E                            Exclude outlier tips : ");
+    if (opt->nullblen==-1 || opt->ci){
+        fprintf(in,"  s                                               Sequence length : %i\n",opt->seqLength);
+    }
+    fprintf(in,"  e                                          Exclude outlier tips : ");
     if (opt->e>0){
-        fprintf(in,"Yes, detecting and excluding outliers from the analysis\n");
-        fprintf(in,"  M     Number of sampling nodes to detect outliers : %i\n",opt->m);
-        fprintf(in,"  E         The Zscore threshold to detect outliers : %f\n",opt->e);
+        fprintf(in,"Yes, detect and exclude outliers from the analysis\n");
+        fprintf(in,"  m                   Number of sampling nodes to detect outliers : %i\n",opt->m);
+        fprintf(in,"  e                       The Zscore threshold to detect outliers : %f\n",opt->e);
     }
     else
         fprintf(in,"No\n");
-    
-    fprintf(in,"\n  H to print Help ");
-    fprintf(in,"\n  Y to accept or type a letter to change an option (X = Exit) ");
+    fprintf(in,"  u                     Minimum branch length of time scaled tree : ");
+    if (opt->minblen==-1){
+        fprintf(in,"To estimate\n");
+        fprintf(in,"  R Rounding number for minimum branch length of time scaled tree : %d \n",opt->round_time);
+    } else {
+        fprintf(in,"%f\n",opt->minblen);
+    }
+    fprintf(in,"  l          Max length of input branches that could be collapsed : ");
+    if (opt->nullblen==-1){
+        fprintf(in,"%f\n",0.5/opt->seqLength);
+    } else {
+        fprintf(in,"%f\n",opt->nullblen);
+    }
+    fprintf(in,"\n  h to print Help ");
+    fprintf(in,"\n  y to accept or type a letter to change an option (x = Exit) ");
 }
 
 void printHelp( void )
@@ -378,14 +411,9 @@ void printHelp( void )
            FLAT"[" BOLD"-c" FLAT"] "
            FLAT"[" BOLD"-v " LINE"mode" FLAT"] "
            FLAT"[" BOLD"-s " LINE"sequenceLength" FLAT"] "
-           FLAT"[" BOLD"-n " LINE"datasetNumber" FLAT"]\n"
-           FLAT"\t     [" BOLD"-t " LINE"lowerBoundRate" FLAT"] "
-           FLAT"[" BOLD"-r " LINE"rootingMethod" FLAT"] "
-           FLAT"[" BOLD"-b " LINE"varianceParameter" FLAT"] "
-           FLAT"[" BOLD"-w " LINE"givenRateFile" FLAT"] "
            FLAT"[" BOLD"-g " LINE"outgroupFile" FLAT"] "
-	   FLAT"[" BOLD"-f " LINE"nbSamplings" FLAT"] "
-           FLAT"[" BOLD"-h" FLAT"]\n"
+           FLAT"[" BOLD"-f " LINE"nbSamplings" FLAT"] "
+           FLAT"[" BOLD"-e " LINE"Zscore" FLAT"]\n"
            FLAT"\n");
     
     printf(BOLD"OPTIONS\n"
@@ -451,6 +479,9 @@ void printHelp( void )
            FLAT"\t" BOLD"-k\n"
            FLAT"\t   Use this option to keep the outgroups (given in option -g) in the estimated tree. The root position is then estimated on the\n"
            FLAT"\t   branch determined by the outgroups. If this option is not used, the outgroups will be removed.\n"
+           FLAT"\t" BOLD"-l " LINE"nullBlen\n"
+           FLAT"\t   A branch in the input tree is considered informative if its length is >= this value. By default it is 0.5/seq_length. Only \n"
+           FLAT"\t   informative branches are forced to be bigger than a minimum branch length (see option -u for more information about this).\n"
            FLAT"\t" BOLD"-m " LINE"samplingNumberOutlier\n"
            FLAT"\t   The number of dated nodes to be sampled when detecting outlier nodes. This should be smaller than the number of dated nodes,\n"
            FLAT"\t   and is 10 by default.\n"
@@ -489,11 +520,21 @@ void printHelp( void )
            FLAT"\t   Use " BOLD"-r as" FLAT" if you want to estimate to root using constrained mode on all branches.\n"
            FLAT"\t   Use " BOLD"-r k" FLAT" if you want to re-estimate the root position on the same branche of the given root.\n"
            FLAT"\t       If combined with option -g, the root will be estimated on the branche defined by the outgroups.\n"
+           FLAT"\t" BOLD"-R " LINE"round_time\n"
+           FLAT"\t   This value is used to round the minimum branch length of the time scaled tree. The purpose of this is to make the minimum branch length\n"
+           FLAT"\t   a meaningful time unit, such as day, week, year ... By default this value is 365, so if the input dates are year, the minimum branch\n"
+           FLAT"\t   length is rounded to day. The rounding formula is round(R*minblen)/R.\n"
            FLAT"\t" BOLD"-s " LINE"sequenceLength\n"
            FLAT"\t   This option is used to specify the sequence length when estimating confidence intervals (option -f). It is used to generate \n"
            FLAT"\t   integer branch lengths (number of substitutions) by multiplying this with the estimated branch lengths. By default it is 1000.\n"
            FLAT"\t" BOLD"-t " LINE"rateLowerBound\n"
            FLAT"\t   This option corresponds to the lower bound for the estimating rate. It is 1e-10 by default.\n"
+           FLAT"\t" BOLD"-u " LINE"minBlen\n"
+           FLAT"\t   By default without this option, lsd2 forces every branch of the time scaled tree to be greater than 1/(seq_length*rate) where rate is\n"
+           FLAT"\t   an pre-estimated median rate. This value is rounded to the number of days or weeks or years, depending on the rounding parameter -R.\n"
+           FLAT"\t   By using option -u, the program will not estimate the minimum branch length but use the specified value instead. Note that minimum branch\n"
+           FLAT"\t   length only applies for informative branches, those whose length in the input tree are at least 0.5/seq_length by default (or a number\n"
+           FLAT"\t   specified through option -l).\n"
            FLAT"\t" BOLD"-v " LINE"variance\n"
            FLAT"\t   Use this option if you want to apply variances for the branch lengths in order to recompense big errors on long estimated branch lengths. \n"
            FLAT"\t   The variance of the branch Bi is Vi = (Bi+b) where b is specified by option -b.\n"
@@ -614,49 +655,30 @@ bool isOptionActivate( Pr* opt, char l )
     switch(l)
     {
         case 'i':
-        case 'I':
         case 'd':
-        case 'D':
         case 'o':
-        case 'O':
         case 'p':
-        case 'P':
         case 's':
-        case 'S':
         case 'c':
-        case 'C':
         case 'v':
-        case 'V':
         case 'b':
-        case 'B':
         case 'r':
         case 'R':
         case 'g':
-        case 'G':
         case 'k':
-        case 'K':
         case 't':
-        case 'T':
         case 'w':
-        case 'W':
         case 'f':
-        case 'F':
         case 'n':
-        case 'N':
         case 'y':
-        case 'Y':
         case 'q':
-        case 'Q':
         case 'e':
-        case 'E':
         case 'm':
-        case 'M':
         case 'j':
-        case 'J':
+        case 'u':
+        case 'l':
         case 'x':
-        case 'X':
         case 'h':
-        case 'H':
         return true;
     }
     return false;
@@ -668,15 +690,12 @@ void setOptionsWithLetter( Pr* opt, char letter)
     switch( letter )
     {
         case 'x':
-        case 'X':
             exit( EXIT_SUCCESS );
         case 'i':
-        case 'I':
             opt->inFile = getInputFileName("Enter your Input File name> ");
             checkRooted(opt);
             break;
         case 'd':
-        case 'D':
             cout<<"Do you have a date file? y/n "<<endl;
             char letter[3];
             do{
@@ -710,19 +729,15 @@ void setOptionsWithLetter( Pr* opt, char letter)
             } while (*letter!='n' && *letter!='N' && *letter!='y' && *letter!='Y');
             break;
         case 'p':
-        case 'P':
             opt->partitionFile = getInputFileName("Enter your Partition File name> ");
             break;
         case 's':
-        case 'S':
             opt->seqLength = getPositiveInputInteger("Enter your sequence length> ");
             break;
         case 'n':
-        case 'N':
             opt->nbData = getPositiveInputInteger("Enter your number of dataset> ");
             break;
         case 'o':
-        case 'O':
             opt->outFile=getInputString("Enter your output file name > ");
             while( access( opt->outFile.c_str(), F_OK )==0){
                 cout<<"File "<<opt->outFile<<" already exists. Do you want to overwrite it? Y/N"<<endl;
@@ -737,20 +752,16 @@ void setOptionsWithLetter( Pr* opt, char letter)
             }
             break;
         case 'c':
-        case 'C':
             opt->constraint=!opt->constraint;
             break;
         case 'v':
-        case 'V':
             if (opt->variance==0 || opt->variance==1) opt->variance+=1;
             else if (opt->variance==2) opt->variance=0;
             break;
         case 'b':
-        case 'B':
             if (opt->variance) opt->c = getInputPositiveReal("Enter the parameter for the variances> ");
             break;
         case 'r':
-        case 'R':
             if (opt->rooted || opt->fnOutgroup!=""){
                 if (opt->estimate_root==""){
                     opt->estimate_root="l";
@@ -780,7 +791,6 @@ void setOptionsWithLetter( Pr* opt, char letter)
             }
             break;
         case 'g':
-        case 'G':
             if (opt->fnOutgroup==""){
                 string fo = getOutgroupFileName("Enter the name of the file that contains your outgroups> ");
                 if (fo.compare("")!=0) {
@@ -796,7 +806,6 @@ void setOptionsWithLetter( Pr* opt, char letter)
             }
             break;
         case 'k':
-        case 'K':
             if (opt->fnOutgroup!=""){
             	opt->keepOutgroup=!opt->keepOutgroup;
             	if (opt->keepOutgroup) {
@@ -805,7 +814,6 @@ void setOptionsWithLetter( Pr* opt, char letter)
 	    }
             break;
         case 'w':
-        case 'W':
             if (opt->rate=="") {
                 opt->rate = getInputFileName("Enter the name of the file that contains the rates> ");
                 if (string(opt->rate).length()==0) opt->rate="";
@@ -817,11 +825,9 @@ void setOptionsWithLetter( Pr* opt, char letter)
             }
             break;
         case 't':
-        case 'T':
             opt->rho_min = getInputPositiveReal("Enter the lower bound for the rate> ");
             break;
         case 'f':
-        case 'F':
             if (!opt->ci) {
                 opt->nbSampling = getInputInteger("Enter the number of sampling for calculating confidence intervals> ");
                 opt->ci=true;
@@ -831,24 +837,29 @@ void setOptionsWithLetter( Pr* opt, char letter)
             }
             break;
         case 'j':
-        case 'J':
             opt->verbose = !opt->verbose;
             break;
         case 'm':
-        case 'M':
             if (opt->e>0){
                 opt->m = getInputInteger("Enter the number of sampling dated nodes for outliers detection> ");
             }
             break;
         case 'q':
-        case 'Q':
             opt->q = getInputPositiveReal("Enter the standard deviation for lognormal relaxed clock to calculate confidence intervals> ");
             break;
         case 'e':
-        case 'E':
             opt->e = getInputReal("Enter the Zscore threshold for outliers detection> ");
+            break;
+        case 'u':
+            opt->minblen = getInputPositiveReal("Enter the minimum elapsed time on a branch> ");
+            break;
+        case 'l':
+            opt->nullblen = getInputPositiveReal("Maximum length that a branch could be collapsed (default is 1/(2*seq_length))> ");
+            break;
+        case 'R':
+            opt->round_time = getInputPositiveReal("Rounding number for minimum branch length of time scaled tree>");
+            break;
         case 'h':
-        case 'H':
             printHelp();
             break;
     }

@@ -27,12 +27,14 @@ public:
     double lower;
     double upper;
     double D;
+    double minblen;
     int rateGroup;
     int status;
     Node(){
         type='n';
         status=0;
         rateGroup=0;
+        minblen = 0;
     }
     bool addConstraint(char t,double v){
         if (type=='n'){

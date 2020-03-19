@@ -15,6 +15,7 @@
 //    along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #include "dating.h"
 
+
 bool without_constraint(Pr* pr,Node** nodes){
     //This function implements LD algorithm using only precise date constrains of the tips (interval date constrains of tips are also ignored)
     //The estimated substitution rate and dates of all internal nodes are returned in variable paramaters.
@@ -360,7 +361,7 @@ bool conditionsQP(list<double>& ldLagrange,Pr* pr,Node** nodes){
         }
     }
     for (int i=0;i<=pr->nbBranches;i++){
-        if (i>0 && nodes[i]->D-nodes[nodes[i]->P]->D<-maxNumError) {
+        if (i>0 && (nodes[i]->D - nodes[nodes[i]->P]->D - nodes[i]->minblen) < -maxNumError) {
             return false;
         }
         if (((nodes[i]->type=='l' || nodes[i]->type=='b') && nodes[i]->D<nodes[i]->lower) || ((nodes[i]->type=='u' || nodes[i]->type=='b') && nodes[i]->D>nodes[i]->upper)){
@@ -377,7 +378,6 @@ bool starting_pointQP(Pr* pr,Node** nodes,list<int> &active_set){
     without_constraint_active_set(pr,nodes);
     double* lowerX = new double[pr->nbBranches+1];
     bool* bl = new bool[pr->nbBranches+1];
-    vector<int> pre = preorder_polytomy(pr,nodes);
     for (int i=0;i<=pr->nbBranches;i++){
         if (nodes[i]->type=='l' || nodes[i]->type=='b'){
             bl[i]=true;
@@ -389,24 +389,25 @@ bool starting_pointQP(Pr* pr,Node** nodes,list<int> &active_set){
         }
         else bl[i]=false;
     }
+    vector<int> pre = preorder_polytomy(pr,nodes);
     for (vector<int>::iterator iter = pre.begin();iter!=pre.end();iter++){
         int i=*iter;
         if (bl[i]){
             for (vector<int>::iterator iter=nodes[i]->suc.begin(); iter!=nodes[i]->suc.end(); iter++) {
                 int s=*iter;
-                if (!bl[s] || (nodes[s]->type=='l' && (nodes[s]->lower<lowerX[i]))){
-                    lowerX[s]=lowerX[i];
-                    nodes[s]->lower=lowerX[i];
+                if (!bl[s] || (nodes[s]->type == 'l' && (nodes[s]->lower - lowerX[i] < nodes[s]->minblen))){
+                    lowerX[s] = lowerX[i] + nodes[s]->minblen;
+                    nodes[s]->lower = lowerX[i] + nodes[s]->minblen;
                     bl[s]=true;
                 }
-                else if (nodes[s]->type=='u' && nodes[s]->upper<lowerX[i]){
+                else if (nodes[s]->type == 'u' && nodes[s]->upper - lowerX[i] < nodes[s]->minblen){
                     return false;
                 }
-                else if (nodes[s]->type=='b'){
-                    if (nodes[s]->upper>=lowerX[i]){
-                        if (nodes[s]->lower<lowerX[i]){
-                            lowerX[s]=lowerX[i];
-                            nodes[s]->lower=lowerX[i];
+                else if (nodes[s]->type == 'b'){
+                    if (nodes[s]->upper - lowerX[i] >= nodes[s]->minblen){
+                        if (nodes[s]->lower - lowerX[i] < nodes[s]->minblen){
+                            lowerX[s] = lowerX[i] + nodes[s]->minblen;
+                            nodes[s]->lower = lowerX[i] + nodes[s]->minblen;
                             bl[s]=true;
                         }
                     }
@@ -414,11 +415,11 @@ bool starting_pointQP(Pr* pr,Node** nodes,list<int> &active_set){
                         return false;
                     }
                 }
-                else if ((nodes[s]->type=='p') && nodes[s]->D<lowerX[i]){
+                else if ((nodes[s]->type == 'p') && nodes[s]->D - lowerX[i] < nodes[s]->minblen){
                     return false;
                 }
-                if (nodes[s]->D<lowerX[s]){
-                    nodes[s]->D=lowerX[s];
+                if (nodes[s]->D - lowerX[s] < nodes[s]->minblen){
+                    nodes[s]->D = lowerX[s] + nodes[s]->minblen;
                 }
             }
         }
@@ -427,8 +428,8 @@ bool starting_pointQP(Pr* pr,Node** nodes,list<int> &active_set){
         if (lower(nodes[i]) || upper(nodes[i])) {
             active_set.push_back(-i);
         }
-        else if (bl[i] && nodes[i]->type!='p' && nodes[i]->D<lowerX[i]){
-            nodes[i]->D=lowerX[i];
+        else if (bl[i] && nodes[i]->type != 'p' && nodes[i]->D < lowerX[i]){
+            nodes[i]->D = lowerX[i];
             if ((nodes[i]->type=='l' || nodes[i]->type=='b')) {
                 activeLower(nodes[i]);
                 active_set.push_back(-i);
@@ -441,39 +442,39 @@ bool starting_pointQP(Pr* pr,Node** nodes,list<int> &active_set){
         if (lower(nodes[i]) || upper(nodes[i])) {
             active_set.push_back(-i);
         }
-        else if (bl[i] && nodes[i]->type!='p' && nodes[i]->D<lowerX[i]){
-            nodes[i]->D=lowerX[i];
-            if ((nodes[i]->type=='l' || nodes[i]->type=='b')) {
+        else if (bl[i] && nodes[i]->type != 'p' && nodes[i]->D < lowerX[i]){
+            nodes[i]->D = lowerX[i];
+            if ((nodes[i]->type=='l' || nodes[i]->type == 'b')) {
                 activeLower(nodes[i]);
                 active_set.push_back(-i);
             }
         }
-        bool conflictU=((nodes[i]->type=='u' || nodes[i]->type=='b') && nodes[i]->D>nodes[i]->upper);
-        bool conflictTC=false;
-        int minI=i;
-        double minS=nodes[i]->D;
+        bool conflictU = ((nodes[i]->type == 'u' || nodes[i]->type == 'b') && nodes[i]->D > nodes[i]->upper);
+        bool conflictTC = false;
+        int minI = i;
+        double minS = nodes[i]->D;
         for (vector<int>::iterator iter=nodes[i]->suc.begin(); iter!=nodes[i]->suc.end(); iter++) {
             int s=*iter;
-            if (nodes[i]->D>nodes[s]->D) {
-                conflictTC=true;
+            if (nodes[s]->D - nodes[i]->D < nodes[s]->minblen){
+                conflictTC = true;
             }
-            if (nodes[s]->D<minS) {
-                minS=nodes[s]->D;
-                minI=s;
+            if (nodes[s]->D - nodes[s]->minblen < minS) {
+                minS = nodes[s]->D - nodes[s]->minblen;
+                minI = s;
             }
         }
         if (conflictU || conflictTC){
-            if (((nodes[i]->type=='u' || nodes[i]->type=='b') && nodes[minI]->D<nodes[i]->upper) || (nodes[i]->type!='u' && nodes[i]->type!='b')){
+            if (((nodes[i]->type == 'u' || nodes[i]->type == 'b') && minS < nodes[i]->upper) || (nodes[i]->type != 'u' && nodes[i]->type != 'b')){
                 if (lower(nodes[i]) || upper(nodes[i])){
                     desactiveLimit(nodes[i]);
                     active_set.remove(-i);
                 }
-                nodes[i]->D=nodes[minI]->D;
+                nodes[i]->D = minS;
                 activeTC(nodes[minI]);
                 active_set.push_back(minI);
             }
             else{
-                nodes[i]->D=nodes[i]->upper;
+                nodes[i]->D = nodes[i]->upper;
                 activeUpper(nodes[i]);
                 active_set.push_back(-i);
             }
@@ -506,7 +507,7 @@ bool with_constraint(Pr* pr,Node** &nodes,list<int> active_set,list<double>& ld)
                 ls.push_back(i);
             }
         }
-        else if (!tc(nodes[-i]) && leaf(nodes[-i])) ls.push_back(-i);
+        else if ((!tc(nodes[-i]) || nodes[-i]->minblen>0) && leaf(nodes[-i])) ls.push_back(-i);
     }
     stack<int>* feuilles = computeFeuilles_polytomy(ls,pr,nodes);
     list<int> top;
@@ -522,8 +523,9 @@ bool with_constraint(Pr* pr,Node** &nodes,list<int> active_set,list<double>& ld)
         }
     }
     list<int>* internal = new list<int>[top.size()];
-    reduceTree_polytomy(pr,nodes,Pre,Suc,internal);
-    
+    double *add = new double[pr->nbBranches];
+    for (int i=0;i<=pr->nbBranches;i++) add[i] = 0;
+    reduceTree_polytomy(pr,nodes,Pre,Suc,add,internal);
     list<int> pos = postorder_polytomy(pr,nodes);
     vector<int> pre = preorder_polytomy(pr,nodes);
     double *W= new double[pr->nbINodes];//nodes[i]->D=W[i].T[a(i)]+C[i]+X[i]/rho
@@ -531,7 +533,7 @@ bool with_constraint(Pr* pr,Node** &nodes,list<int> active_set,list<double>& ld)
     double *X =new double[pr->nbINodes];
     for (int i=0;i<pr->nbINodes;i++){
         if (markLeaf(nodes[i])) C[i]=nodes[i]->D;
-        else C[i]=0;
+        else C[i] = 0;
         W[i]=0;X[i]=0;
     }
     for (list<int>::iterator it = pos.begin();it!=pos.end();it++){
@@ -545,12 +547,12 @@ bool with_constraint(Pr* pr,Node** &nodes,list<int> active_set,list<double>& ld)
                 for (list<int>::iterator iter = Suc[i].begin();iter!=Suc[i].end();iter++){
                     if (markLeaf(nodes[*iter])) {
                         coefs+=1/nodes[*iter]->V;
-                        ctemp+=nodes[*iter]->D/nodes[*iter]->V;
+                        ctemp+=(nodes[*iter]->D-add[*iter])/nodes[*iter]->V;
                         xtemp-=nodes[*iter]->B/nodes[*iter]->V;
                     }
                     else{
                         coefs+=(1-W[*iter])/nodes[*iter]->V;
-                        ctemp+=C[*iter]/nodes[*iter]->V;
+                        ctemp+=(C[*iter]-add[*iter])/nodes[*iter]->V;
                         xtemp+=(X[*iter]-nodes[*iter]->B)/nodes[*iter]->V;
                     }
                 }
@@ -563,25 +565,23 @@ bool with_constraint(Pr* pr,Node** &nodes,list<int> active_set,list<double>& ld)
             else{
                 double coefs=1/nodes[i]->V;
                 double wtemp=1/nodes[i]->V;
-                double ctemp=0;
+                double ctemp=add[i]/nodes[i]->V;
                 double xtemp=nodes[i]->B/nodes[i]->V;
                 for (list<int>::iterator iter = Suc[i].begin();iter!=Suc[i].end();iter++){
                     if (markLeaf(nodes[*iter])) {
                         coefs+=1/nodes[*iter]->V;
-                        ctemp+=nodes[*iter]->D/nodes[*iter]->V;
+                        ctemp+=(nodes[*iter]->D-add[*iter])/nodes[*iter]->V;
                         xtemp-=nodes[*iter]->B/nodes[*iter]->V;
                     }
                     else{
                         coefs+=(1-W[*iter])/nodes[*iter]->V;
-                        ctemp+=C[*iter]/nodes[*iter]->V;
+                        ctemp+=(C[*iter]-add[*iter])/nodes[*iter]->V;
                         xtemp+=(X[*iter]-nodes[*iter]->B)/nodes[*iter]->V;
                     }
                 }
                 W[i]=wtemp/coefs;
                 C[i]=ctemp/coefs;
                 X[i]=xtemp/coefs;
-                //if (i==66 | i==1)
-                //{cout<<i<<" "<<W[i]<<" "<<C[i]<<" "<<X[i]<<endl;}
             }
         }
     }
@@ -595,12 +595,11 @@ bool with_constraint(Pr* pr,Node** &nodes,list<int> active_set,list<double>& ld)
         for (vector<int>::iterator iter=nodes[i]->suc.begin(); iter!=nodes[i]->suc.end(); iter++) {
             int s=*iter;
             if (tc(nodes[s]) && !markLeaf(nodes[s]) && s<pr->nbINodes) {
-                C[s]=C[i];
+                C[s]=C[i] + nodes[s]->minblen;
                 X[s]=X[i];
             }
         }
     }
-    
     if (!pr->givenRate[0]){//if the rate is not given
         double *F=new double[pr->nbBranches+1];
         double *G=new double[pr->nbBranches+1];//nodes[nodes[i]->P]->D-nodes[i]->D=F[i]+G[i]/rho;
@@ -636,7 +635,7 @@ bool with_constraint(Pr* pr,Node** &nodes,list<int> active_set,list<double>& ld)
             }
         }
         pr->rho = -b/(2*a);
-        if (pr->rho<pr->rho_min) pr->rho=pr->rho_min;
+        if (pr->rho < pr->rho_min) pr->rho=pr->rho_min;
         delete[] F;
         delete[] G;
     }
@@ -647,9 +646,9 @@ bool with_constraint(Pr* pr,Node** &nodes,list<int> active_set,list<double>& ld)
     for (int i=pr->nbINodes; i<=pr->nbBranches; i++) {
         if (!markLeaf(nodes[i])) {
             if (tc(nodes[i])) {
-                nodes[i]->D=nodes[nodes[i]->P]->D;
+                nodes[i]->D = nodes[nodes[i]->P]->D + nodes[i]->minblen;
             }
-            else nodes[i]->D=nodes[nodes[i]->P]->D+nodes[i]->B/pr->rho;
+            else nodes[i]->D = nodes[nodes[i]->P]->D + nodes[i]->B/pr->rho;
         }
     }
     computeObjective(pr,nodes);
@@ -657,7 +656,6 @@ bool with_constraint(Pr* pr,Node** &nodes,list<int> active_set,list<double>& ld)
     delete[] C;
     delete[] X;
     delete[] Pre;
-    
     int *as=new int[2*pr->nbBranches+1];
     for (int i=0;i<=2*pr->nbBranches;i++) as[i]=-1;
     int count = 0;
@@ -671,7 +669,6 @@ bool with_constraint(Pr* pr,Node** &nodes,list<int> active_set,list<double>& ld)
         }
         count++;
     }
-    
     bool *bl=new bool[pr->nbBranches+1];
     for (int i=0;i<=pr->nbBranches;i++) bl[i]=false;
     double* lambda = new double[count];
@@ -682,17 +679,17 @@ bool with_constraint(Pr* pr,Node** &nodes,list<int> active_set,list<double>& ld)
             feuilles[y].pop();
             if (tc(nodes[i])){//compute lambda of active tc
                 int p=nodes[i]->P;
-                lambda[as[i]]=-2*pr->rho*(nodes[i]->B-pr->rho*nodes[i]->D+pr->rho*nodes[p]->D)/nodes[i]->V;
+                lambda[as[i]] = -2*pr->rho * (nodes[i]->B - pr->rho*nodes[i]->D + pr->rho*nodes[p]->D) / nodes[i]->V;
                 if (i>=pr->nbINodes && !leaf(nodes[i])) bl[i]=true;
                 if (i<pr->nbINodes && !leaf(nodes[i])){
                     if (!limit(nodes[i])){
                         bl[i]=true;
                         for (vector<int>::iterator iter=nodes[i]->suc.begin(); iter!=nodes[i]->suc.end(); iter++) {
                             int s=*iter;
-                            if (!tc(nodes[s])||bl[s]) {
-                                lambda[as[i]]+=2*pr->rho*(nodes[s]->B-pr->rho*nodes[s]->D+pr->rho*nodes[i]->D)/nodes[s]->V;
+                            if (!tc(nodes[s]) || bl[s]) {
+                                lambda[as[i]] += 2*pr->rho * (nodes[s]->B - pr->rho*nodes[s]->D + pr->rho*nodes[i]->D) / nodes[s]->V;
                                 if (tc(nodes[s])) {
-                                    lambda[as[i]]+=lambda[as[s]];
+                                    lambda[as[i]] += lambda[as[s]];
                                 }
                             }
                             else bl[i]=false;
@@ -703,16 +700,16 @@ bool with_constraint(Pr* pr,Node** &nodes,list<int> active_set,list<double>& ld)
                     lambda[as[i]]=0;
                     for (vector<int>::iterator iter=nodes[p]->suc.begin(); iter!=nodes[p]->suc.end(); iter++) {
                         int j=*iter;
-                        lambda[as[i]]-=2*pr->rho*(nodes[j]->B-pr->rho*nodes[j]->D+pr->rho*nodes[p]->D)/nodes[j]->V;
+                        lambda[as[i]] -= 2*pr->rho * (nodes[j]->B - pr->rho*nodes[j]->D + pr->rho*nodes[p]->D) / nodes[j]->V;
                         if (j!=i && tc(nodes[j])) {
-                            lambda[as[i]]-=lambda[as[j]];
+                            lambda[as[i]] -= lambda[as[j]];
                         }
                     }
                     if (nodes[p]->P!=-1){
-                        lambda[as[i]]+=2*pr->rho*(nodes[p]->B-pr->rho*nodes[p]->D+pr->rho*nodes[nodes[p]->P]->D)/nodes[p]->V;
+                        lambda[as[i]] += 2*pr->rho * (nodes[p]->B - pr->rho*nodes[p]->D + pr->rho*nodes[nodes[p]->P]->D) / nodes[p]->V;
                     }
                     if (tc(nodes[p])) {
-                        lambda[as[i]]+=lambda[as[p]];
+                        lambda[as[i]] += lambda[as[p]];
                     }
                     bl[i]=true;
                 }
@@ -745,55 +742,55 @@ bool with_constraint(Pr* pr,Node** &nodes,list<int> active_set,list<double>& ld)
         for (list<int>::iterator iter = internal[y].begin();iter!=internal[y].end();iter++){
             int i= *iter;
             int p = nodes[i]->P;
-            lambda[as[i]]=-2*pr->rho*(nodes[i]->B-pr->rho*nodes[i]->D+pr->rho*nodes[p]->D)/nodes[i]->V;
+            lambda[as[i]] = -2*pr->rho * (nodes[i]->B - pr->rho*nodes[i]->D + pr->rho*nodes[p]->D) / nodes[i]->V;
             if (i<pr->nbINodes) {
                 for (vector<int>::iterator iter=nodes[i]->suc.begin(); iter!=nodes[i]->suc.end(); iter++) {
                     int s=*iter;
-                    lambda[as[i]]+=2*pr->rho*(nodes[s]->B-pr->rho*nodes[s]->D+pr->rho*nodes[i]->D)/nodes[s]->V;
+                    lambda[as[i]] += 2*pr->rho*(nodes[s]->B - pr->rho*nodes[s]->D + pr->rho*nodes[i]->D) / nodes[s]->V;
                     if (tc(nodes[s])) {
-                        lambda[as[i]]+=lambda[as[s]];
+                        lambda[as[i]] += lambda[as[s]];
                     }
                 }
                 bl[i]=true;
             }
         }
     }
-    /*
-     double sr=0;
-     for (int i=0; i<=pr->nbBranches; i++) {
-     if (nodes[i]->type!='p') {
-     double s=0;
-     if (i>0) {
-     s=-2*pr->rho*(nodes[i]->B-pr->rho*(nodes[i]->D-nodes[nodes[i]->P]->D))/nodes[i]->V;
-     }
-     if (tc(nodes[i])) {
-     s-=lambda[as[i]];
-     }
-     if (lower(nodes[i])){
-     s-=lambda[as[i+pr->nbBranches+1]];
-     }
-     if (upper(nodes[i])){
-     s+=lambda[as[i+pr->nbBranches+1]];
-     }
-     if (i<pr->nbINodes) {
-     for (vector<int>::iterator iter=nodes[i]->suc.begin(); iter!=nodes[i]->suc.end(); iter++) {
-     int s1=*iter;
-     s+=2*pr->rho*(nodes[s1]->B+pr->rho*nodes[i]->D-pr->rho*nodes[s1]->D)/nodes[s1]->V;
-     if (tc(nodes[s1])) {
-     s+=lambda[as[s1]];
-     }
-     }
-     }
-     if (myabs(s)>1e-10) {
-     cout<<"TEST  PROBLEM "<<i<<" "<<s<<" "<<nodes[i]->P<<endl;
-     }
-     }
-     if (i>0) sr+=(nodes[i]->D-nodes[nodes[i]->P]->D)*(nodes[i]->B-pr->rho*(nodes[i]->D-nodes[nodes[i]->P]->D))/nodes[i]->V;
-     }
-     if (myabs(sr)>1e-6) {
-     cout<<"TEST  PROBLEM rho "<<sr<<endl;
-     }
-     */
+  /*
+    double sr=0;
+    for (int i=0; i<=pr->nbBranches; i++) {
+        if (nodes[i]->type!='p') {
+            double s=0;
+            if (i>0) {
+                s = -2*pr->rho * (nodes[i]->B - pr->rho*(nodes[i]->D - nodes[nodes[i]->P]->D)) / nodes[i]->V;
+            }
+            if (tc(nodes[i])) {
+                s -= lambda[as[i]];
+            }
+            if (lower(nodes[i])){
+                s -= lambda[as[i+pr->nbBranches+1]];
+            }
+            if (upper(nodes[i])){
+                s += lambda[as[i+pr->nbBranches+1]];
+            }
+            if (i<pr->nbINodes) {
+                for (vector<int>::iterator iter=nodes[i]->suc.begin(); iter!=nodes[i]->suc.end(); iter++) {
+                    int s1=*iter;
+                    s += 2*pr->rho * (nodes[s1]->B - pr->rho*(nodes[s1]->D - nodes[i]->D)) / nodes[s1]->V;
+                    if (tc(nodes[s1])) {
+                        s+=lambda[as[s1]];
+                    }
+                }
+            }
+            if (myabs(s)>1e-10) {
+                cout<<"TEST  PROBLEM "<<i<<" "<<s<<" "<<nodes[i]->P<<endl;
+            }
+        }
+        if (i>0) sr += (nodes[i]->D-nodes[nodes[i]->P]->D) * (nodes[i]->B-pr->rho*(nodes[i]->D-nodes[nodes[i]->P]->D)) /nodes[i]->V;
+    }
+    if (myabs(sr)>1e-6) {
+        cout<<"TEST  PROBLEM rho "<<sr<<endl;
+    }*/
+    
     for (int i=0;i<count;i++){
         if (myabs(lambda[i])<(maxNumError))
             lambda[i]=0;
@@ -822,16 +819,18 @@ bool with_constraint_active_set(Pr* pr,Node** &nodes){
         bool val = with_constraint(pr,nodes,active_set,lambda);
         int nb_iter=0;
         double alpha;
-        while (val && !conditionsQP(lambda,pr,nodes) && nb_iter<=maxIter){
-            for (int i=0;i<=pr->nbBranches;i++)  {dir[i]=nodes[i]->D-D_old[i];}
+        while (val && !conditionsQP(lambda,pr,nodes) && nb_iter <= maxIter){ //{
+            for (int i=0;i<=pr->nbBranches;i++)  {
+                dir[i] = nodes[i]->D - D_old[i];
+            }
             alpha=1;
             int as=2*pr->nbBranches+2;
             double a;
             for (int i=0; i<=pr->nbBranches; i++) {
                 int p = nodes[i]->P;
                 if (p!=-1){
-                    if (dir[p]>dir[i] && !tc(nodes[i])){
-                        a = (D_old[i]-D_old[p])/(dir[p]-dir[i]);
+                    if (dir[p] > dir[i] && !tc(nodes[i])){
+                        a = (D_old[i]-D_old[p]-nodes[i]->minblen)/(dir[p]-dir[i]);
                         if (a<alpha){
                             alpha = a;
                             as = i;

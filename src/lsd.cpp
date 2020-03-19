@@ -69,6 +69,7 @@ int main( int argc, char** argv ){
     fprintf(tree2,"#NEXUS\n");
     bool constraintConsistent=true;
     int s=0;
+    double median_rate = opt->rho_min;
     if (opt->partitionFile!="") {
         readPartitionFile(opt);
         for (int i=0;i<=opt->ratePartition.size();i++){
@@ -111,12 +112,12 @@ int main( int argc, char** argv ){
             vector<double> bl;
             for (int i=1;i<=opt->nbBranches;i++){
                 bl.push_back(nodes[i]->B);
-                if (opt->c < nodes[i]->B) opt->c = nodes[i]->B;
             }
-            sort(bl.begin(), bl.begin()+bl.size());
-            opt->c = median(bl);
-            cout<<"Using the median branch length "<<opt->c<<" to adjust variances ..."<<endl;
-            fprintf(result,"Median branch length  %f was used to adjust variances\n",opt->c);
+            opt->b = median(bl);
+            cout<<"Using the median branch length "<<opt->b<<" to adjust variances ..."<<endl;
+            fprintf(result,"Median branch lengths %f was used to adjust variances\n",opt->b);
+        } else {
+            opt->b = opt->c;
         }
         computeVariance(opt,nodes);
         double br=0;
@@ -142,7 +143,12 @@ int main( int argc, char** argv ){
         }
         constraintConsistent=initConstraint(opt, nodes);
         if (!opt->constraint){//LD without constraints
-            if (opt->e>0) constraintConsistent = calculateOutliers(opt,nodes);
+            if (opt->e>0) constraintConsistent = calculateOutliers(opt,nodes,median_rate);
+            else calculateMedianRate(opt,nodes,median_rate);
+            double minblen = (int)(opt->round_time/(opt->seqLength*median_rate))/(double)opt->round_time;
+            cout<<"Minimum branch length of time scaled tree was set to "<<(int)(opt->round_time/(opt->seqLength*median_rate))<<"/"<<opt->round_time<<" = "<<minblen<<endl;
+            fprintf(result,"Minimum branch length of time scaled tree was set to %d/%d = %f\n",(int)(opt->round_time/(opt->seqLength*median_rate)),opt->round_time,minblen);
+            imposeMinBlen(opt,nodes,minblen);
             if (!constraintConsistent){
                 ostringstream oss;
                 oss<<"- There's conflict in the input temporal constraints.\n";
@@ -195,7 +201,15 @@ int main( int argc, char** argv ){
         }
         else {//QPD with temporal constrains
             if (constraintConsistent || (opt->estimate_root!="" && opt->estimate_root!="k")){
-                if (opt->e>0) constraintConsistent = calculateOutliers(opt,nodes);
+                if (opt->e>0) constraintConsistent = calculateOutliers(opt,nodes,median_rate);
+                else calculateMedianRate(opt,nodes,median_rate);
+                double minblen = opt->minblen;
+                if (minblen<0){
+                    minblen = (int)(opt->round_time/(opt->seqLength*median_rate))/(double)opt->round_time;
+                    cout<<"Minimum branch length of time scaled tree was set to "<<(int)(opt->round_time/(opt->seqLength*median_rate))<<"/"<<opt->round_time<<" = "<<minblen<<endl;
+                    fprintf(result,"Minimum branch length of time scaled tree was set to %d/%d = %f\n",(int)(opt->round_time/(opt->seqLength*median_rate)),opt->round_time,minblen);
+                }
+                imposeMinBlen(opt,nodes,minblen);
                 if (constraintConsistent){
                     if (opt->estimate_root==""){//keep the given root
                         if (constraintConsistent){
@@ -236,7 +250,7 @@ int main( int argc, char** argv ){
                         }
                         else if (opt->estimate_root.compare("a")==0){
                             //forget the given root and re-estimate the position of the root over all branhces using fast method
-                            cout<<"Estimating the root position on all branches using fast methode ..."<<endl;
+                            cout<<"Estimating the root position on all branches using fast method ..."<<endl;
                             r=estimate_root_with_constraint_fast_rooted(opt,nodes);
                         }
                         else{ //forget the given root and re-estimate the position of the root over all branches

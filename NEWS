@@ -6,3 +6,4 @@ Something new lsd2:
 - Use variance in estimating the root position.
 - The adjusted paramater for variances is set be the same unit of branch length (instead of count as before), and set by default to the median branch length.
 - Can be applied on non-binary tree
+- Fore all informative branches (>=0.5/seq_length) to have a minimum branch length in the time scaled tree

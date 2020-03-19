@@ -552,7 +552,9 @@ bool with_constraint_lambda(double br,Pr* &pr,Node** &nodes,list<int> active_set
             }
         }
         list<int>* internal = new list<int>[top.size()];
-        reduceTree_polytomy(pr,nodes,Pre,Suc,internal);
+        double *add = new double[pr->nbBranches];
+        for (int i=0;i<=pr->nbBranches;i++) add[i] = 0;
+        reduceTree_polytomy(pr,nodes,Pre,Suc,add,internal);
         list<int> pos = postorder_polytomy(pr,nodes);
         vector<int> pre = preorder_polytomy(pr,nodes);
         double *W= new double[pr->nbINodes];//nodes[i]->D=W[i].T[a(i)]+C[i]+X[i]/rho
@@ -575,12 +577,12 @@ bool with_constraint_lambda(double br,Pr* &pr,Node** &nodes,list<int> active_set
                         for (list<int>::iterator iter=Suc[i].begin(); iter!=Suc[i].end(); iter++) {
                             if (markLeaf(nodes[*iter])) {
                                 coefs+=1/nodes[*iter]->V;
-                                ctemp+=nodes[*iter]->D/nodes[*iter]->V;
+                                ctemp+=(nodes[*iter]->D)/nodes[*iter]->V;
                                 xtemp-=nodes[*iter]->B/nodes[*iter]->V;
                             }
                             else {
                                 coefs+=(1-W[*iter])/nodes[*iter]->V;
-                                ctemp+=C[*iter]/nodes[*iter]->V;
+                                ctemp+=(C[*iter])/nodes[*iter]->V;
                                 xtemp+=(X[*iter]-nodes[*iter]->B)/nodes[*iter]->V;
                             }
                         }
@@ -599,11 +601,11 @@ bool with_constraint_lambda(double br,Pr* &pr,Node** &nodes,list<int> active_set
                         double ctemp=0;//C[nc]/nodes[nc]->V;
                         double xtemp=-br/nodes[nc]->V;//(-br+X[nc])/nodes[nc]->V;
                         if (markLeaf(nodes[nc])){
-                            ctemp+=nodes[nc]->D/nodes[nc]->V;
+                            ctemp+=(nodes[nc]->D)/nodes[nc]->V;
                         }
                         else if (nc<pr->nbINodes){
                             coefs-=W[nc]/nodes[nc]->V;
-                            ctemp+=C[nc]/nodes[nc]->V;
+                            ctemp+=(C[nc])/nodes[nc]->V;
                             xtemp+=X[nc]/nodes[nc]->V;
                         }
                         else{
@@ -615,14 +617,14 @@ bool with_constraint_lambda(double br,Pr* &pr,Node** &nodes,list<int> active_set
                             if (markLeaf(nodes[*iter])) {
                                 if (*iter!=nc){
                                     coefs+=1/nodes[*iter]->V;
-                                    ctemp+=nodes[*iter]->D/nodes[*iter]->V;
+                                    ctemp+=(nodes[*iter]->D)/nodes[*iter]->V;
                                     xtemp-=nodes[*iter]->B/nodes[*iter]->V;
                                 }
                             }
                             else{
                                 if (*iter!=nc){
                                     coefs+=(1-W[*iter])/nodes[*iter]->V;
-                                    ctemp+=C[*iter]/nodes[*iter]->V;
+                                    ctemp+=(C[*iter])/nodes[*iter]->V;
                                     xtemp+=(X[*iter]-nodes[*iter]->B)/nodes[*iter]->V;
                                 }
                             }
@@ -740,17 +742,17 @@ bool with_constraint_lambda(double br,Pr* &pr,Node** &nodes,list<int> active_set
                 else{
                     double coefs=1./nodes[i]->V;
                     double wtemp=1./nodes[i]->V;
-                    double ctemp=0;
+                    double ctemp=add[i]/nodes[i]->V;
                     double xtemp=nodes[i]->B/nodes[i]->V;
                     for (list<int>::iterator iter = Suc[i].begin();iter!=Suc[i].end();iter++){
                         if (markLeaf(nodes[*iter])) {
                             coefs+=1/nodes[*iter]->V;
-                            ctemp+=nodes[*iter]->D/nodes[*iter]->V;
+                            ctemp+=(nodes[*iter]->D-add[*iter])/nodes[*iter]->V;
                             xtemp-=nodes[*iter]->B/nodes[*iter]->V;
                         }
                         else{
                             coefs+=(1-W[*iter])/nodes[*iter]->V;
-                            ctemp+=C[*iter]/nodes[*iter]->V;
+                            ctemp+=(C[*iter]-add[*iter])/nodes[*iter]->V;
                             xtemp+=(X[*iter]-nodes[*iter]->B)/nodes[*iter]->V;
                         }
                     }
@@ -774,7 +776,7 @@ bool with_constraint_lambda(double br,Pr* &pr,Node** &nodes,list<int> active_set
                 X[i]=0;
             }
             else if (tc(nodes[i])){
-                C[i]=C[nodes[i]->P];
+                C[i]=C[nodes[i]->P] + nodes[i]->minblen;
                 X[i]=X[nodes[i]->P];
             }
             else if ((i==r || i==p_r) && markLeaf(nodes[0])){
@@ -824,22 +826,18 @@ bool with_constraint_lambda(double br,Pr* &pr,Node** &nodes,list<int> active_set
             }
             double a = 0;
             double b = 0;
-            double c = 0;//Fi^2w^2 +2w*FiGi-wFibi-Gibi+Gi^2 =0
+            double c = 0;//Fi^2w^2 +2w*FiGi-wFibi-Gibi+Gi^2 =0// phi = a*rho^2+b*rho+c
             for (int i=0;i<=pr->nbBranches;i++){
                 if (i==0){
                     a += F[i]*F[i]/nodes[r]->V;
-                    b += (2*F[i]*G[i]-F[i]*br)/nodes[r]->V;
-                    c += (G[i]*G[i]-G[i]*br)/nodes[r]->V;
+                    b += 2*F[i]*(-br+G[i])/nodes[r]->V;
                 }
                 else if (i!=r && i!=p_r && (i<pr->nbINodes || markLeaf(nodes[i]))){
                     a += F[i]*F[i]/nodes[i]->V;
-                    b += (2*F[i]*G[i]-F[i]*nodes[i]->B)/nodes[i]->V;
-                    c += (G[i]*G[i]-G[i]*nodes[i]->B)/nodes[i]->V;
+                    b += 2*F[i]*(-nodes[i]->B+G[i])/nodes[i]->V;
                 }
             }
-            double delta = b*b-4*a*c;
-            pr->rho=(-b+sqrt(delta))/2/a;
-            if (delta<0 || pr->rho<pr->rho_min) pr->rho=pr->rho_min;
+            pr->rho = -b/2/a;
             delete[] F;
             delete[] G;
         }
@@ -850,7 +848,7 @@ bool with_constraint_lambda(double br,Pr* &pr,Node** &nodes,list<int> active_set
         for (int i=pr->nbINodes; i<=pr->nbBranches; i++) {
             if (!markLeaf(nodes[i]) && nodes[i]->type != 'p') {
                 if (tc(nodes[i])) {
-                    nodes[i]->D=nodes[nodes[i]->P]->D;
+                    nodes[i]->D=nodes[nodes[i]->P]->D + nodes[i]->minblen;
                 }
                 else{
                     if (i==r || i==p_r){
@@ -1085,7 +1083,7 @@ bool with_constraint_active_set_lambda(double br,Pr* &pr,Node** &nodes){
                 int p = nodes[i]->P;
                 if (p!=-1){
                     if (dir[p]>dir[i] && !tc(nodes[i])){
-                        a = (D_old[i]-D_old[p])/(dir[p]-dir[i]);
+                        a = (D_old[i]-D_old[p]-nodes[i]->minblen)/(dir[p]-dir[i]);
                         if (a<alpha){
                             alpha = a;
                             as = i;

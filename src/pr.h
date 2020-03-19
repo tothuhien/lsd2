@@ -37,13 +37,17 @@ typedef struct Pr
     bool constraint;       //Impose the constraints or not
     int variance;         //Use the variances or not
     bool ci;         //Compute confidence interval or not
-    double  c;                //var = b+c/s;
+    double c;                //either -b is specified or not
+    double b;                 //var = b+c/s;
     double q; //standard deviation of lognormal distribution to simulate relaxed branch lengths for calculating confidence intervals
+    double nullblen;
     bool verbose;
     double rho_min;
     int nbINodes;
     int nbBranches;
+    double minblen;
     double rho;
+    int round_time;
     vector<double> multiplierRate;
     vector<bool> givenRate;
     double objective;
@@ -85,8 +89,12 @@ typedef struct Pr
         ci=pr->ci;
         q=pr->q;
         c=pr->c;
+        b=pr->b;
         e=pr->e;
         m=pr->m;
+        round_time=pr->round_time;
+        minblen=pr->minblen;
+        nullblen=pr->nullblen;
         verbose=pr->verbose;
         rho=pr->rho;
         rho_min=pr->rho_min;
@@ -122,11 +130,15 @@ typedef struct Pr
         estimate_root = "";
         constraint = false;
         variance = 0;
+        minblen = -1;
+        nullblen = -1;
         c = -1;
+        b = -1;
         q = 0.2;
         rho_min = 1e-10;
         ci = false;
         nbSampling=100;
+        round_time=365;
         rooted=true;
         keepOutgroup=false;
         ratePartition = vector<Part* >();
