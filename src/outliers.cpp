@@ -347,7 +347,6 @@ vector<double> residus_lsd_rtt(Pr* pr,Node** nodes,double& mean_res, double& var
         double r = (nodes[i]->B - pr->rho*(nodes[i]->D - nodes[nodes[i]->P]->D))/sqrt(nodes[i]->V);
         res.push_back(r);
     }
-    //TODO
     return res;
 }
 
@@ -529,18 +528,18 @@ vector<int> outliers_rooted(Pr* pr,Node** nodes,vector<int>* samples, vector<dou
     for (int k=0;k<pr->internalConstraints.size();k++){
         Date* no = pr->internalConstraints[k];
         int i = no->id;
-        if (nodes[i]->type == 'p' || nodes[i]->type == 'b'){
-            bool bl = false;
-            if (i>0){
-                bl = (myabs(res[i-1])>pr->e);
-            }
-            for (int j=0;j<nodes[i]->suc.size();j++){
-                int s = nodes[i]->suc[j];
-                bl = bl || (myabs(res[s-1])>pr->e);
-            }
-            if (bl){
-                outliers_min.push_back(k);
-            }
+        if ((!pr->relative || i!=0) && (nodes[i]->type == 'p' || nodes[i]->type == 'b')){
+                bool bl = false;
+                if (i>0){
+                    bl = (myabs(res[i-1])>pr->e);
+                }
+                for (int j=0;j<nodes[i]->suc.size();j++){
+                    int s = nodes[i]->suc[j];
+                    bl = bl || (myabs(res[s-1])>pr->e);
+                }
+                if (bl){
+                    outliers_min.push_back(k);
+                }
         }
     }
     if (!both) return outliers_min;

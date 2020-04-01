@@ -552,7 +552,7 @@ bool with_constraint_lambda(double br,Pr* &pr,Node** &nodes,list<int> active_set
             }
         }
         list<int>* internal = new list<int>[top.size()];
-        double *add = new double[pr->nbBranches];
+        double *add = new double[pr->nbBranches+1];
         for (int i=0;i<=pr->nbBranches;i++) add[i] = 0;
         reduceTree_polytomy(pr,nodes,Pre,Suc,add,internal);
         list<int> pos = postorder_polytomy(pr,nodes);
@@ -793,8 +793,8 @@ bool with_constraint_lambda(double br,Pr* &pr,Node** &nodes,list<int> active_set
                 X[i]=W[i]*X[Pre[i]]+X[i];
             }
         }
-        double *F= new double[pr->nbBranches+1];//
-        double *G = new double[pr->nbBranches+1];//
+        double *F= new double[pr->nbBranches+1];
+        double *G = new double[pr->nbBranches+1];
         if (!pr->givenRate[0]){
             F[0]=-2*C[0];
             G[0]=-2*X[0];
@@ -866,6 +866,7 @@ bool with_constraint_lambda(double br,Pr* &pr,Node** &nodes,list<int> active_set
         delete[] W;
         delete[] C;
         delete[] X;
+        delete[] add;
         int *as=new int[2*pr->nbBranches+2];
         for (int i=0;i<=2*pr->nbBranches+1;i++) as[i]=-1;
         int count = 0;
@@ -996,7 +997,6 @@ bool with_constraint_lambda(double br,Pr* &pr,Node** &nodes,list<int> active_set
                 lambda[i]=0;
             ld.push_back(lambda[i]);
         }
-        
         /*       double sr=(2*nodes[0]->D-nodes[r]->D-nodes[p_r]->D)*(br-pr->rho*(nodes[r]->D+nodes[p_r]->D-2*nodes[0]->D))/nodes[r]->V;
          for (int i=0; i<=pr->nbBranches; i++) {
          if (i>0 && i!=r && i!=p_r){
@@ -1173,7 +1173,9 @@ int estimate_root_without_constraint_local_rooted(Pr* &pr,Node** &nodes){
         bool consistent=without_constraint_active_set_lambda_multirates(br,pr,nodes_new,true);
         if (consistent) {
             cv[s1]=pr->objective;
-            if (pr->verbose) printf("%.10f\n",cv[s1]);
+            if (pr->verbose){
+                printf("objective function: %.10f, rate: %.10f\n",cv[s1],pr->rho);
+            }
             cv[s2]=cv[s1];
             phi1=cv[s1];
             r=s1;
@@ -1213,7 +1215,9 @@ int estimate_root_without_constraint_local_rooted(Pr* &pr,Node** &nodes){
             bool consistent=without_constraint_active_set_lambda_multirates(br,pr,nodes_new,true);
             if (consistent) {
                 cv[i]=pr->objective;
-                if (pr->verbose) printf("%.10f\n",cv[i]);
+                if (pr->verbose){
+                    printf("objective function: %.10f, rate: %.10f\n",cv[i],pr->rho);
+                }
                 if (cv[i]<cv[nodes[i]->P] || r==0){
                     if (i<pr->nbINodes){
                         for (vector<int>::iterator iter=nodes[i]->suc.begin(); iter!=nodes[i]->suc.end(); iter++) {
@@ -1287,7 +1291,9 @@ int estimate_root_without_constraint_rooted(Pr* &pr,Node** &nodes){
         bool consistent=without_constraint_active_set_lambda_multirates(br,pr,nodes_new,true);
         if (consistent) {
             phi1=pr->objective;
-            if (pr->verbose) printf("%.10f %.10f %.10f\n",phi1,pr->rho,nodes_new[0]->D);
+            if (pr->verbose){
+                printf("objective function: %.10f, rate: %.10f\n",phi1,pr->rho);
+            }
             r=y;
             for (int i=1; i<=pr->ratePartition.size(); i++) {
                 multiplier[i] = pr->multiplierRate[i];
@@ -1315,7 +1321,9 @@ int estimate_root_without_constraint_rooted(Pr* &pr,Node** &nodes){
             bool consistent=without_constraint_active_set_lambda_multirates(br,pr,nodes_new,true);
             if (consistent) {
                 phi=pr->objective;
-                if (pr->verbose) printf("%.10f %.10f %.10f\n",phi,pr->rho,nodes_new[0]->D);
+                if (pr->verbose){
+                    printf("objective function: %.10f, rate: %.10f\n",phi,pr->rho);
+                }
                 if (phi1>phi || r==0){
                     phi1=phi;
                     r=y;
@@ -1371,7 +1379,9 @@ int estimate_root_with_constraint_local_rooted(Pr* &pr,Node** &nodes){
         bool consistent=with_constraint_active_set_lambda_multirates(br,pr,nodes_new,true);
         if (consistent){
             cv[s1]=pr->objective;
-            if (pr->verbose) printf("%.10f\n",cv[s1]);
+            if (pr->verbose){
+                printf("objective function: %.10f, rate: %.10f\n",cv[s1],pr->rho);
+            }
             cv[s2]=cv[s1];
             r=s1;
             phi1=cv[s1];
@@ -1411,7 +1421,9 @@ int estimate_root_with_constraint_local_rooted(Pr* &pr,Node** &nodes){
             bool consistent=with_constraint_active_set_lambda_multirates(br,pr,nodes_new,true);
             if (consistent){
                 cv[i]=pr->objective;
-                if (pr->verbose) printf("%.10f \n",cv[i]);
+                if (pr->verbose){
+                    printf("objective function: %.10f, rate: %.10f\n",cv[i],pr->rho);
+                }
                 if (cv[i]<cv[nodes[i]->P]+maxNumError || r==0){
                     if (i<pr->nbINodes){
                         for (vector<int>::iterator iter=nodes[i]->suc.begin(); iter!=nodes[i]->suc.end(); iter++) {
@@ -1493,7 +1505,9 @@ int estimate_root_with_constraint_fast_rooted(Pr* &pr,Node** &nodes){
             bool consistent=with_constraint_active_set_lambda_multirates(br,pr,nodes_new,true);
             if (consistent){
                 cv[r]=pr->objective;
-                if (pr->verbose) printf("%.10f %.10f %.10f\n",cv[r],pr->rho,nodes_new[0]->D);
+                if (pr->verbose){
+                    printf("objective function: %.10f, rate: %.10f\n",cv[r],pr->rho);
+                }
                 phi1=cv[r];
                 for (int i=1; i<=pr->ratePartition.size(); i++) {
                     multiplier[i] = pr->multiplierRate[i];
@@ -1532,12 +1546,12 @@ int estimate_root_with_constraint_fast_rooted(Pr* &pr,Node** &nodes){
                 for (int i=pr->nbINodes;i<=pr->nbBranches;i++){
                     if (nodes_new[i]->type=='p') nodes_new[i]->D = originalD[i];
                 }
-                
                 bool consistent=with_constraint_active_set_lambda_multirates(br,pr,nodes_new,true);
                 if (consistent){
                     cv[e]=pr->objective;
-                    if (pr->verbose) printf("%.10f %.10f %.10f\n",cv[e],pr->rho,nodes_new[0]->D);
-                    //printf("%.10f\n",cv[e]);
+                    if (pr->verbose){
+                        printf("objective function: %.10f, rate: %.10f\n",cv[e],pr->rho);
+                    }
                     if (cv[e]<cv[tab[P_ref[i]]]+maxNumError || r==0){
                         if (i<pr->nbINodes){
                             next.push_back(Suc1_ref[i]);
@@ -1612,7 +1626,7 @@ int estimate_root_with_constraint_rooted(Pr* &pr,Node** &nodes){
         }
         bool consistent=with_constraint_active_set_lambda_multirates(br,pr,nodes_new,true);
         if (consistent){
-            if (pr->verbose) printf("%.10f\n",pr->objective);
+            if (pr->verbose) printf("objective function: %.10f, rate: %.10f\n",pr->objective,pr->rho);
             r=y;
             phi1=pr->objective;
             for (int i=1; i<=pr->ratePartition.size(); i++) {
@@ -1640,7 +1654,9 @@ int estimate_root_with_constraint_rooted(Pr* &pr,Node** &nodes){
             bool consistent=with_constraint_active_set_lambda_multirates(br,pr,nodes_new,true);
             if (consistent){
                 phi=pr->objective;
-                if (pr->verbose) printf("%.10f\n",phi);
+                if (pr->verbose) {
+                    printf("objective function: %.10f, rate: %.10f\n",phi,pr->rho);
+                }
                 if (phi1>phi  || r==0){
                     phi1=phi;
                     r=y;

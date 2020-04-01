@@ -1750,6 +1750,7 @@ void reduceTree_polytomy(Pr* pr,Node** nodes,int* &Pre,list<int>* & Suc,double* 
     Pre[0]=-1;
     for (int i=0;i<pr->nbINodes;i++){
         if ((!tc(nodes[i])) && (!markLeaf(nodes[i]) || nodes[i]->type=='p')){
+            //cout<<"case 1 : "<<i<<endl;
             bool bl=false;
             for (vector<int>::iterator iter=nodes[i]->suc.begin(); iter!=nodes[i]->suc.end(); iter++) {
                 if (tc(nodes[*iter])) {
@@ -1769,9 +1770,11 @@ void reduceTree_polytomy(Pr* pr,Node** nodes,int* &Pre,list<int>* & Suc,double* 
             }
         }
         else {
+            //cout<<"case 2 : "<<i<<endl;
             for (vector<int>::iterator iter=nodes[i]->suc.begin(); iter!=nodes[i]->suc.end(); iter++) {
                 if (Pre[*iter]==-1) Pre[*iter]=i;
                 if (markLeaf(nodes[*iter]) || *iter<pr->nbINodes) Suc[i].push_back(*iter);
+                //cout<<*iter<<" "<<Pre[*iter]<<endl;
             }
         }
     }

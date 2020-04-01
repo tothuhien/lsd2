@@ -502,12 +502,13 @@ bool with_constraint(Pr* pr,Node** &nodes,list<int> active_set,list<double>& ld)
     list<int> ls;
     for (list<int>::iterator iter = active_set.begin();iter!=active_set.end();iter++){
         int i = *iter;
-        if (i>0) {
+        if (i>0) {//time constraint
             if (leaf(nodes[i])) {
                 ls.push_back(i);
             }
         }
-        else if ((!tc(nodes[-i]) || nodes[-i]->minblen>0) && leaf(nodes[-i])) ls.push_back(-i);
+        else if (!tc(nodes[-i]) && leaf(nodes[-i])) ls.push_back(-i);//only limit constraint
+        //else if ((!tc(nodes[-i]) || nodes[-i]->minblen>0) && leaf(nodes[-i])) ls.push_back(-i);
     }
     stack<int>* feuilles = computeFeuilles_polytomy(ls,pr,nodes);
     list<int> top;
@@ -523,7 +524,7 @@ bool with_constraint(Pr* pr,Node** &nodes,list<int> active_set,list<double>& ld)
         }
     }
     list<int>* internal = new list<int>[top.size()];
-    double *add = new double[pr->nbBranches];
+    double *add = new double[pr->nbBranches+1];
     for (int i=0;i<=pr->nbBranches;i++) add[i] = 0;
     reduceTree_polytomy(pr,nodes,Pre,Suc,add,internal);
     list<int> pos = postorder_polytomy(pr,nodes);
@@ -585,7 +586,6 @@ bool with_constraint(Pr* pr,Node** &nodes,list<int> active_set,list<double>& ld)
             }
         }
     }
-    delete[] Suc;
     for (vector<int>::iterator iter = pre.begin();iter!=pre.end();iter++){
         int i = *iter;
         if (Pre[i]!=-1 && nodes[i]->status==0){
@@ -656,6 +656,8 @@ bool with_constraint(Pr* pr,Node** &nodes,list<int> active_set,list<double>& ld)
     delete[] C;
     delete[] X;
     delete[] Pre;
+    delete[] Suc;
+    delete[] add;
     int *as=new int[2*pr->nbBranches+1];
     for (int i=0;i<=2*pr->nbBranches;i++) as[i]=-1;
     int count = 0;

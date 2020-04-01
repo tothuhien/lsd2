@@ -98,11 +98,6 @@ int main( int argc, char** argv ){
             Date* dateRoot = new Date("", 'p',opt->mrca,0,0);
             opt->internalConstraints.clear();
             opt->internalConstraints.push_back(dateRoot);
-            if (opt->e>0){
-                std::ostringstream oss;
-                oss<<"- Estimating outliers are not available with relative dates.\n";
-                opt->warningMessage.push_back(oss.str());
-            }
         }
         if (y==1){
             fprintf(tree1,"Begin trees;\n");
