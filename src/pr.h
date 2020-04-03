@@ -47,7 +47,7 @@ typedef struct Pr
     int nbBranches;
     double minblen;
     double rho;
-    int round_time;
+    double round_time;
     vector<double> multiplierRate;
     vector<bool> givenRate;
     double objective;

@@ -2115,7 +2115,22 @@ double median(vector<double> array){
     }
 }
 
-void imposeMinBlen(Pr* pr, Node** nodes, double minblen){
+void imposeMinBlen(FILE* file,Pr* pr, Node** nodes, double median_rate){
+    double minblen = pr->minblen;
+    if (pr->minblen<0){
+        double minblen = (int)(pr->round_time/(pr->seqLength*median_rate))/(double)pr->round_time;
+        string timeunit;
+        if (pr->round_time == 365){
+            timeunit = "day(s)";
+        } else if(pr->round_time == 52) {
+            timeunit = "week(s)";
+        }
+        cout<<"Minimum branch length of time scaled tree (settable via option -u): "<<1./(pr->seqLength*median_rate)<<", rounded to "<<minblen<<" ("<<(int)(pr->round_time/(pr->seqLength*median_rate))<<"/"<<pr->round_time<<"), using factor "<<pr->round_time<<" (settable via option -R)"<<endl;
+        fprintf(file,"Minimum branch length of time scaled tree (settable via option -u): %g, rounded to %g (%d/%g), using factor %g (settable via option -R)\n",1./(pr->seqLength*median_rate),minblen,(int)(pr->round_time/(pr->seqLength*median_rate)),pr->round_time,pr->round_time);
+        
+    } else {
+        cout<<"Minimum branch length of time scaled tree was set to "<<minblen<<endl;
+    }
     double nullt = 0.5/pr->seqLength;
     if (pr->nullblen>=0){
         nullt = pr->nullblen;

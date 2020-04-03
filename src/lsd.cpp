@@ -109,8 +109,10 @@ int main( int argc, char** argv ){
                 bl.push_back(nodes[i]->B);
             }
             opt->b = median(bl);
-            cout<<"Using the median branch length "<<opt->b<<" to adjust variances ..."<<endl;
-            fprintf(result,"Median branch lengths %f was used to adjust variances\n",opt->b);
+            if (opt->variance>0){
+                cout<<"Using the median branch length "<<opt->b<<" to adjust variances ..."<<endl;
+                fprintf(result,"Median branch lengths %g was used to adjust variances\n",opt->b);
+            }
         } else {
             opt->b = opt->c;
         }
@@ -140,10 +142,7 @@ int main( int argc, char** argv ){
         if (!opt->constraint){//LD without constraints
             if (opt->e>0) constraintConsistent = calculateOutliers(opt,nodes,median_rate);
             else calculateMedianRate(opt,nodes,median_rate);
-            double minblen = (int)(opt->round_time/(opt->seqLength*median_rate))/(double)opt->round_time;
-            cout<<"Minimum branch length of time scaled tree was set to "<<(int)(opt->round_time/(opt->seqLength*median_rate))<<"/"<<opt->round_time<<" = "<<minblen<<endl;
-            fprintf(result,"Minimum branch length of time scaled tree was set to %d/%d = %f\n",(int)(opt->round_time/(opt->seqLength*median_rate)),opt->round_time,minblen);
-            imposeMinBlen(opt,nodes,minblen);
+            imposeMinBlen(result,opt,nodes,median_rate);
             if (!constraintConsistent){
                 ostringstream oss;
                 oss<<"- There's conflict in the input temporal constraints.\n";
@@ -198,13 +197,7 @@ int main( int argc, char** argv ){
             if (constraintConsistent || (opt->estimate_root!="" && opt->estimate_root!="k")){
                 if (opt->e>0) constraintConsistent = calculateOutliers(opt,nodes,median_rate);
                 else calculateMedianRate(opt,nodes,median_rate);
-                double minblen = opt->minblen;
-                if (minblen<0){
-                    minblen = (int)(opt->round_time/(opt->seqLength*median_rate))/(double)opt->round_time;
-                    cout<<"Minimum branch length of time scaled tree was set to "<<(int)(opt->round_time/(opt->seqLength*median_rate))<<"/"<<opt->round_time<<" = "<<minblen<<endl;
-                    fprintf(result,"Minimum branch length of time scaled tree was set to %d/%d = %f\n",(int)(opt->round_time/(opt->seqLength*median_rate)),opt->round_time,minblen);
-                }
-                imposeMinBlen(opt,nodes,minblen);
+                imposeMinBlen(result,opt,nodes,median_rate);
                 if (constraintConsistent){
                     if (opt->estimate_root==""){//keep the given root
                         if (constraintConsistent){

@@ -190,9 +190,9 @@ Pr* getCommandLine( int argc, char** argv)
                 lflag = true;
                 break;
             case 'R':
-                if ( !isInteger(optarg))
+                if ( !isReal(optarg))
                     myExit("Argument of option -R must be a real\n");
-                opt->round_time = atoi(optarg);
+                opt->round_time = atof(optarg);
                 if (opt->round_time<=0)
                     myExit("Argument of option -R must be positive\n");
                 break;
@@ -324,7 +324,7 @@ void printInterface( FILE* in, Pr* opt)
         if (opt->c==-1){
             fprintf(in,"%s\n","Use median branch lengths");
         } else{
-            fprintf(in,"%f\n",opt->c);
+            fprintf(in,"%g\n",opt->c);
         }
     }
     fprintf(in,"  r                                             Estimate the root : ");
@@ -365,7 +365,7 @@ void printInterface( FILE* in, Pr* opt)
     fprintf(in,"  f                                  Compute confidence intervals : ");
     if (opt->ci){
         fprintf(in,"Yes, sampling %d times\n",opt->nbSampling);
-        fprintf(in,"  q                  Standard deviation of lognormal relaxed clock: %f (for computing confidence intervals)\n",opt->q);
+        fprintf(in,"  q                  Standard deviation of lognormal relaxed clock: %g (for computing confidence intervals)\n",opt->q);
     }
     else
         fprintf(in,"No\n");
@@ -376,22 +376,22 @@ void printInterface( FILE* in, Pr* opt)
     if (opt->e>0){
         fprintf(in,"Yes, detect and exclude outliers from the analysis\n");
         fprintf(in,"  m                   Number of sampling nodes to detect outliers : %i\n",opt->m);
-        fprintf(in,"  e                       The Zscore threshold to detect outliers : %f\n",opt->e);
+        fprintf(in,"  e                       The Zscore threshold to detect outliers : %g\n",opt->e);
     }
     else
         fprintf(in,"No\n");
     fprintf(in,"  u                     Minimum branch length of time scaled tree : ");
     if (opt->minblen==-1){
         fprintf(in,"To estimate\n");
-        fprintf(in,"  R Rounding number for minimum branch length of time scaled tree : %d \n",opt->round_time);
+        fprintf(in,"  R Rounding number for minimum branch length of time scaled tree : %g \n",opt->round_time);
     } else {
-        fprintf(in,"%f\n",opt->minblen);
+        fprintf(in,"%g\n",opt->minblen);
     }
     fprintf(in,"  l          Max length of input branches that could be collapsed : ");
     if (opt->nullblen==-1){
-        fprintf(in,"%f\n",0.5/opt->seqLength);
+        fprintf(in,"%g\n",0.5/opt->seqLength);
     } else {
-        fprintf(in,"%f\n",opt->nullblen);
+        fprintf(in,"%g\n",opt->nullblen);
     }
     fprintf(in,"\n  h to print Help ");
     fprintf(in,"\n  y to accept or type a letter to change an option (x = Exit) ");

@@ -166,9 +166,7 @@ bool without_constraint_lambda(double br,Pr* &par,Node** &nodes,list<int> active
             }
             
         }
-        
         vector<int> pre = preorder_polytomy(par,nodes);
-        
         for (vector<int>::iterator iter = pre.begin();iter!=pre.end();iter++){
             int i = *iter;
             if (leaf(nodes[i])){
@@ -264,18 +262,17 @@ bool without_constraint_lambda(double br,Pr* &par,Node** &nodes,list<int> active
         delete[] W;
         delete[] C;
         delete[] X;
-        
         int *as=new int[par->nbBranches+1];
         for (int i=0;i<=par->nbBranches;i++) as[i]=-1;
         int count = 0;
         for (list<int>::iterator iter = active_set.begin();iter!=active_set.end();iter++){
-            int a = *iter;
+            int a = -(*iter);
             as[a]=count;
             count++;
         }
         double* lambda = new double[count];
         for (list<int>::iterator iter = active_set.begin();iter!=active_set.end();iter++){
-            int i=*iter;
+            int i=-(*iter);
             double lambdaPC=0;
             if (i==0){
                 lambdaPC=4*par->rho*(br-par->rho*nodes[r]->D-par->rho*nodes[pr]->D+2*par->rho*nodes[0]->D)/nodes[r]->V;
@@ -406,35 +403,35 @@ bool starting_point_without_constraint_lambda(double br,Pr* &pr,Node** &nodes,li
     delete[] lowerX;
     for (int i =0;i<pr->nbINodes;i++) {
         if (lower(nodes[i]) || upper(nodes[i])) {
-            active_set.push_back(i);
+            active_set.push_back(-i);
         }
         else if (nodes[i]->type!='p') {
             if ((nodes[i]->type=='l' || nodes[i]->type=='b') && nodes[i]->D<nodes[i]->lower) {
-                activeLower(nodes[i]);
+                activeLower(nodes[-i]);
                 nodes[i]->D=nodes[i]->lower;
-                active_set.push_back(i);
+                active_set.push_back(-i);
             }
             else if ((nodes[i]->type=='u' || nodes[i]->type=='b') && nodes[i]->D>nodes[i]->upper) {
                 activeUpper(nodes[i]);
                 nodes[i]->D=nodes[i]->upper;
-                active_set.push_back(i);
+                active_set.push_back(-i);
             }
         }
     }
     for (int i=pr->nbINodes; i<=pr->nbBranches; i++) {
         if (lower(nodes[i]) || upper(nodes[i])) {
-            active_set.push_back(i);
+            active_set.push_back(-i);
         }
         else if (nodes[i]->type!='p') {
             if ((nodes[i]->type=='l' || nodes[i]->type=='b') && nodes[i]->D<nodes[i]->lower) {
                 activeLower(nodes[i]);
                 nodes[i]->D=nodes[i]->lower;
-                active_set.push_back(i);
+                active_set.push_back(-i);
             }
             else if ((nodes[i]->type=='u' || nodes[i]->type=='b') && nodes[i]->D>nodes[i]->upper) {
                 activeUpper(nodes[i]);
                 nodes[i]->D=nodes[i]->upper;
-                active_set.push_back(i);
+                active_set.push_back(-i);
             }
         }
     }
@@ -481,17 +478,23 @@ bool without_constraint_active_set_lambda(double br,Pr* &pr,Node** &nodes){
             int asrm;
             if (remove_ne_lambda(lambda,active_set,asrm)){
                 active_set.remove(asrm);
-                desactive(nodes[asrm]);
+                if (asrm>0) {
+                    desactive(nodes[asrm]);
+                }
+                else {
+                    desactive(nodes[-asrm]);
+                }
             }
             for (int i=0;i<=pr->nbBranches;i++) D_old[i]=D_old[i]+alpha*dir[i];
+            
             if (as!=0) {
                 if (as>2*pr->nbBranches+1) {
-                    active_set.push_back(as-2*pr->nbBranches-2);
+                    active_set.push_back(-(as-2*pr->nbBranches-2));
                     activeUpper(nodes[as-2*pr->nbBranches-2]);
                     nodes[as-2*pr->nbBranches-2]->D=nodes[as-2*pr->nbBranches-2]->upper;
                 }
                 else {
-                    active_set.push_back(as-pr->nbBranches-1);
+                    active_set.push_back(-(as-pr->nbBranches-1));
                     activeLower(nodes[as-pr->nbBranches-1]);
                     nodes[as-pr->nbBranches-1]->D=nodes[as-pr->nbBranches-1]->lower;
                 }
