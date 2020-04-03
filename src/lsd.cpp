@@ -104,14 +104,10 @@ int main( int argc, char** argv ){
             fprintf(tree2,"Begin trees;\n");
         }
         if (opt->c == -1){
-            vector<double> bl;
-            for (int i=1;i<=opt->nbBranches;i++){
-                bl.push_back(nodes[i]->B);
-            }
-            opt->b = median(bl);
+            opt->b = median_branch_lengths(opt,nodes);
             if (opt->variance>0){
-                cout<<"Using the median branch length "<<opt->b<<" to adjust variances ..."<<endl;
-                fprintf(result,"Median branch lengths %g was used to adjust variances\n",opt->b);
+                cout<<"Parameter to adjust variances was set to "<<opt->b<<" (settable via option -b)"<<endl;
+                fprintf(result,"Parameter to adjust variances was set to %g (settable via option -b)",opt->b);
             }
         } else {
             opt->b = opt->c;

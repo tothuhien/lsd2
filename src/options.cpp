@@ -185,8 +185,8 @@ Pr* getCommandLine( int argc, char** argv)
                 if ( !isReal(optarg))
                     myExit("Argument of option -l must be a real\n");
                 opt->nullblen = atof(optarg);
-                if (opt->nullblen<0 || opt->nullblen>1)
-                    myExit("Argument of option -l must be between 0 and 1\n");
+                if (opt->nullblen<0)
+                    myExit("Argument of option -l must be >= 0\n");
                 lflag = true;
                 break;
             case 'R':
@@ -237,6 +237,9 @@ Pr* getCommandLine( int argc, char** argv)
         opt->estimate_root="a";
     }
     if( opt->outFile=="") opt->outFile = opt->inFile + ".result";
+    if (opt->nullblen<0){
+        opt->nullblen = 0.5/opt->seqLength;
+    }
     return opt;
 }
 
@@ -290,6 +293,9 @@ Pr* getInterface()
         printInterface( stdout, opt);
         cout<<endl;
     } while(( *letter!='y' && *letter!='Y'));
+    if (opt->nullblen<0){
+        opt->nullblen = 0.5/opt->seqLength;
+    }
     return opt;
 }
 
@@ -624,6 +630,19 @@ double getInputPositiveReal( string msg )
     return atof( word.c_str() );
 }
 
+double getInputNonNegativeReal( string msg )
+{
+    string word;
+    do
+    {
+        word = getInputString( msg );
+        if( isReal(word.c_str()) && atof( word.c_str())>0)
+            break;
+        myErrorMsg("Your word is not recognized as a positive real.\n");
+    } while( true );
+    return atof( word.c_str() );
+}
+
 int getInputInteger( string msg )
 {
     string word;
@@ -854,7 +873,7 @@ void setOptionsWithLetter( Pr* opt, char letter)
             opt->minblen = getInputPositiveReal("Enter the minimum elapsed time on a branch> ");
             break;
         case 'l':
-            opt->nullblen = getInputPositiveReal("Maximum length that a branch could be collapsed (default is 1/(2*seq_length))> ");
+            opt->nullblen = getInputNonNegativeReal("Maximum length that a branch could be collapsed (default is 1/(2*seq_length))> ");
             break;
         case 'R':
             opt->round_time = getInputPositiveReal("Rounding number for minimum branch length of time scaled tree>");
