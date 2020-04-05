@@ -15,6 +15,7 @@
 //    along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 #include "confidence_interval.h"
+#include <time.h>
 
 void collapse(int i,int j,Pr* pr,Node** nodes,Node** nodes_new,int &cc,int* &tab){
     if (nodes[j]->type!='n') {
