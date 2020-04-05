@@ -185,14 +185,14 @@ Pr* getCommandLine( int argc, char** argv)
                 if ( !isReal(optarg))
                     myExit("Argument of option -l must be a real\n");
                 opt->nullblen = atof(optarg);
-                if (opt->nullblen<0 || opt->nullblen>1)
-                    myExit("Argument of option -l must be between 0 and 1\n");
+                if (opt->nullblen<0)
+                    myExit("Argument of option -l must be >= 0\n");
                 lflag = true;
                 break;
             case 'R':
-                if ( !isInteger(optarg))
+                if ( !isReal(optarg))
                     myExit("Argument of option -R must be a real\n");
-                opt->round_time = atoi(optarg);
+                opt->round_time = atof(optarg);
                 if (opt->round_time<=0)
                     myExit("Argument of option -R must be positive\n");
                 break;
@@ -237,6 +237,9 @@ Pr* getCommandLine( int argc, char** argv)
         opt->estimate_root="a";
     }
     if( opt->outFile=="") opt->outFile = opt->inFile + ".result";
+    if (opt->nullblen<0){
+        opt->nullblen = 0.5/opt->seqLength;
+    }
     return opt;
 }
 
@@ -290,6 +293,9 @@ Pr* getInterface()
         printInterface( stdout, opt);
         cout<<endl;
     } while(( *letter!='y' && *letter!='Y'));
+    if (opt->nullblen<0){
+        opt->nullblen = 0.5/opt->seqLength;
+    }
     return opt;
 }
 
@@ -324,7 +330,7 @@ void printInterface( FILE* in, Pr* opt)
         if (opt->c==-1){
             fprintf(in,"%s\n","Use median branch lengths");
         } else{
-            fprintf(in,"%f\n",opt->c);
+            fprintf(in,"%g\n",opt->c);
         }
     }
     fprintf(in,"  r                                             Estimate the root : ");
@@ -365,7 +371,7 @@ void printInterface( FILE* in, Pr* opt)
     fprintf(in,"  f                                  Compute confidence intervals : ");
     if (opt->ci){
         fprintf(in,"Yes, sampling %d times\n",opt->nbSampling);
-        fprintf(in,"  q                  Standard deviation of lognormal relaxed clock: %f (for computing confidence intervals)\n",opt->q);
+        fprintf(in,"  q                  Standard deviation of lognormal relaxed clock: %g (for computing confidence intervals)\n",opt->q);
     }
     else
         fprintf(in,"No\n");
@@ -376,22 +382,22 @@ void printInterface( FILE* in, Pr* opt)
     if (opt->e>0){
         fprintf(in,"Yes, detect and exclude outliers from the analysis\n");
         fprintf(in,"  m                   Number of sampling nodes to detect outliers : %i\n",opt->m);
-        fprintf(in,"  e                       The Zscore threshold to detect outliers : %f\n",opt->e);
+        fprintf(in,"  e                       The Zscore threshold to detect outliers : %g\n",opt->e);
     }
     else
         fprintf(in,"No\n");
     fprintf(in,"  u                     Minimum branch length of time scaled tree : ");
     if (opt->minblen==-1){
         fprintf(in,"To estimate\n");
-        fprintf(in,"  R Rounding number for minimum branch length of time scaled tree : %d \n",opt->round_time);
+        fprintf(in,"  R Rounding number for minimum branch length of time scaled tree : %g \n",opt->round_time);
     } else {
-        fprintf(in,"%f\n",opt->minblen);
+        fprintf(in,"%g\n",opt->minblen);
     }
     fprintf(in,"  l          Max length of input branches that could be collapsed : ");
     if (opt->nullblen==-1){
-        fprintf(in,"%f\n",0.5/opt->seqLength);
+        fprintf(in,"%g\n",0.5/opt->seqLength);
     } else {
-        fprintf(in,"%f\n",opt->nullblen);
+        fprintf(in,"%g\n",opt->nullblen);
     }
     fprintf(in,"\n  h to print Help ");
     fprintf(in,"\n  y to accept or type a letter to change an option (x = Exit) ");
@@ -620,6 +626,19 @@ double getInputPositiveReal( string msg )
         if( isReal(word.c_str()) && atof( word.c_str())>0)
 	  break;
         myErrorMsg("Your word is not recognized as a strictly positive real.\n");
+    } while( true );
+    return atof( word.c_str() );
+}
+
+double getInputNonNegativeReal( string msg )
+{
+    string word;
+    do
+    {
+        word = getInputString( msg );
+        if( isReal(word.c_str()) && atof( word.c_str())>0)
+            break;
+        myErrorMsg("Your word is not recognized as a positive real.\n");
     } while( true );
     return atof( word.c_str() );
 }
@@ -854,7 +873,7 @@ void setOptionsWithLetter( Pr* opt, char letter)
             opt->minblen = getInputPositiveReal("Enter the minimum elapsed time on a branch> ");
             break;
         case 'l':
-            opt->nullblen = getInputPositiveReal("Maximum length that a branch could be collapsed (default is 1/(2*seq_length))> ");
+            opt->nullblen = getInputNonNegativeReal("Maximum length that a branch could be collapsed (default is 1/(2*seq_length))> ");
             break;
         case 'R':
             opt->round_time = getInputPositiveReal("Rounding number for minimum branch length of time scaled tree>");

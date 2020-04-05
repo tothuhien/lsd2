@@ -2115,17 +2115,42 @@ double median(vector<double> array){
     }
 }
 
-void imposeMinBlen(Pr* pr, Node** nodes, double minblen){
-    double nullt = 0.5/pr->seqLength;
-    if (pr->nullblen>=0){
-        nullt = pr->nullblen;
-    } 
+void imposeMinBlen(FILE* file,Pr* pr, Node** nodes, double median_rate){
+    double minblen = pr->minblen;
+    if (pr->minblen<0){
+        double minblen = (int)(pr->round_time/(pr->seqLength*median_rate))/(double)pr->round_time;
+        string timeunit;
+        if (pr->round_time == 365){
+            timeunit = "day(s)";
+        } else if(pr->round_time == 52) {
+            timeunit = "week(s)";
+        }
+        cout<<"Minimum branch length of time scaled tree (settable via option -u): "<<1./(pr->seqLength*median_rate)<<", rounded to "<<minblen<<" ("<<(int)(pr->round_time/(pr->seqLength*median_rate))<<"/"<<pr->round_time<<"), using factor "<<pr->round_time<<" (settable via option -R)"<<endl;
+        fprintf(file,"Minimum branch length of time scaled tree (settable via option -u): %g, rounded to %g (%d/%g), using factor %g (settable via option -R)\n",1./(pr->seqLength*median_rate),minblen,(int)(pr->round_time/(pr->seqLength*median_rate)),pr->round_time,pr->round_time);
+        
+    } else {
+        cout<<"Minimum branch length of time scaled tree was set to "<<minblen<<endl;
+    }
     nodes[0]->minblen = minblen;
     for (int i=1;i<=pr->nbBranches;i++){
-            if (nodes[i]->B > nullt){
+            if (nodes[i]->B >= pr->nullblen){
                 nodes[i]->minblen = minblen;
             } else {
                 nodes[i]->minblen = 0;
             }
     }
+}
+
+double median_branch_lengths(Pr* pr,Node** nodes){
+    vector<double> bl;
+    for (int i=1;i<=pr->nbBranches;i++){
+        if (nodes[i]->B >= pr->nullblen){
+            bl.push_back(nodes[i]->B);
+        }
+    }
+    if (bl.size()==0){
+        cout<<"Not any branch length >= "<<pr->nullblen<<" (informative branch length threshold set via option -l)"<<endl;
+        exit(EXIT_FAILURE);
+    }
+    return median(bl);
 }

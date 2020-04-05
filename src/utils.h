@@ -254,4 +254,6 @@ bool checkAllConstraintConsistent(Pr* pr,Node** nodes);
 
 double median(vector<double> array);
 
-void imposeMinBlen(Pr* pr, Node** nodes, double minblen);
+void imposeMinBlen(FILE* file,Pr* pr, Node** nodes, double median_rate);
+
+double median_branch_lengths(Pr* pr,Node** nodes);
