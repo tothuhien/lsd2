@@ -35,7 +35,12 @@
 
 using namespace std;
 
-int main( int argc, char** argv ){
+#ifdef USE_LSD2
+int lsd_main( int argc, char** argv )
+#else
+int main( int argc, char** argv )
+#endif
+{
     Pr* opt = getOptions( argc, argv);
     FILE * result = fopen(opt->outFile.c_str(),"wt");
     if (result==NULL){
