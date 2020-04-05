@@ -2118,7 +2118,7 @@ double median(vector<double> array){
 void imposeMinBlen(FILE* file,Pr* pr, Node** nodes, double median_rate){
     double minblen = pr->minblen;
     if (pr->minblen<0){
-        double minblen = (int)(pr->round_time/(pr->seqLength*median_rate))/(double)pr->round_time;
+        minblen = (int)(pr->round_time/(pr->seqLength*median_rate))/(double)pr->round_time;
         string timeunit;
         if (pr->round_time == 365){
             timeunit = "day(s)";
