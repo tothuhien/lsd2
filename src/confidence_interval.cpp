@@ -15,102 +15,13 @@
 //    along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 #include "confidence_interval.h"
-#include <time.h>
 
-void collapse(int i,int j,Pr* pr,Node** nodes,Node** nodes_new,int &cc,int* &tab){
-    if (nodes[j]->type!='n') {
-        nodes_new[i]->addConstraint(nodes[j]);
-    }
-    for (vector<int>::iterator iter=nodes[j]->suc.begin(); iter!=nodes[j]->suc.end(); iter++) {
-        int s= *iter;
-        if (s<pr->nbINodes && myabs(nodes[s]->B)<=toCollapse) {
-            tab[s]=-1;
-            collapse(i,s, pr, nodes, nodes_new, cc,tab);
-        }
-        else{
-            nodes_new[s]->P=i;
-            if (s<pr->nbINodes) {
-                tab[s]=cc;
-                cc++;
-            }
-        }
-    }
-}
-
-int collapseTree(Pr* pr,Node** nodes,Node** nodes_new,int* &tab){
-    for (int i=0;i<=pr->nbBranches;i++){
-        nodes_new[i]= new Node();
-        nodes_new[i]->P=nodes[i]->P;
-        nodes_new[i]->type=nodes[i]->type;
-        nodes_new[i]->lower=nodes[i]->lower;
-        nodes_new[i]->upper=nodes[i]->upper;
-        nodes_new[i]->D=nodes[i]->D;
-        nodes_new[i]->B=nodes[i]->B;
-        nodes_new[i]->L=nodes[i]->L;
-    }
-    if (pr->ratePartition.size()>0) {
-        for (int i=0;i<=pr->nbBranches;i++){
-            nodes_new[i]->rateGroup = nodes[i]->rateGroup;
-        }
-    }
-    int cc=0;//number of internal nodes reduced
-    cc++;
-    tab[0]=0;
-    for (int i=0;i<pr->nbINodes;i++){
-        if (myabs(nodes[i]->B)>toCollapse || i==0){
-            for (vector<int>::iterator iter=nodes[i]->suc.begin(); iter!=nodes[i]->suc.end(); iter++) {
-                int s=*iter;
-                if (myabs(nodes[s]->B)<=toCollapse && s<pr->nbINodes) {
-                    tab[s]=-1;
-                    collapse(i, s,  pr, nodes, nodes_new,cc,tab);
-                }
-                else {
-                    nodes_new[s]->P=i;
-                    if (s<pr->nbINodes) {
-                        tab[s]=cc;
-                        cc++;
-                    }
-                }
-            }
-        }
-    }
-    for (int i=pr->nbINodes;i<=pr->nbBranches;i++){
-        tab[i]=cc+i-pr->nbINodes;
-    }
-    return cc;
-}
-
-void collapseTreeReOrder(Pr* pr,Node** nodes,Pr* prReduced,Node** nodesReduced,int* &tab){
-    nodesReduced[0]=new Node();
-    nodesReduced[0]->P=-1;
-    nodesReduced[0]->type=nodes[0]->type;
-    nodesReduced[0]->lower=nodes[0]->lower;
-    nodesReduced[0]->upper=nodes[0]->upper;
-    nodesReduced[0]->D=nodes[0]->D;
-    for (int i=1; i<=pr->nbBranches; i++) {
-        if (tab[i]!=-1) {
-            nodesReduced[tab[i]]=new Node();
-            nodesReduced[tab[i]]->P=tab[nodes[i]->P];
-            nodesReduced[tab[i]]->B=nodes[i]->B;
-            nodesReduced[tab[i]]->type=nodes[i]->type;
-            nodesReduced[tab[i]]->lower=nodes[i]->lower;
-            nodesReduced[tab[i]]->upper=nodes[i]->upper;
-            nodesReduced[tab[i]]->D=nodes[i]->D;
-            nodesReduced[tab[i]]->L=nodes[i]->L;
-        }
-    }
-    if (pr->ratePartition.size()>0) {
-        for (int i=0;i<=pr->nbBranches;i++){
-            if (tab[i]!=-1) nodesReduced[tab[i]]->rateGroup = nodes[i]->rateGroup;
-        }
-    }
-}
 
 void computeIC(double br,Pr* pr,Node** nodes,double* &T_left,double* &T_right,double* &H_left,double* &H_right,double* &HD_left,double* &HD_right,double &rho_left,double& rho_right,double* &other_rhos_left,double* &other_rhos_right){
-//void computeIC(double br,Pr* pr,Node** nodes,double* &T_left,double* &T_right,double &rho_left,double& rho_right,double* &other_rhos_left,double* &other_rhos_right){
     Node** nodes_new = new Node*[pr->nbBranches+1];
     int* tab = new int[pr->nbBranches+1];
-    int nbC = collapseTree(pr, nodes, nodes_new,tab);//nbC is the number of internal nodes reduced
+    bool useSupport = false;
+    int nbC = collapseTree(pr, nodes, nodes_new,tab,0,useSupport);//nbC is the number of internal nodes reduced
     Node** nodesReduced = new Node*[nbC+pr->nbBranches-pr->nbINodes+1];
     Pr* prReduced = new Pr(nbC,nbC+pr->nbBranches-pr->nbINodes);
     prReduced->copy(pr);
@@ -125,7 +36,6 @@ void computeIC(double br,Pr* pr,Node** nodes,double* &T_left,double* &T_right,do
     for (int i=0;i<pr->nbSampling;i++){
         B_simul[i]=new double[prReduced->nbBranches+1];
     }
-    srand ( time(NULL) );
     std::default_random_engine generator;
     
     double minB=nodesReduced[1]->B;
@@ -139,7 +49,6 @@ void computeIC(double br,Pr* pr,Node** nodes,double* &T_left,double* &T_right,do
     double sigma = sqrt(log(prReduced->q*prReduced->q+1));
     for (int i=1;i<=prReduced->nbBranches;i++){
         std::poisson_distribution<int> distribution(nodesReduced[i]->B*seqLength_forIC);
-        //std::lognormal_distribution<double> distributionlogNormal(-0.01961036,0.1980422);
         std::lognormal_distribution<double> distributionlogNormal(m,sigma);
         for (int j=0;j<pr->nbSampling;j++){
             double coef = (double)distributionlogNormal(generator);
@@ -260,7 +169,7 @@ void computeIC(double br,Pr* pr,Node** nodes,double* &T_left,double* &T_right,do
     delete[] HD_simul;
 }
 
-void output(double br,int y, Pr* pr,Node** nodes,FILE* f,FILE* tree1,FILE* tree2,FILE* tree3){
+void output(double br,int y, Pr* pr,Node** nodes,ostream& f,ostream& tree1,ostream& tree2,ostream& tree3){
     if (pr->outlier.size()>0){
         std::ostringstream oss;
         oss<<"- There are "<<pr->outlier.size()<<" nodes that are considered as outliers and were excluded from the analysis:\n";
@@ -301,7 +210,7 @@ void output(double br,int y, Pr* pr,Node** nodes,FILE* f,FILE* tree1,FILE* tree2
     
     //variance = 2
     if (pr->variance==2){
-        printf("Re-estimating using variances based on the branch lengths of the first run ...\n");
+       cout<<"Re-estimating using variances based on the branch lengths of the first run ...\n";
         if (pr->estimate_root=="") {
             computeNewVariance(pr,nodes);
             if (pr->constraint) {
@@ -377,11 +286,11 @@ void output(double br,int y, Pr* pr,Node** nodes,FILE* f,FILE* tree1,FILE* tree2
     calculate_tree_height(pr,nodes);
     //Calculate confidence intervals
     if (!pr->ci){
-        fprintf(tree1,"tree %d = ",y);
-        fprintf(tree1,"%s",nexus(0,pr,nodes).c_str());
-        fprintf(tree2,"tree %d = ",y);
-        fprintf(tree2,"%s",nexusDate(0,pr,nodes).c_str());
-        fprintf(tree3,"%s",newick(0,0,pr,nodes).c_str());
+        tree1<<"tree "<<y<<" = ";
+        tree1<<nexus(0,pr,nodes).c_str();
+        tree2<<"tree "<<y<<" = ";
+        tree2<<nexusDate(0,pr,nodes).c_str();
+        tree3<<newick(0,0,pr,nodes).c_str();
     }
     else{
         double* T_min = new double[pr->nbBranches+1];
@@ -395,7 +304,6 @@ void output(double br,int y, Pr* pr,Node** nodes,FILE* f,FILE* tree1,FILE* tree2
         double* other_rhos_right = new double[pr->ratePartition.size()+1];
         cout<<"Computing confidence intervals using sequence length "<<pr->seqLength<<" and a lognormal relaxed clock with mean 1, standard deviation "<<pr->q<<" ..."<<endl;
         computeIC(br,pr,nodes,T_min,T_max,H_min,H_max,HD_min,HD_max,rho_left,rho_right,other_rhos_left,other_rhos_right);
-        //computeIC(br,pr,nodes,T_min,T_max,rho_left,rho_right,other_rhos_left,other_rhos_right);
         
         std::ostringstream oss;
         oss<<"- Results with confidence intervals:\n";
@@ -421,12 +329,11 @@ void output(double br,int y, Pr* pr,Node** nodes,FILE* f,FILE* tree1,FILE* tree2
         delete[] other_rhos_left;
         delete[] other_rhos_right;
         
-        fprintf(tree1,"tree %d = ",y);
-        fprintf(tree2,"tree %d = ",y);
-        fprintf(tree1,"%s",nexusIC(0,pr,nodes,T_min,T_max,H_min,H_max).c_str());
-        fprintf(tree2,"%s",nexusICDate(0,pr,nodes,T_min,T_max,HD_min,HD_max).c_str());
-        fprintf(tree3,"%s",newick(0,0,pr,nodes).c_str());
-        //fprintf(tree3,"%s",newickDate(0,pr,nodes).c_str());
+        tree1<<"tree "<<y<<" = ";
+        tree2<<"tree "<<y<<" = ";
+        tree1<<nexusIC(0,pr,nodes,T_min,T_max,H_min,H_max).c_str();
+        tree2<<nexusICDate(0,pr,nodes,T_min,T_max,HD_min,HD_max).c_str();
+        tree3<<newick(0,0,pr,nodes).c_str();
         
         delete[] T_min;
         delete[] T_max;
@@ -440,20 +347,20 @@ void output(double br,int y, Pr* pr,Node** nodes,FILE* f,FILE* tree1,FILE* tree2
         pr->warningMessage.push_back(oss.str());
     }
     if ((pr->warningMessage).size()>0){
-        fprintf(f,"*WARNINGS:\n");
-        printf("*WARNINGS:\n");
+        f<<"*WARNINGS:\n";
+        cout<<"*WARNINGS:\n";
         for (int i=0;i<pr->warningMessage.size();i++){
-            fprintf(f,"%s",string(pr->warningMessage[i]).c_str());
-            printf("%s",string(pr->warningMessage[i]).c_str());
+            f<<string(pr->warningMessage[i]).c_str();
+           cout<<string(pr->warningMessage[i]).c_str();
         }
         
     }
     
-    fprintf(f,"*RESULTS:\n");
-    printf("*RESULTS:\n");
+    f<<"*RESULTS:\n";
+    cout<<"*RESULTS:\n";
     for (int i=0;i<pr->resultMessage.size();i++){
-        fprintf(f,"%s",string(pr->resultMessage[i]).c_str());
-        printf("%s",string(pr->resultMessage[i]).c_str());
+        f<<string(pr->resultMessage[i]).c_str();
+        cout<<string(pr->resultMessage[i]).c_str();
     }
 
 }

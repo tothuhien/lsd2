@@ -15,7 +15,7 @@
 //    along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #include "utils.h"
 
-string readWord(FILE *f,string fn){
+string readWord(ifstream& f,string fn){
     string s;
     char c=readChar(f,fn);
     int i=0;
@@ -23,7 +23,7 @@ string readWord(FILE *f,string fn){
     while (c>=33 && c<=126 && c!='(' && c!=')' && c!=','){
         s=s+c;
         i++;
-        c=getc(f);
+        f.get(c);
     }
     return s;
 }
@@ -51,18 +51,18 @@ int getLineNumber(string fn){
     return nb;
 }
 
-char readChar(FILE *f,string fn){
+char readChar(ifstream& f,string fn){
     char r;
-    if (fscanf(f,"%c",&r)==1) return r;
+    if (f.get(r)) return r;
     else {
         cout<<"Error in the file "<<fn<<endl;
         exit(EXIT_FAILURE);
     }
 }
 
-double readdouble(FILE *f,string fn){
+double readdouble(ifstream& f,string fn){
     double r;
-    if (fscanf(f,"%lf",&r)==1) return r;
+    if (f >>r) return r;
     else {
         cout<<"Error in the file "<<fn<<" : real expected"<<endl;
         exit(EXIT_FAILURE);
@@ -122,16 +122,17 @@ double readDouble(string line,int& pos){
  return r;
  }*/
 
-int readInt(FILE *f,string msg){
-    int d;
-    if (fscanf(f,"%d",&d)==1) return d;
-    else {
+int readInt(ifstream& f,string msg){
+    int c;
+    if (f >> c) {
+        return (int)(c);
+    } else {
         cout<<msg<<endl;
         exit(EXIT_FAILURE);
     }
 }
 
-string readSupport(FILE *f,string fn){
+string readSupport(ifstream& f,string fn){
     string s="";
     char c=readChar(f,fn);
     while (c!=':' && c!=';') {
@@ -167,45 +168,6 @@ void concat(list<int> & l1,stack<int> l2){
     }
 }
 
-/*
- list<int> arrayToList(int* & arr,list<int> li,int n){
- for (int i=0;i<n;i++){
- li.push_back(arr[i]);
- }
- return li;
- }
- void listToArray(list<int> li,int* & arr){
- int count=0;
- for (list<int>::iterator i=li.begin();i!=li.end();i++){
- arr[count]=(*i);
- count++;
- }
- }
- void listToArray(list<string> li,string* & arr){
- int count=0;
- for (list<string>::iterator i=li.begin();i!=li.end();i++){
- arr[count]=(*i);
- count++;
- }
- }
- void listToArray(list<double> li,double* & arr){
- int count=0;
- for (list<double>::iterator i=li.begin();i!=li.end();i++){
- arr[count]=(*i);
- count++;
- }
- }
- void listToArray(list<string> & inner,list<string> & leaves,string* & arr){
- int count=0;
- for (list<string>::iterator i=inner.begin();i!=inner.end();i++){
- arr[inner.size()-count-1]=(*i);
- count++;
- }
- for (list<string>::iterator i=leaves.begin();i!=leaves.end();i++){
- arr[count]=(*i);
- count++;
- }
- }*/
 int getPosition(Node** nodes,string s,int n,int m){
     int i = n;
     int count=0;
@@ -225,59 +187,6 @@ int getPosition(Node** nodes,string s,int n,int m){
     else return k;
 }
 
-bool comparecs(char* c,string s){
-    for (int i=0;i<s.size();i++) {
-        if (c[i]!=s.at(i)) return false;
-    }
-    return true;
-}
-bool comparec(char* c,char* s,int n){
-    for (int i=0;i<n;i++) {
-        if (c[i]!=s[i]) return false;
-    }
-    return true;
-}
-
-double minV(double* & B,int n){
-    int i=1;
-    while (B[i]==0) i++;
-    double M=B[i];
-    while (i<n){
-        if (B[i]!=0 && B[i]<M) M=B[i];
-        i++;
-    }
-    return M;
-}
-
-double Min(double a,double b){
-    if (a<b) return a;
-    else return b;
-}
-
-double Min(double a,double b,double c){
-    if (a<b && a<c) return a;
-    else if (b<a && b<c) return b;
-    else return c;
-}
-
-double Max(double a,double b){
-    if (a<b) return b;
-    else return a;
-}
-
-double Maxi(double* & B,int n){
-    double max=0;
-    for (int i=0;i<n;i++){
-        if (max<B[i]) max=B[i];
-    }
-    return max;
-}
-
-double myabs(double a){
-    if (a>=0) return a;
-    else return -a;
-}
-
 bool isAncestor(Node** nodes,int i,int j){
     int x=j;
     while (x!=-1){
@@ -287,26 +196,12 @@ bool isAncestor(Node** nodes,int i,int j){
     return false;
 }
 
-int lca(list<int> a, list<int> b){
-    for (list<int>::iterator ia=a.begin();ia!=a.end();ia++){
-        for (list<int>::iterator ib=b.begin();(ib!=b.end() && *ib>=*ia);ib++){
-            if (*ia==*ib){return *ia;}
-        }
-    }
-    return 0;
-}
-
 int mrca(Node** nodes,int i,int j){
     int c = i;
     while (!isAncestor(nodes,c,j)){
         c=nodes[c]->P;
     }
     return c;
-}
-
-bool decrease(int a,int b){
-    if (a>=b) return true;
-    else return false;
 }
 
 int index(list<int> & L, int e){
@@ -359,29 +254,29 @@ list<int> intersect(list<int> l1,list<int> l2){
     return common;
 }
 
-string readLabel(FILE *f,FILE *w){
+string readLabel(ifstream& f,FILE *w){
     string s="";
     char c=readChar(f,"input tree");
     fprintf(w,"%c",c);
     while (c!=':' && c!=')'){
         s=s+c;
-        fscanf(f,"%c",&c);
+        f.get(c);
         fprintf(w,"%c",c);
     }
     return s.c_str();
 }
 
-string readLabel(char ch,FILE *f,int& a){
+string readLabel(char ch,ifstream& f,int& a){
     string s="";
     s=s+ch;
     char c=readChar(f,"input tree");
     while (c!=':' && c!=';' && c!=')'){
         s=s+c;
-        fscanf(f,"%c",&c);
+        f.get(c);
     }
     if (c==')') {
         while (c==')') {
-            fscanf(f,"%c",&c);
+            f.get(c);
             a--;
         }
     }
@@ -389,7 +284,7 @@ string readLabel(char ch,FILE *f,int& a){
 }
 
 
-char readBracket(FILE *f,string fn){
+char readBracket(ifstream& f,string fn){
     char c=readChar(f,fn);
     while (c!='('){
         c=readChar(f,fn);
@@ -397,7 +292,7 @@ char readBracket(FILE *f,string fn){
     return c;
 }
 
-char readCommaBracket(FILE *f,string fn,string& s){
+char readCommaBracket(ifstream& f,string fn,string& s){
     char c=readChar(f,fn);
     s="";
     while (c==' ' || c=='	'){ c=readChar(f,fn);}
@@ -407,28 +302,12 @@ char readCommaBracket(FILE *f,string fn,string& s){
     }
     return c;
 }
-char read2P(FILE *f,string fn){
+char read2P(ifstream f,string fn){
     char c= readChar(f,fn);
     if (c==';') return c;
     while (c!=':' && c!=';') c=readChar(f,fn);
     return c;
 }
-
-
-bool finish(bool* & flag,int size){
-    for (int i=0;i<size;i++){
-        if (flag[i]==false) {return false;}
-    }
-    return true;
-}
-int choose(bool* & flag,int* & Suc1,int* & Suc2,int size){
-    for (int i=0;i<size;i++){
-        if (!flag[i] && flag[Suc1[i]] && flag[Suc2[i]]) return i;
-    }
-    return -1;
-}
-
-
 
 Node** unrooted2rooted(Pr* & pr,Node** nodes,int s){
     Node** nodes_new = new Node*[pr->nbBranches+1];
@@ -613,7 +492,6 @@ bool isInteger( const char* str )
     }
     return true;
 }
-
 
 void sort(int* & tab,int size){
     for (int i=0;i<size;i++){
@@ -1365,7 +1243,7 @@ string nexus(int i,Pr* pr,Node** nodes){
             else newLabel+=","+l;
         }
         if (i>0) {
-            if (myabs(nodes[i]->B)>toCollapse) return newLabel+")"+nodes[i]->L+"[&date="+date.str()+"]:"+b.str();
+            if (abs(nodes[i]->B)>0) return newLabel+")"+nodes[i]->L+"[&date="+date.str()+"]:"+b.str();
             else return newLabel+")"+nodes[i]->L+":"+b.str();
         }
         else{
@@ -1390,7 +1268,7 @@ string nexusDate(int i,Pr* pr,Node** nodes){
             else newLabel+=","+l;
         }
         if (i>0) {
-            if (myabs(nodes[i]->B)>toCollapse) return newLabel+")"+nodes[i]->L+"[&date="+date.str()+"]:"+b.str();
+            if (abs(nodes[i]->B)>0) return newLabel+")"+nodes[i]->L+"[&date="+date.str()+"]:"+b.str();
             else return newLabel+")"+nodes[i]->L+":"+b.str();
         }
         else{
@@ -1422,7 +1300,7 @@ string nexusIC(int i,Pr* pr,Node** nodes,double* T_min,double* T_max){
                 else newLabel+=","+l;
             }
             if (i>0) {
-                if (myabs(nodes[i]->B)>toCollapse) return newLabel+")"+nodes[i]->L+"[&date="+date.str()+"][&CI=\""+date.str()+"("+tmin.str()+","+tmax.str()+")\"]:"+b.str();
+                if (abs(nodes[i]->B)>toCollapse) return newLabel+")"+nodes[i]->L+"[&date="+date.str()+"][&CI=\""+date.str()+"("+tmin.str()+","+tmax.str()+")\"]:"+b.str();
                 else return newLabel+")"+nodes[i]->L+":"+b.str();
             }
             else{
@@ -1459,7 +1337,7 @@ string nexusIC(int i,Pr* pr,Node** nodes,double* D_min,double* D_max,double* H_m
                 else newLabel+=","+l;
             }
             if (i>0) {
-                if (myabs(nodes[i]->B)>toCollapse) return newLabel+")"+nodes[i]->L+"[&date="+date.str()+",CI_height={"+hmin.str()+","+hmax.str()+"}][&CI_date=\""+date.str()+"("+dmin.str()+","+dmax.str()+")\"]:"+b.str();
+                if (abs(nodes[i]->B)>0) return newLabel+")"+nodes[i]->L+"[&date="+date.str()+",CI_height={"+hmin.str()+","+hmax.str()+"}][&CI_date=\""+date.str()+"("+dmin.str()+","+dmax.str()+")\"]:"+b.str();
                 else return newLabel+")"+nodes[i]->L+":"+b.str();
             }
             else{
@@ -1495,7 +1373,7 @@ string nexusICDate(int i,Pr* pr,Node** nodes,double* D_min,double* D_max,double*
                 else newLabel+=","+l;
             }
             if (i>0) {
-                if (myabs(nodes[i]->B)>toCollapse) return newLabel+")"+nodes[i]->L+"[&date="+date.str()+",CI_height={"+hmin.str()+","+hmax.str()+"}][&CI_date=\""+date.str()+"("+dmin.str()+","+dmax.str()+")\"]:"+b.str();
+                if (abs(nodes[i]->B)>0) return newLabel+")"+nodes[i]->L+"[&date="+date.str()+",CI_height={"+hmin.str()+","+hmax.str()+"}][&CI_date=\""+date.str()+"("+dmin.str()+","+dmax.str()+")\"]:"+b.str();
                 else return newLabel+")"+nodes[i]->L+":"+b.str();
             }
             else{
@@ -1534,8 +1412,9 @@ double* newvariance(int m,double rho,int* P,double* T,int c,int s){
 list<string> getOutgroup(string fn){
     list<string> result;
     int lineNb=getLineNumber(fn);
-    FILE * o = fopen(fn.c_str(),"rt");
-    if (o==NULL) cout<<"Impossible to open outgroup file"<<endl;
+    ifstream o;
+    o.open(fn.c_str());
+    if (!o.is_open()) cout<<"Impossible to open outgroup file"<<endl;
     else{
         int ino=readInt(o,"Error in the outgroup file, the file should begin with an integer (the number of outgroups)");
         if (lineNb-1<ino) {
@@ -1781,8 +1660,9 @@ void reduceTree_polytomy(Pr* pr,Node** nodes,int* &Pre,list<int>* & Suc,double* 
 }
 
 void checkRooted(Pr* &opt){
-    FILE * tree = fopen(opt->inFile.c_str(),"rt");
-    if (tree==NULL){
+    ifstream tree;
+    tree.open(opt->inFile.c_str());
+    if (!tree.is_open()){
         cout<<"Error: can not open the input file"<<endl;
         exit(EXIT_FAILURE);
     }
@@ -1824,7 +1704,7 @@ void checkRooted(Pr* &opt){
             c=readChar(tree,"input tree");
         }
     }  while (a>0);
-    fclose(tree);
+    tree.close();
     m--;
     if (m==2*n) {
         opt->rooted=true;
@@ -2115,9 +1995,9 @@ double median(vector<double> array){
     }
 }
 
-void imposeMinBlen(FILE* file,Pr* pr, Node** nodes, double median_rate){
+void imposeMinBlen(ostream& file,Pr* pr, Node** nodes, double median_rate){
     double minblen = pr->minblen;
-    if (pr->minblen<0){
+    if (pr->minblen<0 && !pr->relative){
         minblen = (int)(pr->round_time/(pr->seqLength*median_rate))/(double)pr->round_time;
         string timeunit;
         if (pr->round_time == 365){
@@ -2125,19 +2005,33 @@ void imposeMinBlen(FILE* file,Pr* pr, Node** nodes, double median_rate){
         } else if(pr->round_time == 52) {
             timeunit = "week(s)";
         }
-        cout<<"Minimum branch length of time scaled tree (settable via option -u): "<<1./(pr->seqLength*median_rate)<<", rounded to "<<minblen<<" ("<<(int)(pr->round_time/(pr->seqLength*median_rate))<<"/"<<pr->round_time<<"), using factor "<<pr->round_time<<" (settable via option -R)"<<endl;
-        fprintf(file,"Minimum branch length of time scaled tree (settable via option -u): %g, rounded to %g (%d/%g), using factor %g (settable via option -R)\n",1./(pr->seqLength*median_rate),minblen,(int)(pr->round_time/(pr->seqLength*median_rate)),pr->round_time,pr->round_time);
-        
+        if (pr->minblenL <0){
+            cout<<"Minimum branch length of time scaled tree (settable via option -u and -U): "<<1./(pr->seqLength*median_rate)<<", rounded to "<<minblen<<" ("<<(int)(pr->round_time/(pr->seqLength*median_rate))<<"/"<<pr->round_time<<") using factor "<<pr->round_time<<" (settable via option -R)"<<endl;
+            file<<"Minimum branch length of time scaled tree (settable via option -u and -U): "<<1./(pr->seqLength*median_rate)<<", rounded to "<<minblen<<" ("<<(int)(pr->round_time/(pr->seqLength*median_rate))<<"/"<<pr->round_time<<") using factor "<<pr->round_time<<" (settable via option -R)\n";
+        } else {
+            cout<<"Minimum internal branches lengths of time scaled tree (settable via option -u): "<<1./(pr->seqLength*median_rate)<<", rounded to "<<minblen<<" ("<<(int)(pr->round_time/(pr->seqLength*median_rate))<<"/"<<pr->round_time<<") using factor "<<pr->round_time<<" (settable via option -R)"<<endl;
+            cout<<"Minimum external branches lengths of time scaled tree was set to "<<pr->minblenL<<" (settable via option -U)"<<endl;
+            file<<"Minimum internal branches lengths of time scaled tree (settable via option -u): "<<1./(pr->seqLength*median_rate)<<", rounded to "<<minblen<<" ("<<(int)(pr->round_time/(pr->seqLength*median_rate))<<"/"<<pr->round_time<<") using factor "<<pr->round_time<<" (settable via option -R)\n";
+            file<<"Minimum external branches lengths of time scaled tree was set to "<<pr->minblenL<<" (settable via option -U)"<<endl;
+        }
     } else {
-        cout<<"Minimum branch length of time scaled tree was set to "<<minblen<<endl;
+        if (pr->minblen < 0) minblen = 0;
+        if (pr->minblenL <0){
+            cout<<"Minimum branch length of time scaled tree was set to "<<minblen<<" (settable via option -u and -U)"<<endl;
+        } else {
+            cout<<"Minimum internal branches lengths of time scaled tree was set to "<<minblen<<" (settable via option -u)"<<endl;
+            cout<<"Minimum external branches lengths of time scaled tree was set to "<<pr->minblenL<<" (settable via option -U)"<<endl;
+        }
     }
     nodes[0]->minblen = minblen;
+    double minblenL = minblen;
+    if (pr->minblenL >= 0) minblenL = pr->minblenL;
     for (int i=1;i<=pr->nbBranches;i++){
-            if (nodes[i]->B >= pr->nullblen){
-                nodes[i]->minblen = minblen;
-            } else {
-                nodes[i]->minblen = 0;
-            }
+        if (i<pr->nbINodes) {
+            nodes[i]->minblen = minblen;
+        } else{
+            nodes[i]->minblen = minblenL;
+        }
     }
 }
 
@@ -2153,4 +2047,136 @@ double median_branch_lengths(Pr* pr,Node** nodes){
         exit(EXIT_FAILURE);
     }
     return median(bl);
+}
+
+void collapse(int i,int j,Pr* pr,Node** nodes,Node** nodes_new,int &cc,int* &tab, double toCollapse, bool useSupport, double* support){
+    if (nodes[j]->type!='n') {
+        bool bl = nodes_new[i]->addConstraint(nodes[j]);
+        if (!bl){
+            cout<<"Can not collapse branches due to inconsitent temporal constraints"<<endl;
+            exit(EXIT_FAILURE);
+        }
+    }
+    for (vector<int>::iterator iter=nodes[j]->suc.begin(); iter!=nodes[j]->suc.end(); iter++) {
+        int s= *iter;
+        if (s<pr->nbINodes && (abs(nodes[s]->B) <= toCollapse  || (useSupport && support[s]<= pr->support))) {
+            tab[s]=-1;
+            collapse(i,s, pr, nodes, nodes_new, cc,tab,toCollapse,useSupport,support);
+        }
+        else{
+            nodes_new[s]->P=i;
+            nodes_new[s]->B = nodes[s]->B + nodes_new[j]->B;
+            if (s<pr->nbINodes) {
+                tab[s]=cc;
+                cc++;
+            }
+        }
+    }
+}
+
+int collapseTree(Pr* pr,Node** nodes,Node** nodes_new,int* &tab, double toCollapse, bool& useSupport){
+    double* support = new double[pr->nbINodes];
+    if (useSupport){
+        for (int i=0; i<pr->nbINodes;i++){
+                try {
+                    support[i] = std::stod(nodes[i]->L.c_str());
+                } catch (const std::invalid_argument&) {
+                    useSupport = false;
+                }
+        }
+        if (!useSupport){
+                std::ostringstream oss;
+                oss<<"- Can not read support values, invalid arguments\n";
+                pr->warningMessage.push_back(oss.str());
+        }
+    }
+    for (int i=0;i<=pr->nbBranches;i++){
+        nodes_new[i]= new Node();
+        nodes_new[i]->P=nodes[i]->P;
+        nodes_new[i]->type=nodes[i]->type;
+        nodes_new[i]->lower=nodes[i]->lower;
+        nodes_new[i]->upper=nodes[i]->upper;
+        nodes_new[i]->D=nodes[i]->D;
+        nodes_new[i]->B=nodes[i]->B;
+        nodes_new[i]->L=nodes[i]->L;
+    }
+    if (pr->ratePartition.size()>0) {
+        for (int i=0;i<=pr->nbBranches;i++){
+            nodes_new[i]->rateGroup = nodes[i]->rateGroup;
+        }
+    }
+    int cc=0;//number of internal nodes reduced
+    cc++;
+    tab[0]=0;
+    for (int i=0;i<pr->nbINodes;i++){
+        if ((abs(nodes_new[i]->B) > toCollapse && (!useSupport || support[i] > pr->support)) || i==0){
+            for (vector<int>::iterator iter=nodes[i]->suc.begin(); iter!=nodes[i]->suc.end(); iter++) {
+                int s=*iter;
+                if (s<pr->nbINodes && (abs(nodes[s]->B) <= toCollapse  || (useSupport && support[s]<= pr->support))) {
+                    tab[s]=-1;
+                    collapse(i, s,  pr, nodes, nodes_new,cc,tab, toCollapse, useSupport,  support);
+                }
+                else {
+                    nodes_new[s]->P=i;
+                    if (s<pr->nbINodes) {
+                        tab[s]=cc;
+                        cc++;
+                    }
+                }
+            }
+        }
+    }
+    for (int i=pr->nbINodes;i<=pr->nbBranches;i++){
+        tab[i]=cc+i-pr->nbINodes;
+    }
+    delete[] support;
+    return cc;
+}
+
+void collapseTreeReOrder(Pr* pr,Node** nodes,Pr* prReduced,Node** nodesReduced,int* &tab){
+    nodesReduced[0]=new Node();
+    nodesReduced[0]->P=-1;
+    nodesReduced[0]->type=nodes[0]->type;
+    nodesReduced[0]->lower=nodes[0]->lower;
+    nodesReduced[0]->upper=nodes[0]->upper;
+    nodesReduced[0]->D=nodes[0]->D;
+    for (int i=1; i<=pr->nbBranches; i++) {
+        if (tab[i]!=-1) {
+            nodesReduced[tab[i]]=new Node();
+            nodesReduced[tab[i]]->P=tab[nodes[i]->P];
+            nodesReduced[tab[i]]->B=nodes[i]->B;
+            nodesReduced[tab[i]]->type=nodes[i]->type;
+            nodesReduced[tab[i]]->lower=nodes[i]->lower;
+            nodesReduced[tab[i]]->upper=nodes[i]->upper;
+            nodesReduced[tab[i]]->D=nodes[i]->D;
+            nodesReduced[tab[i]]->L=nodes[i]->L;
+        }
+    }
+    if (pr->ratePartition.size()>0) {
+        for (int i=0;i<=pr->nbBranches;i++){
+            if (tab[i]!=-1) nodesReduced[tab[i]]->rateGroup = nodes[i]->rateGroup;
+        }
+    }
+}
+
+void collapseUnInformativeBranches(Pr* &pr,Node** &nodes){
+    Node** nodes_new = new Node*[pr->nbBranches+1];
+    int* tab = new int[pr->nbBranches+1];
+    bool useSupport = (pr->support>=0);
+    int nbC = collapseTree(pr, nodes, nodes_new,tab, pr->nullblen,useSupport);//nbC is the number of internal nodes reduced
+    if (!useSupport) cout<<"Collapse "<<(pr->nbINodes - nbC)<<" internal branches having branch length <= "<<pr->nullblen<<" (settable via option -l)"<<endl;
+    else cout<<"Collapse "<<(pr->nbINodes - nbC)<<" internal branches having branch length <= "<<pr->nullblen<<" (settable via option -l) or support value <= "<<pr->support<<" (settable via option -S)"<<endl;
+    Node** nodesReduced = new Node*[nbC+pr->nbBranches-pr->nbINodes+1];
+    Pr* prReduced = new Pr(nbC,nbC+pr->nbBranches-pr->nbINodes);
+    prReduced->copy(pr);
+    prReduced->internalConstraints.clear();
+    collapseTreeReOrder( pr, nodes_new, prReduced, nodesReduced,tab);
+    for (int i=0;i<pr->nbBranches+1;i++){
+        delete nodes_new[i];
+    }
+    delete[] nodes_new;
+    delete[] tab;
+    computeSuc_polytomy(prReduced, nodesReduced);
+    pr = prReduced;
+    nodes = nodesReduced;
 }

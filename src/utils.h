@@ -5,45 +5,35 @@
 #include <stack>
 #include <list>
 #include <cstdlib>
-#include <string.h>
+#include <cmath>
 #include "stdarg.h"
-#include <math.h>
 #include <algorithm>
-#ifndef maxIter
-#define maxIter 1000
-#endif
-#ifndef toCollapse
-#define toCollapse 0
-#endif
 #include "node.h"
 #include "pr.h"
 #include "pair.h"
 #include "subtree.h"
 #include "part.h"
 
+
 using namespace std;
   
-string readWord(FILE *f,string fn);
+string readWord(ifstream& f,string fn);
 
 string readWord(string line,int& pos);
 
-char readChar(FILE *f,string fn);
+char readChar(ifstream& f,string fn);
 
 double readDouble(string line,int& pos);
 
-double readdouble(FILE *f,string fn);
-
-double readdouble(FILE *f,char c);
-
-double readdouble(FILE *f,int c);
+double readdouble(ifstream& f,string fn);
 
 vector<double> read_double_from_line(string line);
 
-int readInt(FILE *f,string msg);
+int readInt(ifstream& f,string msg);
 
 int getLineNumber(string fn);
 
-string readSupport(FILE *f,string fn);
+string readSupport(ifstream& f,string fn);
 
 void concat(list<int> & l1,list<int> l2);
 
@@ -57,11 +47,7 @@ int getPosition(Node**,string s,int n,int m);
 
 list<int> intersect(list<int> l1,list<int> l2);
 
-double myabs(double a);
-
 bool isAncestor(Node**,int i,int j);
-
-int lca(list<int> a, list<int> b);
 
 int mrca(Node**,int i,int j);
 
@@ -75,16 +61,16 @@ bool contain(int s,list<int> l);
 
 bool contain(string s,list<string> l);
 
-string readLabel(FILE *f,FILE *w);
+string readLabel(ifstream& f,FILE *w);
 
-string readLabel(char ch,FILE *f,int& a);
+string readLabel(char ch,ifstream& f,int& a);
 
 
-char readBracket(FILE *f,string fn);
+char readBracket(ifstream& f,string fn);
 
-char readCommaBracket(FILE *f,string fn,string& s);
+char readCommaBracket(ifstream& f,string fn,string& s);
 
-char read2P(FILE *f,string fn);
+char read2P(ifstream& f,string fn);
 
 void computeSuc(int* & Pre,int* & Suc1,int* & Suc2,int size,int n);
 
@@ -102,7 +88,9 @@ bool isReal( const char* str );
 bool isInteger( const char* str );
 
 void sort(int* & tab,int size);
+
 void sort(double* & tab,int size);
+ 
 int index(int* & tab,int value,int size);
 
 int mrca(Node**,list<int> taxa);
@@ -254,6 +242,14 @@ bool checkAllConstraintConsistent(Pr* pr,Node** nodes);
 
 double median(vector<double> array);
 
-void imposeMinBlen(FILE* file,Pr* pr, Node** nodes, double median_rate);
+void imposeMinBlen(ostream& result,Pr* pr, Node** nodes, double median_rate);
 
 double median_branch_lengths(Pr* pr,Node** nodes);
+
+int collapseTree(Pr* pr,Node** nodes,Node** nodes_new,int* &tab, double toCollapse,bool& useSupport);
+    
+void collapse(int i,int j,Pr* pr,Node** nodes,Node** nodes_new,int &cc,int* &tab, double toCollapse, bool useSupport, double* support);
+
+void collapseTreeReOrder(Pr* pr,Node** nodes,Pr* prReduced,Node** nodesReduced,int* &tab);
+
+void collapseUnInformativeBranches(Pr* &pr,Node** &nodes);

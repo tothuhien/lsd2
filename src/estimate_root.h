@@ -1,11 +1,3 @@
-#include <iostream>
-#include <sstream>
-#include <fstream>
-#include <string>
-#include <stack>
-#include <list>
-#include "stdarg.h"
-#include <math.h>
 #include "utils.h"
 #include "dating.h"
 

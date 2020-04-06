@@ -1,13 +1,6 @@
 #ifndef PR_H
 #define PR_H
-#include <iostream>
-#include <sstream>
-#include <fstream>
-#include <string>
-#include <stdio.h>
-#include <stdlib.h>
-#include <unistd.h>
-#include <math.h>
+#include "stdarg.h"
 #include <vector>
 #include "date.h"
 #include "pair.h"
@@ -41,11 +34,13 @@ typedef struct Pr
     double b;                 //var = b+c/s;
     double q; //standard deviation of lognormal distribution to simulate relaxed branch lengths for calculating confidence intervals
     double nullblen;
+    double support;
     bool verbose;
     double rho_min;
     int nbINodes;
     int nbBranches;
     double minblen;
+    double minblenL;
     double rho;
     double round_time;
     vector<double> multiplierRate;
@@ -93,7 +88,9 @@ typedef struct Pr
         e=pr->e;
         m=pr->m;
         round_time=pr->round_time;
+        support=pr->support;
         minblen=pr->minblen;
+        minblenL=pr->minblenL;
         nullblen=pr->nullblen;
         verbose=pr->verbose;
         rho=pr->rho;
@@ -121,7 +118,7 @@ typedef struct Pr
         treeFile1 = "";
         treeFile2 = "";
         fnOutgroup = "";
-        seqLength = 0;
+        seqLength = 1000;
         nbData = 1;
         rate = "";
         relative = false;
@@ -131,7 +128,9 @@ typedef struct Pr
         constraint = false;
         variance = 0;
         minblen = -1;
+        minblenL = -1;
         nullblen = -1;
+        support = -1;
         c = -1;
         b = -1;
         q = 0.2;

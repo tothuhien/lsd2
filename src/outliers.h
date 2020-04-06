@@ -1,5 +1,3 @@
-
-#include <stdio.h>
 #include "utils.h"
 
 using namespace std;

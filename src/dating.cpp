@@ -196,7 +196,7 @@ list<double> computeLambda(list<int> active_set,Pr* pr,Node** nodes){
                     lambda[as[i]] += 2*pr->rho*(nodes[s]->B+pr->rho*nodes[i]->D-pr->rho*nodes[s]->D)/nodes[s]->V;
                 }
             }
-            if (myabs(lambda[as[i]])<maxNumError) lambda[as[i]]=0;
+            if (abs(lambda[as[i]])<1e-10) lambda[as[i]]=0;
             ld.push_back(lambda[as[i]]);
         }
         else if (upper(nodes[i])){
@@ -209,7 +209,7 @@ list<double> computeLambda(list<int> active_set,Pr* pr,Node** nodes){
                     lambda[as[i]] -= 2*pr->rho*(nodes[s]->B+pr->rho*nodes[i]->D-pr->rho*nodes[s]->D)/nodes[s]->V;
                 }
             }
-            if (myabs(lambda[as[i]])<maxNumError) lambda[as[i]]=0;
+            if (abs(lambda[as[i]])<1e-10) lambda[as[i]]=0;
             ld.push_back(lambda[as[i]]);
         }
     }
@@ -232,14 +232,14 @@ list<double> computeLambda(list<int> active_set,Pr* pr,Node** nodes){
      if (upper(nodes[i])){
      s+=lambda[as[i]];
      }
-     if (myabs(s)>1e-10) {
+     if (abs(s)>1e-10) {
      cout<<"TEST PROBLEM "<<i<<" "<<s<<" "<<nodes[i]->P<<endl;
      }
      
      }
      if (i>0) sr+=(nodes[i]->D-nodes[nodes[i]->P]->D)*(nodes[i]->B-pr->rho*(nodes[i]->D-nodes[nodes[i]->P]->D))/nodes[i]->V;
      }
-     if (myabs(sr)>1e-6) {
+     if (abs(sr)>1e-6) {
      cout<<"TEST PROBLEM rho "<<sr<<endl;
      }*/
     delete[] lambda;
@@ -282,7 +282,7 @@ bool without_constraint_active_set(Pr* pr,Node** nodes){
     int nb_iter=0;
     double alpha;
     double* dir = new double[pr->nbBranches+1];
-    while (val && !conditions(lambda,pr,nodes) && nb_iter<=maxIter){
+    while (val && !conditions(lambda,pr,nodes) && nb_iter<=1000){
         for (int i=0;i<=pr->nbBranches;i++)  {dir[i]=nodes[i]->D-D_old[i];}
         alpha=1;
         int as=0;
@@ -339,7 +339,7 @@ bool without_constraint_active_set(Pr* pr,Node** nodes){
         lambda=computeLambda(active_set,pr,nodes);
         nb_iter++;
     }
-    if (nb_iter>maxIter){
+    if (nb_iter>1000){
         for (int i=0;i<=pr->nbBranches;i++) nodes[i]->D=D_old[i];
     }
     computeObjective(pr,nodes);
@@ -361,7 +361,7 @@ bool conditionsQP(list<double>& ldLagrange,Pr* pr,Node** nodes){
         }
     }
     for (int i=0;i<=pr->nbBranches;i++){
-        if (i>0 && (nodes[i]->D - nodes[nodes[i]->P]->D - nodes[i]->minblen) < -maxNumError) {
+        if (i>0 && (nodes[i]->D - nodes[nodes[i]->P]->D - nodes[i]->minblen) < -1e-10) {
             return false;
         }
         if (((nodes[i]->type=='l' || nodes[i]->type=='b') && nodes[i]->D<nodes[i]->lower) || ((nodes[i]->type=='u' || nodes[i]->type=='b') && nodes[i]->D>nodes[i]->upper)){
@@ -783,18 +783,18 @@ bool with_constraint(Pr* pr,Node** &nodes,list<int> active_set,list<double>& ld)
                     }
                 }
             }
-            if (myabs(s)>1e-10) {
+            if (abs(s)>1e-10) {
                 cout<<"TEST  PROBLEM "<<i<<" "<<s<<" "<<nodes[i]->P<<endl;
             }
         }
         if (i>0) sr += (nodes[i]->D-nodes[nodes[i]->P]->D) * (nodes[i]->B-pr->rho*(nodes[i]->D-nodes[nodes[i]->P]->D)) /nodes[i]->V;
     }
-    if (myabs(sr)>1e-6) {
+    if (abs(sr)>1e-6) {
         cout<<"TEST  PROBLEM rho "<<sr<<endl;
     }*/
     
     for (int i=0;i<count;i++){
-        if (myabs(lambda[i])<(maxNumError))
+        if (abs(lambda[i])<(1e-10))
             lambda[i]=0;
         ld.push_back(lambda[i]);
     }
@@ -821,7 +821,7 @@ bool with_constraint_active_set(Pr* pr,Node** &nodes){
         bool val = with_constraint(pr,nodes,active_set,lambda);
         int nb_iter=0;
         double alpha;
-        while (val && !conditionsQP(lambda,pr,nodes) && nb_iter <= maxIter){ //{
+        while (val && !conditionsQP(lambda,pr,nodes) && nb_iter <= 1000){ //{
             for (int i=0;i<=pr->nbBranches;i++)  {
                 dir[i] = nodes[i]->D - D_old[i];
             }
@@ -900,7 +900,7 @@ bool with_constraint_active_set(Pr* pr,Node** &nodes){
             val=with_constraint(pr,nodes,active_set,lambda);
             nb_iter++;
         }
-        if (nb_iter>maxIter){
+        if (nb_iter>1000){
             for (int i=0;i<=pr->nbBranches;i++) nodes[i]->D=D_old[i];
         }
         computeObjective(pr,nodes);
@@ -994,9 +994,9 @@ bool without_constraint_multirates(Pr* pr,Node** nodes,bool reassign){
                 for (int i=1;i<pr->multiplierRate.size();i++) cout<<pr->multiplierRate[i]<<" ";
                 cout<<pr->rho<<endl;
             }
-            cont = val && (myabs((old_rho-pr->rho)/pr->rho) >= 1e-5);
+            cont = val && (abs((old_rho-pr->rho)/pr->rho) >= 1e-5);
             for (int r=1; r<=pr->ratePartition.size(); r++) {
-                cont = cont || (pr->multiplierRate[r]>0 && myabs((old_multi[r]*old_rho-pr->multiplierRate[r]*pr->rho)/pr->multiplierRate[r]/pr->rho)>=1e-5);
+                cont = cont || (pr->multiplierRate[r]>0 && abs((old_multi[r]*old_rho-pr->multiplierRate[r]*pr->rho)/pr->multiplierRate[r]/pr->rho)>=1e-5);
             }
             i++;
         } while (cont);
@@ -1061,9 +1061,9 @@ bool with_constraint_multirates(Pr* pr,Node** nodes,bool reassign){
             }
             if (!bl) {
                 val = with_constraint_active_set(pr,nodes);
-                bl = myabs((old_rho-pr->rho)/pr->rho)<=1e-4;
+                bl = abs((old_rho-pr->rho)/pr->rho)<=1e-4;
                 for (int r=1; r<=pr->ratePartition.size(); r++) {
-                    bl = bl && (pr->multiplierRate[r]<0 || myabs((old_multi[r]*old_rho-pr->multiplierRate[r]*pr->rho)/pr->multiplierRate[r]/pr->rho)<=1e-4);
+                    bl = bl && (pr->multiplierRate[r]<0 || abs((old_multi[r]*old_rho-pr->multiplierRate[r]*pr->rho)/pr->multiplierRate[r]/pr->rho)<=1e-4);
                 }
             }
             else {
@@ -1073,9 +1073,9 @@ bool with_constraint_multirates(Pr* pr,Node** nodes,bool reassign){
                 for (int i=1;i<pr->multiplierRate.size();i++) cout<<pr->multiplierRate[i]<<" ";
                 cout<<pr->rho<<endl;
             }
-            cont = val && (myabs((old_rho-pr->rho)/pr->rho) >= 1e-5);
+            cont = val && (abs((old_rho-pr->rho)/pr->rho) >= 1e-5);
             for (int r=1; r<=pr->ratePartition.size(); r++) {
-                cont = cont || (pr->multiplierRate[r]>0 && myabs((old_multi[r]*old_rho-pr->multiplierRate[r]*pr->rho)/pr->multiplierRate[r]/pr->rho)>=1e-5);
+                cont = cont || (pr->multiplierRate[r]>0 && abs((old_multi[r]*old_rho-pr->multiplierRate[r]*pr->rho)/pr->multiplierRate[r]/pr->rho)>=1e-5);
             }
             /*printf("ROUND %d , objective function %.15e , rate %.15f ",i,pr->objective,pr->rho);
             for (int r=1; r<=pr->ratePartition.size(); r++) {

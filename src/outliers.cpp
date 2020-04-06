@@ -91,7 +91,7 @@ bool calculateOutliers(Pr* & pr,Node** & nodes,double & median_rate){
         delete[] samples;
         if (pr->outlier.size()>0){
             std::ostringstream oss;
-            oss<<"- The input dates associated with the following nodes are considered as outliers and were removed from the analysis: ";
+            oss<<"- The input dates associated with the following "<<pr->outlier.size()<<" nodes are considered as outliers, so the nodes were removed from the analysis: ";
             for (int i=0;i<pr->outlier.size();i++){
                 if (pr->outlier[i] >= pr->nbINodes){
                     oss<<" "<<(nodes[pr->outlier[i]]->L).c_str();
@@ -121,7 +121,7 @@ bool calculateOutliers(Pr* & pr,Node** & nodes,double & median_rate){
         if (bl){
             if (pr->outlier.size()>0){
                 std::ostringstream oss;
-                oss<<"- The input dates associated with the following nodes that are considered as outliers and were excluded from the analysis: ";
+                oss<<"- The input dates associated with the following "<<pr->outlier.size()<<" nodes are considered as outliers, so the nodes were excluded from the analysis: ";
                 for (int i=0;i<pr->outlier.size();i++){
                     if (pr->outlier[i] >= pr->nbINodes){
                         oss<<" "<<(nodes[pr->outlier[i]]->L).c_str();
@@ -512,14 +512,14 @@ vector<int> outliers_rooted(Pr* pr,Node** nodes,vector<int>* samples, vector<dou
     pr->givenRate[0] = true;
     
     pr->rho = rate_min;
-    without_constraint(pr,nodes);
+    without_constraint_multirates(pr,nodes,true);
     double mean_res = 0;
     double var_res = 0;
     vector<double> res = residus_lsd(pr,nodes,mean_res,var_res);
     for (int i=0;i<res.size();i++) res[i] = (res[i]-mean_res)/sqrt(var_res);
     vector<int> outliers_min;
     for (int i=pr->nbINodes;i<=pr->nbBranches;i++){
-        if (myabs(res[i-1])>pr->e){
+        if (abs(res[i-1])>pr->e){
             if (nodes[i]->type == 'p' || nodes[i]->type == 'b'){
                 outliers_min.push_back(i);
             }
@@ -531,11 +531,11 @@ vector<int> outliers_rooted(Pr* pr,Node** nodes,vector<int>* samples, vector<dou
         if ((!pr->relative || i!=0) && (nodes[i]->type == 'p' || nodes[i]->type == 'b')){
                 bool bl = false;
                 if (i>0){
-                    bl = (myabs(res[i-1])>pr->e);
+                    bl = (abs(res[i-1])>pr->e);
                 }
                 for (int j=0;j<nodes[i]->suc.size();j++){
                     int s = nodes[i]->suc[j];
-                    bl = bl || (myabs(res[s-1])>pr->e);
+                    bl = bl || (abs(res[s-1])>pr->e);
                 }
                 if (bl){
                     outliers_min.push_back(k);
@@ -545,14 +545,14 @@ vector<int> outliers_rooted(Pr* pr,Node** nodes,vector<int>* samples, vector<dou
     if (!both) return outliers_min;
     else {
         pr->rho = rate_max;
-        without_constraint(pr,nodes);
+        without_constraint_multirates(pr,nodes,true);
         mean_res = 0;
         var_res = 0;
         res = residus_lsd(pr,nodes,mean_res,var_res);
         for (int i=0;i<res.size();i++) res[i] = (res[i]-mean_res)/sqrt(var_res);
         vector<int> outliers_max;
         for (int i=pr->nbINodes;i<=pr->nbBranches;i++){
-            if (myabs(res[i-1])>pr->e){
+            if (abs(res[i-1])>pr->e){
                 if (nodes[i]->type == 'p' || nodes[i]->type == 'b'){
                     outliers_max.push_back(i);
                 }
@@ -564,11 +564,11 @@ vector<int> outliers_rooted(Pr* pr,Node** nodes,vector<int>* samples, vector<dou
             if (nodes[i]->type == 'p' || nodes[i]->type == 'b'){
                 bool bl = false;
                 if (i>0){
-                    bl = (myabs(res[i-1])>pr->e);
+                    bl = (abs(res[i-1])>pr->e);
                 }
                 for (int j=0;j<nodes[i]->suc.size();j++){
                     int s = nodes[i]->suc[j];
-                    bl = bl || (myabs(res[s-1])>pr->e);
+                    bl = bl || (abs(res[s-1])>pr->e);
                 }
                 if (bl){
                     outliers_max.push_back(k);

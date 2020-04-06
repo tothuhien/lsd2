@@ -1,5 +1,6 @@
 #ifndef PART_H
 #define PART_H
+#include "stdarg.h"
 #include "subtree.h"
 
 using namespace std;

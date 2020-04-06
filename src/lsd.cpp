@@ -14,14 +14,6 @@
 //    You should have received a copy of the GNU General Public License
 //    along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
-#include <iostream>
-#include <sstream>
-#include <fstream>
-#include <string>
-#include <stack>
-#include <list>
-#include <math.h>
-#include <ctime>
 #include "pr.h"
 #include "options.h"
 #include "readData.h"
@@ -33,6 +25,7 @@
 #include "confidence_interval.h"
 #include "outliers.h"
 
+
 using namespace std;
 
 #ifdef USE_LSD2
@@ -42,36 +35,39 @@ int main( int argc, char** argv )
 #endif
 {
     Pr* opt = getOptions( argc, argv);
-    FILE * result = fopen(opt->outFile.c_str(),"wt");
-    if (result==NULL){
+    filebuf result_file;
+    result_file.open(opt->outFile.c_str(),ios::out);
+    if (!result_file.is_open()){
         cout<<"Error: can not create the output file "<<opt->outFile<<endl;
         exit(EXIT_FAILURE);
     }
+    ostream result(&result_file);
     printInterface( result, opt);
-    fprintf(result,"\n");
     clock_t start = clock();
     double elapsed_time;
     if (opt->fnOutgroup!=""){
         list<string> outgroup = getOutgroup(opt->fnOutgroup);
         extrait_outgroup(opt,outgroup);
     }
-    FILE * tree = fopen(opt->inFile.c_str(),"rt");
-    if (tree==NULL){
+    ifstream tree;
+    tree.open(opt->inFile.c_str());
+    if (!tree.is_open()){
         cout<<"Error: can not open the input tree file."<<endl;
         exit(EXIT_FAILURE);
     }
-    opt->treeFile1=opt->outFile+".nexus";
-    opt->treeFile2=opt->outFile+".date.nexus";
-    opt->treeFile3=opt->outFile+".nwk";
-    FILE * tree1 = fopen(opt->treeFile1.c_str(),"wt");
-    FILE * tree2 = fopen(opt->treeFile2.c_str(),"wt");
-    FILE * tree3 = fopen(opt->treeFile3.c_str(),"wt");
+    filebuf tree_file1,tree_file2,tree_file3;
+    tree_file1.open(opt->treeFile1.c_str(),ios::out);
+    tree_file2.open(opt->treeFile2.c_str(),ios::out);
+    tree_file3.open(opt->treeFile3.c_str(),ios::out);
+    ostream tree1(&tree_file1);
+    ostream tree2(&tree_file2);
+    ostream tree3(&tree_file3);
     ifstream gr(opt->rate.c_str());
-    if (tree1==NULL || tree2==NULL){
+    if (!tree_file1.is_open() || !tree_file2.is_open() || !tree_file3.is_open()){
         cout<<"Error: can not create the output tree files."<<endl;
     }
-    fprintf(tree1,"#NEXUS\n");
-    fprintf(tree2,"#NEXUS\n");
+    tree1<<"#NEXUS\n";
+    tree2<<"#NEXUS\n";
     bool constraintConsistent=true;
     int s=0;
     double median_rate = opt->rho_min;
@@ -82,7 +78,7 @@ int main( int argc, char** argv )
         }
     }
     for (int y=1;y<=opt->nbData;y++){
-        fprintf(result,"\nTree %d \n",y);
+        result<<"\nTree "<<y<<" \n";
         cout<<"\nTREE "<<y<<endl;
         cout<<"*PROCESSING:"<<endl;
         cout<<"Reading the tree ... "<<endl;
@@ -95,6 +91,7 @@ int main( int argc, char** argv )
         else{
             computeSuc_polytomy(opt,nodes);
         }
+        collapseUnInformativeBranches(opt,nodes);
         if (opt->relative){
             for (int i=0;i<opt->nbINodes;i++) nodes[i]->removeConstraint();
             for (int i=opt->nbINodes;i<=opt->nbBranches;i++){
@@ -105,14 +102,14 @@ int main( int argc, char** argv )
             opt->internalConstraints.push_back(dateRoot);
         }
         if (y==1){
-            fprintf(tree1,"Begin trees;\n");
-            fprintf(tree2,"Begin trees;\n");
+            tree1<<"Begin trees;\n";
+            tree2<<"Begin trees;\n";
         }
         if (opt->c == -1){
-            opt->b = median_branch_lengths(opt,nodes);
+            opt->b = max(median_branch_lengths(opt,nodes),10./opt->seqLength);
             if (opt->variance>0){
                 cout<<"Parameter to adjust variances was set to "<<opt->b<<" (settable via option -b)"<<endl;
-                fprintf(result,"Parameter to adjust variances was set to %g (settable via option -b)",opt->b);
+                result<<"Parameter to adjust variances was set to "<<opt->b<<" (settable via option -b)\n";
             }
         } else {
             opt->b = opt->c;
@@ -272,16 +269,16 @@ int main( int argc, char** argv )
     }
     delete opt;
     elapsed_time = (double)(clock()-start)/CLOCKS_PER_SEC;
-    fprintf(result, "\n*********************************************************\n" );
-    fprintf(result, "\nTOTAL ELAPSED TIME: %.2f seconds\n", elapsed_time);
-    fprintf(tree1,"End;");
-    fprintf(tree2,"End;");
+    result<<"\n*********************************************************\n";
+    result<<"\nTOTAL ELAPSED TIME: "<<elapsed_time<<" seconds\n";
+    tree1<<"End;";
+    tree2<<"End;";
     cout<<"\nTOTAL ELAPSED TIME: "<<elapsed_time<<" seconds"<<endl;
-    fclose(tree);
-    fclose(result);
-    fclose(tree1);
-    fclose(tree2);
-    fclose(tree3);
+    tree.close();
+    result_file.close();
+    tree_file1.close();
+    tree_file2.close();
+    tree_file3.close();
     gr.close();
     return EXIT_SUCCESS;
 }
