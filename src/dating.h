@@ -7,9 +7,6 @@
 #include "stdarg.h"
 #include <math.h>
 #include "utils.h"
-#ifndef maxNumError
-#define maxNumError 1e-10
-#endif
 
 using namespace std;
 

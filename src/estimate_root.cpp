@@ -297,7 +297,7 @@ bool without_constraint_lambda(double br,Pr* &par,Node** &nodes,list<int> active
             }
         }
         for (int i=0;i<active_set.size();i++){
-            if (abs(lambda[i])<(maxNumError))
+            if (abs(lambda[i])<(1e-10))
                 lambda[i]=0;
             ld.push_back(lambda[i]);
         }
@@ -996,7 +996,7 @@ bool with_constraint_lambda(double br,Pr* &pr,Node** &nodes,list<int> active_set
             }
         }
         for (int i=0;i<active_set.size();i++){
-            if (abs(lambda[i])<(maxNumError))
+            if (abs(lambda[i])<(1e-10))
                 lambda[i]=0;
             ld.push_back(lambda[i]);
         }
@@ -1427,7 +1427,7 @@ int estimate_root_with_constraint_local_rooted(Pr* &pr,Node** &nodes){
                 if (pr->verbose){
                     cout<<"objective function: "<<cv[i]<<", rate: "<<pr->rho<<"\n";
                 }
-                if (cv[i]<cv[nodes[i]->P]+maxNumError || r==0){
+                if (cv[i]<cv[nodes[i]->P]+1e-10 || r==0){
                     if (i<pr->nbINodes){
                         for (vector<int>::iterator iter=nodes[i]->suc.begin(); iter!=nodes[i]->suc.end(); iter++) {
                             next.push_back(*iter);
@@ -1555,7 +1555,7 @@ int estimate_root_with_constraint_fast_rooted(Pr* &pr,Node** &nodes){
                     if (pr->verbose){
                         cout<<"objective function: "<<cv[e]<<", rate: "<<pr->rho<<"\n";
                     }
-                    if (cv[e]<cv[tab[P_ref[i]]]+maxNumError || r==0){
+                    if (cv[e]<cv[tab[P_ref[i]]]+1e-10 || r==0){
                         if (i<pr->nbINodes){
                             next.push_back(Suc1_ref[i]);
                             next.push_back(Suc2_ref[i]);

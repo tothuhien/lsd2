@@ -196,7 +196,7 @@ list<double> computeLambda(list<int> active_set,Pr* pr,Node** nodes){
                     lambda[as[i]] += 2*pr->rho*(nodes[s]->B+pr->rho*nodes[i]->D-pr->rho*nodes[s]->D)/nodes[s]->V;
                 }
             }
-            if (abs(lambda[as[i]])<maxNumError) lambda[as[i]]=0;
+            if (abs(lambda[as[i]])<1e-10) lambda[as[i]]=0;
             ld.push_back(lambda[as[i]]);
         }
         else if (upper(nodes[i])){
@@ -209,7 +209,7 @@ list<double> computeLambda(list<int> active_set,Pr* pr,Node** nodes){
                     lambda[as[i]] -= 2*pr->rho*(nodes[s]->B+pr->rho*nodes[i]->D-pr->rho*nodes[s]->D)/nodes[s]->V;
                 }
             }
-            if (abs(lambda[as[i]])<maxNumError) lambda[as[i]]=0;
+            if (abs(lambda[as[i]])<1e-10) lambda[as[i]]=0;
             ld.push_back(lambda[as[i]]);
         }
     }
@@ -361,7 +361,7 @@ bool conditionsQP(list<double>& ldLagrange,Pr* pr,Node** nodes){
         }
     }
     for (int i=0;i<=pr->nbBranches;i++){
-        if (i>0 && (nodes[i]->D - nodes[nodes[i]->P]->D - nodes[i]->minblen) < -maxNumError) {
+        if (i>0 && (nodes[i]->D - nodes[nodes[i]->P]->D - nodes[i]->minblen) < -1e-10) {
             return false;
         }
         if (((nodes[i]->type=='l' || nodes[i]->type=='b') && nodes[i]->D<nodes[i]->lower) || ((nodes[i]->type=='u' || nodes[i]->type=='b') && nodes[i]->D>nodes[i]->upper)){
@@ -794,7 +794,7 @@ bool with_constraint(Pr* pr,Node** &nodes,list<int> active_set,list<double>& ld)
     }*/
     
     for (int i=0;i<count;i++){
-        if (abs(lambda[i])<(maxNumError))
+        if (abs(lambda[i])<(1e-10))
             lambda[i]=0;
         ld.push_back(lambda[i]);
     }
