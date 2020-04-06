@@ -2049,7 +2049,7 @@ double median_branch_lengths(Pr* pr,Node** nodes){
     return median(bl);
 }
 
-void collapse(int i,int j,Pr* pr,Node** nodes,Node** nodes_new,int &cc,int* &tab, double toCollapse){
+void collapse(int i,int j,Pr* pr,Node** nodes,Node** nodes_new,int &cc,int* &tab, double toCollapse, bool useSupport, double* support){
     if (nodes[j]->type!='n') {
         bool bl = nodes_new[i]->addConstraint(nodes[j]);
         if (!bl){
@@ -2059,9 +2059,9 @@ void collapse(int i,int j,Pr* pr,Node** nodes,Node** nodes_new,int &cc,int* &tab
     }
     for (vector<int>::iterator iter=nodes[j]->suc.begin(); iter!=nodes[j]->suc.end(); iter++) {
         int s= *iter;
-        if (s<pr->nbINodes && abs(nodes[s]->B) <= toCollapse) {
+        if (s<pr->nbINodes && (abs(nodes[s]->B) <= toCollapse  || (useSupport && support[s]<= pr->support))) {
             tab[s]=-1;
-            collapse(i,s, pr, nodes, nodes_new, cc,tab,toCollapse);
+            collapse(i,s, pr, nodes, nodes_new, cc,tab,toCollapse,useSupport,support);
         }
         else{
             nodes_new[s]->P=i;
@@ -2074,7 +2074,22 @@ void collapse(int i,int j,Pr* pr,Node** nodes,Node** nodes_new,int &cc,int* &tab
     }
 }
 
-int collapseTree(Pr* pr,Node** nodes,Node** nodes_new,int* &tab, double toCollapse){
+int collapseTree(Pr* pr,Node** nodes,Node** nodes_new,int* &tab, double toCollapse, bool& useSupport){
+    double* support = new double[pr->nbINodes];
+    if (useSupport){
+        for (int i=0; i<pr->nbINodes;i++){
+                try {
+                    support[i] = std::stod(nodes[i]->L.c_str());
+                } catch (const std::invalid_argument&) {
+                    useSupport = false;
+                }
+        }
+        if (!useSupport){
+                std::ostringstream oss;
+                oss<<"- Can not read support values, invalid arguments\n";
+                pr->warningMessage.push_back(oss.str());
+        }
+    }
     for (int i=0;i<=pr->nbBranches;i++){
         nodes_new[i]= new Node();
         nodes_new[i]->P=nodes[i]->P;
@@ -2094,12 +2109,12 @@ int collapseTree(Pr* pr,Node** nodes,Node** nodes_new,int* &tab, double toCollap
     cc++;
     tab[0]=0;
     for (int i=0;i<pr->nbINodes;i++){
-        if (abs(nodes[i]->B) > toCollapse || i==0){
+        if ((abs(nodes_new[i]->B) > toCollapse && (!useSupport || support[i] > pr->support)) || i==0){
             for (vector<int>::iterator iter=nodes[i]->suc.begin(); iter!=nodes[i]->suc.end(); iter++) {
                 int s=*iter;
-                if (abs(nodes[s]->B) <= toCollapse && s<pr->nbINodes) {
+                if (s<pr->nbINodes && (abs(nodes[s]->B) <= toCollapse  || (useSupport && support[s]<= pr->support))) {
                     tab[s]=-1;
-                    collapse(i, s,  pr, nodes, nodes_new,cc,tab, toCollapse);
+                    collapse(i, s,  pr, nodes, nodes_new,cc,tab, toCollapse, useSupport,  support);
                 }
                 else {
                     nodes_new[s]->P=i;
@@ -2114,6 +2129,7 @@ int collapseTree(Pr* pr,Node** nodes,Node** nodes_new,int* &tab, double toCollap
     for (int i=pr->nbINodes;i<=pr->nbBranches;i++){
         tab[i]=cc+i-pr->nbINodes;
     }
+    delete[] support;
     return cc;
 }
 
@@ -2146,12 +2162,14 @@ void collapseTreeReOrder(Pr* pr,Node** nodes,Pr* prReduced,Node** nodesReduced,i
 void collapseUnInformativeBranches(Pr* &pr,Node** &nodes){
     Node** nodes_new = new Node*[pr->nbBranches+1];
     int* tab = new int[pr->nbBranches+1];
-    int nbC = collapseTree(pr, nodes, nodes_new,tab, pr->nullblen);//nbC is the number of internal nodes reduced
-    cout<<"Collapse "<<(pr->nbINodes - nbC)<<" internal branches having branch length <= "<<pr->nullblen<<" (settable via option -l)"<<endl;
+    bool useSupport = (pr->support>=0);
+    int nbC = collapseTree(pr, nodes, nodes_new,tab, pr->nullblen,useSupport);//nbC is the number of internal nodes reduced
+    if (!useSupport) cout<<"Collapse "<<(pr->nbINodes - nbC)<<" internal branches having branch length <= "<<pr->nullblen<<" (settable via option -l)"<<endl;
+    else cout<<"Collapse "<<(pr->nbINodes - nbC)<<" internal branches having branch length <= "<<pr->nullblen<<" (settable via option -l) or support value <= "<<pr->support<<" (settable via option -S)"<<endl;
     Node** nodesReduced = new Node*[nbC+pr->nbBranches-pr->nbINodes+1];
     Pr* prReduced = new Pr(nbC,nbC+pr->nbBranches-pr->nbINodes);
     prReduced->copy(pr);
-    prReduced->init();
+    prReduced->internalConstraints.clear();
     collapseTreeReOrder( pr, nodes_new, prReduced, nodesReduced,tab);
     for (int i=0;i<pr->nbBranches+1;i++){
         delete nodes_new[i];

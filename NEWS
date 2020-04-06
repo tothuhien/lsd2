@@ -4,7 +4,7 @@ Something new lsd2:
 - Estimate outliers dates by repeating randomly selecting dated given nodes to have a median rate. This rate is then used to calculate residus of each branch. The residus are normalized and compared to the given Zscore threshold to decide if the related nodes are outliers.
 - Estimate several substitution rates, use option -p to specify the input partition file. A partition file defines subtrees where each one is supposed to have a different rate.
 - Can be applied on non-binary tree
-- Collapse all uninformative branches (default <= 0.5/seqlength but settable by users) before estimating rates & dates.
+- Collapse all uninformative branches (default <= 0.5/seqlength but settable by users, or having weak support values in case those values are provided in the input tree) before estimating rates & dates.
 - Impose a minimum branch length for the time scaled tree (estimate by default, but settable by users).
 - The adjusted paramater for variances is set be the same unit of branch length (instead of count as before), and set by default to the maximum between median branch length and 10/seqlength.
 - Use variance in estimating the root position. 

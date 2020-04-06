@@ -34,6 +34,7 @@ typedef struct Pr
     double b;                 //var = b+c/s;
     double q; //standard deviation of lognormal distribution to simulate relaxed branch lengths for calculating confidence intervals
     double nullblen;
+    double support;
     bool verbose;
     double rho_min;
     int nbINodes;
@@ -87,6 +88,7 @@ typedef struct Pr
         e=pr->e;
         m=pr->m;
         round_time=pr->round_time;
+        support=pr->support;
         minblen=pr->minblen;
         minblenL=pr->minblenL;
         nullblen=pr->nullblen;
@@ -128,6 +130,7 @@ typedef struct Pr
         minblen = -1;
         minblenL = -1;
         nullblen = -1;
+        support = -1;
         c = -1;
         b = -1;
         q = 0.2;

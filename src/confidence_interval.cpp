@@ -20,7 +20,8 @@
 void computeIC(double br,Pr* pr,Node** nodes,double* &T_left,double* &T_right,double* &H_left,double* &H_right,double* &HD_left,double* &HD_right,double &rho_left,double& rho_right,double* &other_rhos_left,double* &other_rhos_right){
     Node** nodes_new = new Node*[pr->nbBranches+1];
     int* tab = new int[pr->nbBranches+1];
-    int nbC = collapseTree(pr, nodes, nodes_new,tab,0);//nbC is the number of internal nodes reduced
+    bool useSupport = false;
+    int nbC = collapseTree(pr, nodes, nodes_new,tab,0,useSupport);//nbC is the number of internal nodes reduced
     Node** nodesReduced = new Node*[nbC+pr->nbBranches-pr->nbINodes+1];
     Pr* prReduced = new Pr(nbC,nbC+pr->nbBranches-pr->nbINodes);
     prReduced->copy(pr);

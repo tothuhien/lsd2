@@ -25,6 +25,9 @@ Pr* getOptions( int argc, char** argv )
 
 Pr* getCommandLine( int argc, char** argv)
 {
+    #ifndef VERSION
+    #define VERSION "v1.4.13"
+    #endif
     Pr* opt = new Pr();
     int c;
     string s;
@@ -37,7 +40,7 @@ Pr* getCommandLine( int argc, char** argv)
     lflag=false,
     uflag=false,
     vflag=false;
-    while ( (c = getopt(argc, argv, ":i:d:o:s:n:g:r:v:ct:w:b:ha:z:f:kje:m:p:q:u:l:U:R:V")) != -1 )
+    while ( (c = getopt(argc, argv, ":i:d:o:s:n:g:r:v:ct:w:b:ha:z:f:kje:m:p:q:u:l:U:R:S:V")) != -1 )
     {
         switch (c)
         {
@@ -206,6 +209,13 @@ Pr* getCommandLine( int argc, char** argv)
                 if (opt->round_time<=0)
                     myExit("Argument of option -R must be positive\n");
                 break;
+            case 'S':
+                if ( !isReal(optarg))
+                    myExit("Argument of option -S must be a real\n");
+                opt->support = atof(optarg);
+                if (opt->round_time<0)
+                    myExit("Argument of option -S must be positive\n");
+                break;
             case 'V':
                 cout<<"lsd2 "<<VERSION<<endl;
                 exit( EXIT_SUCCESS );
@@ -320,6 +330,10 @@ Pr* getInterface()
 
 void printInterface(ostream& in, Pr* opt)
 {
+    #ifndef VERSION
+    #define VERSION "v1.4.13"
+    #endif
+
     in<<"\nLEAST-SQUARE METHODS TO ESTIMATE RATES AND DATES - "<<VERSION<<" \n\n";
     in<<"\nInput files:\n";
     in<<"  i                                               Input tree file : "<<opt->inFile.c_str()<<"\n";
@@ -423,6 +437,16 @@ void printInterface(ostream& in, Pr* opt)
 
 void printHelp( void )
 {
+    #ifndef BOLD
+    #define BOLD      "\033[00;01m"
+    #endif
+    #ifndef FLAT
+    #define FLAT      "\033[00;00m"
+    #endif
+    #ifndef LINE
+    #define LINE      "\033[00;04m"
+    #endif
+    
     cout<<BOLD"LSD: LEAST-SQUARES METHODS TO ESTIMATE RATES AND DATES - "<<VERSION<<"\n\n";
     cout<<BOLD"DESCRIPTION\n"
            FLAT"\tThis program estimates the rate and the dates of the input phylogenies given some temporal constraints.\n"
@@ -503,7 +527,7 @@ void printHelp( void )
            FLAT"\t   Use this option to keep the outgroups (given in option -g) in the estimated tree. The root position is then estimated on the\n"
            FLAT"\t   branch determined by the outgroups. If this option is not used, the outgroups will be removed.\n"
            FLAT"\t" BOLD"-l " LINE"nullBlen\n"
-           FLAT"\t   A branch in the input tree is considered informative if its length is greter this value. By default it is 0.5/seq_length. Only \n"
+           FLAT"\t   A branch in the input tree is considered informative if its length is greater this value. By default it is 0.5/seq_length. Only \n"
            FLAT"\t   informative branches are forced to be bigger than a minimum branch length (see option -u for more information about this).\n"
            FLAT"\t" BOLD"-m " LINE"samplingNumberOutlier\n"
            FLAT"\t   The number of dated nodes to be sampled when detecting outlier nodes. This should be smaller than the number of dated nodes,\n"
@@ -550,6 +574,9 @@ void printHelp( void )
            FLAT"\t" BOLD"-s " LINE"sequenceLength\n"
            FLAT"\t   This option is used to specify the sequence length when estimating confidence intervals (option -f). It is used to generate \n"
            FLAT"\t   integer branch lengths (number of substitutions) by multiplying this with the estimated branch lengths. By default it is 1000.\n"
+           FLAT"\t" BOLD"-S " LINE"minSupport\n"
+           FLAT"\t   Together with collapsing internal short branches (see option -l), users can also collapse internal branches having weak support values (if\n"
+           FLAT"\t   provided in the input tree) by using this option. The program will collapse all internal branches having support <= the specifed value.\n"
            FLAT"\t" BOLD"-t " LINE"rateLowerBound\n"
            FLAT"\t   This option corresponds to the lower bound for the estimating rate. It is 1e-10 by default.\n"
            FLAT"\t" BOLD"-u " LINE"minBlen\n"
@@ -713,6 +740,7 @@ bool isOptionActivate( Pr* opt, char l )
         case 'u':
         case 'U':
         case 'l':
+        case 'S':
         case 'x':
         case 'h':
         return true;
@@ -897,6 +925,9 @@ void setOptionsWithLetter( Pr* opt, char letter)
             break;
         case 'R':
             opt->round_time = getInputPositiveReal("Rounding number for minimum branch length of time scaled tree>");
+            break;
+        case 'S':
+            opt->support = getInputPositiveReal("Threshold of support value to collapse>");
             break;
         case 'h':
             printHelp();

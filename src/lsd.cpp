@@ -25,6 +25,7 @@
 #include "confidence_interval.h"
 #include "outliers.h"
 
+
 using namespace std;
 
 #ifdef USE_LSD2

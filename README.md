@@ -41,8 +41,7 @@ Further options can be specified, see *./lsd2 -h* for more details.
 
 ### Input_tree_file
 
-Input tree(s) in newick format are compulsory. A tree can be either binary or polytomy. The input
-file must contain one tree per line:
+Input tree(s) in newick format are compulsory. A tree can be either binary or polytomy - and either having support value or not. The input file must contain one tree per line, for example:
 
     ((A:0.12,D:0.12):0.3,(B:0.3,C:0.5):0.4);
 
