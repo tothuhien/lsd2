@@ -297,7 +297,7 @@ bool without_constraint_lambda(double br,Pr* &par,Node** &nodes,list<int> active
             }
         }
         for (int i=0;i<active_set.size();i++){
-            if (myabs(lambda[i])<(maxNumError))
+            if (abs(lambda[i])<(maxNumError))
                 lambda[i]=0;
             ld.push_back(lambda[i]);
         }
@@ -332,12 +332,12 @@ bool without_constraint_lambda(double br,Pr* &par,Node** &nodes,list<int> active
          s+=2*par->rho*(nodes[s1]->B-par->rho*nodes[s1]->D+par->rho*nodes[i]->D)/nodes[s1]->V;
          }
          }
-         if (myabs(s)>1e-6) {
+         if (abs(s)>1e-6) {
          cout<<"TEST PROBLEM "<<i<<" "<<s<<" "<<nodes[i]->P<<endl;
          }
          }
          }
-         if (myabs(sr)>1e-5 && par->rho!=par->rho_min) {
+         if (abs(sr)>1e-5 && par->rho!=par->rho_min) {
          cout<<"TEST PROBLEM rho "<<sr<<endl;
          }*/
         delete[] lambda;
@@ -996,7 +996,7 @@ bool with_constraint_lambda(double br,Pr* &pr,Node** &nodes,list<int> active_set
             }
         }
         for (int i=0;i<active_set.size();i++){
-            if (myabs(lambda[i])<(maxNumError))
+            if (abs(lambda[i])<(maxNumError))
                 lambda[i]=0;
             ld.push_back(lambda[i]);
         }
@@ -1041,12 +1041,12 @@ bool with_constraint_lambda(double br,Pr* &pr,Node** &nodes,list<int> active_set
          }
          }
          }
-         if (myabs(s)>1e-6) {
+         if (abs(s)>1e-6) {
          cout<<"TEST PROBLEM "<<i<<" "<<s<<" "<<nodes[i]->P<<endl;
          }
          }
          }
-         if (myabs(sr)>1e-5 && pr->rho!=pr->rho_min) {
+         if (abs(sr)>1e-5 && pr->rho!=pr->rho_min) {
          cout<<"TEST PROBLEM rho "<<sr<<endl;
          }*/
         delete[] Pre;
@@ -1177,7 +1177,7 @@ int estimate_root_without_constraint_local_rooted(Pr* &pr,Node** &nodes){
         if (consistent) {
             cv[s1]=pr->objective;
             if (pr->verbose){
-                printf("objective function: %.10f, rate: %.10f\n",cv[s1],pr->rho);
+                cout<<"objective function: "<<cv[s1]<<", rate: "<<pr->rho<<"\n";
             }
             cv[s2]=cv[s1];
             phi1=cv[s1];
@@ -1187,11 +1187,11 @@ int estimate_root_without_constraint_local_rooted(Pr* &pr,Node** &nodes){
             }
         }
         else{
-            if (pr->verbose) printf("Ignoring due to undetermined solution.\n");
+            if (pr->verbose) cout<<"Ignoring due to undetermined solution.\n";
         }
     }
     else{
-        if (pr->verbose) printf("Ignoring due to conflict temporal constraints.\n");
+        if (pr->verbose) cout<<"Ignoring due to conflict temporal constraints.\n";
     }
     list<int> next;
     if (s1<pr->nbINodes){
@@ -1219,7 +1219,7 @@ int estimate_root_without_constraint_local_rooted(Pr* &pr,Node** &nodes){
             if (consistent) {
                 cv[i]=pr->objective;
                 if (pr->verbose){
-                    printf("objective function: %.10f, rate: %.10f\n",cv[i],pr->rho);
+                    cout<<"objective function: "<<cv[i]<<", rate: "<<pr->rho<<"\n";
                 }
                 if (cv[i]<cv[nodes[i]->P] || r==0){
                     if (i<pr->nbINodes){
@@ -1236,7 +1236,7 @@ int estimate_root_without_constraint_local_rooted(Pr* &pr,Node** &nodes){
                 }
             }
             else{
-                if (pr->verbose) printf("Ignoring due to undetermined solution.\n");
+                if (pr->verbose) cout<<"Ignoring due to undetermined solution.\n";
                 if (i<pr->nbINodes){
                     for (vector<int>::iterator iter=nodes[i]->suc.begin(); iter!=nodes[i]->suc.end(); iter++) {
                         next.push_back(*iter);
@@ -1245,7 +1245,7 @@ int estimate_root_without_constraint_local_rooted(Pr* &pr,Node** &nodes){
             }
         }
         else{
-            if (pr->verbose) printf("Ignoring due to conflict temporal constraints.\n");
+            if (pr->verbose) cout<<"Ignoring due to conflict temporal constraints.\n";
             if (i<pr->nbINodes){
                 for (vector<int>::iterator iter=nodes[i]->suc.begin(); iter!=nodes[i]->suc.end(); iter++) {
                     next.push_back(*iter);
@@ -1295,7 +1295,7 @@ int estimate_root_without_constraint_rooted(Pr* &pr,Node** &nodes){
         if (consistent) {
             phi1=pr->objective;
             if (pr->verbose){
-                printf("objective function: %.10f, rate: %.10f\n",phi1,pr->rho);
+                cout<<"objective function: "<<phi1<<", rate: "<<pr->rho<<"\n";
             }
             r=y;
             for (int i=1; i<=pr->ratePartition.size(); i++) {
@@ -1303,11 +1303,11 @@ int estimate_root_without_constraint_rooted(Pr* &pr,Node** &nodes){
             }
         }
         else{
-            if (pr->verbose) printf("Ignoring due to undetermined solution.\n");
+            if (pr->verbose) cout<<"Ignoring due to undetermined solution.\n";
         }
     }
     else{
-        if (pr->verbose) printf("Ignoring due to undetermined solution.\n");
+        if (pr->verbose) cout<<"Ignoring due to undetermined solution.\n";
     }
     y++;
     double phi;
@@ -1325,7 +1325,7 @@ int estimate_root_without_constraint_rooted(Pr* &pr,Node** &nodes){
             if (consistent) {
                 phi=pr->objective;
                 if (pr->verbose){
-                    printf("objective function: %.10f, rate: %.10f\n",phi,pr->rho);
+                    cout<<"objective function: "<<phi<<", rate: "<<pr->rho<<"\n";
                 }
                 if (phi1>phi || r==0){
                     phi1=phi;
@@ -1336,11 +1336,11 @@ int estimate_root_without_constraint_rooted(Pr* &pr,Node** &nodes){
                 }
             }
             else{
-                if (pr->verbose) printf("Ignoring due to undetermined solution.\n");
+                if (pr->verbose) cout<<"Ignoring due to undetermined solution.\n";
             }
         }
         else{
-            if (pr->verbose) printf("Ignoring due to undetermined solution.\n");
+            if (pr->verbose) cout<<"Ignoring due to undetermined solution.\n";
         }
         y++;
     }
@@ -1383,7 +1383,7 @@ int estimate_root_with_constraint_local_rooted(Pr* &pr,Node** &nodes){
         if (consistent){
             cv[s1]=pr->objective;
             if (pr->verbose){
-                printf("objective function: %.10f, rate: %.10f\n",cv[s1],pr->rho);
+                cout<<"objective function: "<<cv[s1]<<", rate: "<<pr->rho<<"\n";
             }
             cv[s2]=cv[s1];
             r=s1;
@@ -1393,11 +1393,11 @@ int estimate_root_with_constraint_local_rooted(Pr* &pr,Node** &nodes){
             }
         }
         else{
-            if (pr->verbose) printf("Ignoring due to undetermined solution.\n");
+            if (pr->verbose) cout<<"Ignoring due to undetermined solution.\n";
         }
     }
     else{
-        if (pr->verbose) printf("Ignoring due to undetermined solution.\n");
+        if (pr->verbose) cout<<"Ignoring due to undetermined solution.\n";
     }
     list<int> next;
     if (s1<pr->nbINodes){
@@ -1425,7 +1425,7 @@ int estimate_root_with_constraint_local_rooted(Pr* &pr,Node** &nodes){
             if (consistent){
                 cv[i]=pr->objective;
                 if (pr->verbose){
-                    printf("objective function: %.10f, rate: %.10f\n",cv[i],pr->rho);
+                    cout<<"objective function: "<<cv[i]<<", rate: "<<pr->rho<<"\n";
                 }
                 if (cv[i]<cv[nodes[i]->P]+maxNumError || r==0){
                     if (i<pr->nbINodes){
@@ -1442,7 +1442,7 @@ int estimate_root_with_constraint_local_rooted(Pr* &pr,Node** &nodes){
                 }
             }
             else{
-                if (pr->verbose) printf("Ignoring due to temporal constrainst conflict.\n");
+                if (pr->verbose) cout<<"Ignoring due to temporal constrainst conflict.\n";
                 if (i<pr->nbINodes){
                     for (vector<int>::iterator iter=nodes[i]->suc.begin(); iter!=nodes[i]->suc.end(); iter++) {
                         next.push_back(*iter);
@@ -1451,7 +1451,7 @@ int estimate_root_with_constraint_local_rooted(Pr* &pr,Node** &nodes){
             }
         }
         else{
-            if (pr->verbose) printf("Ignoring due to undetermined solution.\n");
+            if (pr->verbose) cout<<"Ignoring due to undetermined solution.\n";
             if (i<pr->nbINodes){
                 for (vector<int>::iterator iter=nodes[i]->suc.begin(); iter!=nodes[i]->suc.end(); iter++) {
                     next.push_back(*iter);
@@ -1509,7 +1509,7 @@ int estimate_root_with_constraint_fast_rooted(Pr* &pr,Node** &nodes){
             if (consistent){
                 cv[r]=pr->objective;
                 if (pr->verbose){
-                    printf("objective function: %.10f, rate: %.10f\n",cv[r],pr->rho);
+                    cout<<"objective function: "<<cv[r]<<", rate: "<<pr->rho<<"\n";
                 }
                 phi1=cv[r];
                 for (int i=1; i<=pr->ratePartition.size(); i++) {
@@ -1517,11 +1517,11 @@ int estimate_root_with_constraint_fast_rooted(Pr* &pr,Node** &nodes){
                 }
             }
             else{
-                if (pr->verbose) printf("Ignoring due to undetermined solution.\n");
+                if (pr->verbose) cout<<"Ignoring due to undetermined solution.\n";
             }
         }
         else{
-            if (pr->verbose) printf("Ignoring due to undetermined solution.\n");
+            if (pr->verbose) cout<<"Ignoring due to undetermined solution.\n";
         }
         list<int> next;
         int* Suc1_ref = new int[pr->nbINodes];
@@ -1553,7 +1553,7 @@ int estimate_root_with_constraint_fast_rooted(Pr* &pr,Node** &nodes){
                 if (consistent){
                     cv[e]=pr->objective;
                     if (pr->verbose){
-                        printf("objective function: %.10f, rate: %.10f\n",cv[e],pr->rho);
+                        cout<<"objective function: "<<cv[e]<<", rate: "<<pr->rho<<"\n";
                     }
                     if (cv[e]<cv[tab[P_ref[i]]]+maxNumError || r==0){
                         if (i<pr->nbINodes){
@@ -1569,7 +1569,7 @@ int estimate_root_with_constraint_fast_rooted(Pr* &pr,Node** &nodes){
                     }
                 }
                 else{
-                    if (pr->verbose) printf("Ignoring due to undetermined solution\n");
+                    if (pr->verbose) cout<<"Ignoring due to undetermined solution\n";
                     if (i<pr->nbINodes){
                         next.push_back(Suc1_ref[i]);
                         next.push_back(Suc2_ref[i]);
@@ -1577,7 +1577,7 @@ int estimate_root_with_constraint_fast_rooted(Pr* &pr,Node** &nodes){
                 }
             }
             else{
-                if (pr->verbose) printf("Ignoring due to undetermined solution.\n");
+                if (pr->verbose) cout<<"Ignoring due to undetermined solution.\n";
                 if (i<pr->nbINodes){
                     next.push_back(Suc1_ref[i]);
                     next.push_back(Suc2_ref[i]);
@@ -1629,7 +1629,7 @@ int estimate_root_with_constraint_rooted(Pr* &pr,Node** &nodes){
         }
         bool consistent=with_constraint_active_set_lambda_multirates(br,pr,nodes_new,true);
         if (consistent){
-            if (pr->verbose) printf("objective function: %.10f, rate: %.10f\n",pr->objective,pr->rho);
+            if (pr->verbose) cout<<"objective function: "<<pr->objective<<", rate: "<<pr->rho<<"\n";
             r=y;
             phi1=pr->objective;
             for (int i=1; i<=pr->ratePartition.size(); i++) {
@@ -1637,11 +1637,11 @@ int estimate_root_with_constraint_rooted(Pr* &pr,Node** &nodes){
             }
         }
         else{
-            if (pr->verbose) printf("Ignoring due to undetermined solution.\n");
+            if (pr->verbose) cout<<"Ignoring due to undetermined solution.\n";
         }
     }
     else{
-        if (pr->verbose) printf("Ignoring due to inderminable problem.\n");
+        if (pr->verbose) cout<<"Ignoring due to inderminable problem.\n";
     }
     y++;
     while (y<=pr->nbBranches){
@@ -1658,7 +1658,7 @@ int estimate_root_with_constraint_rooted(Pr* &pr,Node** &nodes){
             if (consistent){
                 phi=pr->objective;
                 if (pr->verbose) {
-                    printf("objective function: %.10f, rate: %.10f\n",phi,pr->rho);
+                    cout<<"objective function: "<<phi<<", rate: "<<pr->rho<<"\n";
                 }
                 if (phi1>phi  || r==0){
                     phi1=phi;
@@ -1669,11 +1669,11 @@ int estimate_root_with_constraint_rooted(Pr* &pr,Node** &nodes){
                 }
             }
             else{
-                if (pr->verbose) printf("Ignoring due to undetermined solution.\n");
+                if (pr->verbose) cout<<"Ignoring due to undetermined solution.\n";
             }
         }
         else{
-            if (pr->verbose) printf("Ignoring due to undetermined solution.\n");
+            if (pr->verbose) cout<<"Ignoring due to undetermined solution.\n";
         }
         y++;
     }
@@ -1753,11 +1753,6 @@ bool without_constraint_active_set_lambda_multirates(double br,Pr* &pr,Node** &n
         for (int i=1; i<=pr->ratePartition.size(); i++){
             nan[i] = false;
         }
-        /*printf("ROUND 0 , objective function %.15e , rate %.15f ",pr->objective,pr->rho);
-         for (int r=1; r<=pr->ratePartition.size(); r++) {
-         if (!nan[r]) printf(" %.15f ",pr->rho*pr->multiplierRate[r]);
-         }
-         cout<<endl;*/
         double old_phi = 0;
         double old_rho = 0;
         double* old_multi = new double[pr->ratePartition.size()+1];
@@ -1783,15 +1778,10 @@ bool without_constraint_active_set_lambda_multirates(double br,Pr* &pr,Node** &n
                 nodes[j]->V = V[j]/m/m;
             }
             consistent = without_constraint_active_set_lambda(br,pr,nodes);
-            cont = myabs((old_rho-pr->rho)/pr->rho) >= 1e-5;
+            cont = abs((old_rho-pr->rho)/pr->rho) >= 1e-5;
             for (int j=1; j<=pr->ratePartition.size(); j++) {
-                cont = cont || (myabs((old_multi[j]*old_rho-pr->multiplierRate[j]*pr->rho)/pr->multiplierRate[j]/pr->rho)>=1e-5);
+                cont = cont || (abs((old_multi[j]*old_rho-pr->multiplierRate[j]*pr->rho)/pr->multiplierRate[j]/pr->rho)>=1e-5);
             }
-            /*printf("ROUND %d , objective function %.15e , rate %.15f ",i,pr->objective,pr->rho);
-             for (int r=1; r<=pr->ratePartition.size(); r++) {
-             if (!nan[r]) printf(" %.15f ",pr->rho*pr->multiplierRate[r]);
-             }
-             cout<<endl;*/
             i++;
         } while (cont);
         br = Br;
@@ -1799,11 +1789,6 @@ bool without_constraint_active_set_lambda_multirates(double br,Pr* &pr,Node** &n
             nodes[j]->B = B[j];
             nodes[j]->V = V[j];
         }
-        /*printf("ROUND %d , objective function %.15e , rate %.15f ",i,pr->objective,pr->rho);
-         for (int g=1; g<=pr->ratePartition.size(); g++) {
-         if (!nan[g]) printf(" %.15f ",pr->rho*pr->multiplierRate[g]);
-         }
-         cout<<endl;*/
     }
     delete[] B;
     delete[] V;
@@ -1871,9 +1856,9 @@ bool with_constraint_active_set_lambda_multirates(double br,Pr* &pr,Node** &node
                 nodes[j]->V = V[j]/m/m;
             }
             consistent = with_constraint_active_set_lambda(br,pr,nodes);
-            cont = myabs((old_rho-pr->rho)/pr->rho) >= 1e-5;
+            cont = abs((old_rho-pr->rho)/pr->rho) >= 1e-5;
             for (int j=1; j<=pr->ratePartition.size(); j++) {
-                cont = cont || (myabs((old_multi[j]*old_rho-pr->multiplierRate[j]*pr->rho)/pr->multiplierRate[j]/pr->rho)>=1e-5);
+                cont = cont || (abs((old_multi[j]*old_rho-pr->multiplierRate[j]*pr->rho)/pr->multiplierRate[j]/pr->rho)>=1e-5);
             }
             i++;
         } while (cont);

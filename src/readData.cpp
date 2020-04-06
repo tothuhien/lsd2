@@ -15,7 +15,7 @@
 //    along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #include "readData.h"
 
-Node** tree2data(FILE * tree,Pr* pr,int & s){
+Node** tree2data(ifstream& tree,Pr* pr,int & s){
     //checkRooted(pr);
     int inode = 1;//id of internal nodes;
     int countleaf=1;//n;
@@ -126,7 +126,8 @@ Node** tree2data(FILE * tree,Pr* pr,int & s){
 }
 void readDateFile(Pr* pr,Node** &nodes,bool& constraintConsistent){
     int lineNb=getLineNumber(pr->inDateFile);
-    FILE * dateFile = fopen(pr->inDateFile.c_str(),"rt");
+    ifstream dateFile;
+    dateFile.open(pr->inDateFile.c_str());
     int ino=readInt(dateFile,"Error in the date file, the file should begin with an integer (the number of temporal constrains)");
     if (lineNb-1<ino) {
         cout<<"The number of given constraints is small than the number of constraints to read. Please change the number of constraints to read at the first line of the input date file."<<endl;
@@ -210,7 +211,7 @@ void readDateFile(Pr* pr,Node** &nodes,bool& constraintConsistent){
             else {//precise value
                 string wd="";
                 wd+=c;
-                while (fscanf(dateFile,"%c",&c)==1 && c>=33 && c<=126) {
+                while (dateFile.get(c) && c>=33 && c<=126) {
                     wd+=c;
                 }
                 v1=atof(wd.c_str());
@@ -252,7 +253,7 @@ void readDateFile(Pr* pr,Node** &nodes,bool& constraintConsistent){
         else oss<<"- There nodes that have more than one temporal constraint.\n";
         pr->warningMessage.push_back(oss.str());
     }
-    fclose(dateFile);
+    dateFile.close();
 }
 
 
@@ -388,16 +389,17 @@ int getBranchOut(Pr* pr,Node** nodes,list<string> &outgroups,bool &keepBelow){
 }
 
 void extrait_outgroup(Pr* pr,list<string> &outgroups){
-    FILE * tree = fopen(pr->inFile.c_str(),"rt");
+    ifstream tree;
+    tree.open(pr->inFile.c_str());
     int s =0;
-    if (tree==NULL) cout<<"Can not open the tree file"<<endl;
+    if (!tree.is_open()) cout<<"Can not open the tree file"<<endl;
     else{
         string newFile = pr->inFile;
         if (pr->keepOutgroup) newFile+=".reroot";
         else newFile+=".ingroup";
         FILE* w=fopen(newFile.c_str(),"wt");
         for (int y=0;y<pr->nbData;y++){
-            printf("Removing outgroups of tree %d ...\n",y+1);
+            cout<<"Removing outgroups of tree "<<y+1<<" ...\n";
             Node** nodes = tree2data(tree,pr,s);
             if (!pr->rooted) {
                 nodes=unrooted2rootedS(pr, nodes, s);
@@ -435,6 +437,6 @@ void extrait_outgroup(Pr* pr,list<string> &outgroups){
         fclose(w);
         pr->inFile=newFile;
     }
-    fclose(tree);
+    tree.close();
 }
 

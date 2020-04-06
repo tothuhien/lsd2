@@ -1,5 +1,6 @@
 #ifndef SUBTREE_H
 #define SUBTREE_H
+#include "stdarg.h"
 #include "pair.h"
 
 using namespace std;

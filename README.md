@@ -18,24 +18,26 @@ Mac/Linux users can install lsd2 via Homebrew as follows:
 If you want to use the interface, type *./lsd2* without parameters in the terminal from the folder containing the executable file.
 Otherwise, type *./lsd2 parameters*  where the list of parameters can be obtained by *./lsd2 -h*.
 
-The input tree file is required and should be specified by option -i. 
+The input tree file is required and should be specified by option __-i__. 
 	
-The input date file is necessary to estimate absolute dates and can be specified by option -d. 
-The input date file should contain the date of all tips and possiblly some internal nodes if known. 
+The input date file is necessary to estimate absolute dates and can be specified by option __-d__. 
+The input date file should contain the date of most of the tips and possiblly some internal nodes if known. 
 If some tip dates are missing, the program just uses the subtree containing all defined date tips & nodes for estimating the rate. 
 The missing tip dates would be inferred at the end using the estimated rate & dates.
-In order to have unique solution, at least two nodes should have different given dates. 
+In order to avoid undetermined problem, sufficient dates should be given.
 A tree where all tips having the same date and no further date information on internal nodes will not be able to infer absolute dates. 
 In this case, you can estimate relative dates using options -a and -z to specify the root date and tip date. 
 	
-Option -c is recommended to take into account the temporal constraints (date of a node >= date of its ancestors). 
+Option __-c is recommended__ to take into account the temporal constraints (date of a node >= date of its ancestors). 
 It should be noticed that LSD2 always assumes an increasing-time order from root to tips, i.e the date of a node is smaller than that of its children. If your data has the reverse order, the simplest way is to take the negation of the
 input date, and take the negation again of the output date to obtain your expected results.
 
-Further options can be specified, see *./lsd2 -h* for more details.
-    
-## Input files format
+The program first __collapses__ all internal branches that are considered uninformative (<= 0.5/seqlength by default) and impose a constraint of __minimum branches lengths__ for the time scaled tree. 
+These values could be manually specified via option -l (for uninformative branch length threshold), and options -u, -U (for minimum internal/external branches lengths of time scaled tree).
 
+Further options can be specified, see *./lsd2 -h* for more details.
+
+## Input files format
 
 ### Input_tree_file
 
@@ -117,7 +119,7 @@ Note that if the internal nodes don't have labels, then they can be defined by m
 
 ## Using variances
 
-Variance is used to penalize long branch lengths. The variance formula of each branch v_i is proprtion to (b_i + b), where b (specified by option -b) is the pseudo constant added to adjust the dependency of variances to branch lengths. This parameter is a positive number < 1, and by defaul is the median branch length. It could be adjusted based on how much your input tree is relaxed. The smaller it is, the more variances are linear to branch lengths, which is more appropriate for strict clock tree. The bigger it is the less dependent of branch lengths on variances, which may be better for relaxed tree. Also, option `-v 2` may only be useful with strict clock tree.
+Variance is used to penalize long branch lengths. The variance formula of each branch v_i is proprtion to (b_i + b), where b (specified by option __-b__) is the pseudo constant added to adjust the dependency of variances to branch lengths. This parameter is a positive number, and by defaul is maximum of median branch length and 10/seqlength. It could be adjusted based on how much your input tree is relaxed. The smaller it is, the more variances are linear to branch lengths, which is more appropriate for strict clock tree. The bigger it is the less dependent of branch lengths on variances, which may be better for relaxed tree. Set __v -1__ to use variances, and __v -2__ to run program twice where the second time calculates variances based of the estimated branch length of the first time.
 
 ## Some examples of command lines:
 
@@ -130,7 +132,15 @@ Variance is used to penalize long branch lengths. The variance formula of each b
 	- You want to remove outlier nodes with Zscore threshold 3:
 
     `./lsd2 -i rootedtree_file -d date_file -c -v 1 -e 3`
+  
+  - You just want to collapse null branches in the input tree (by default all branches <= 0.5/seqlength are collapsed), and impose a minimum of 0.1 (estimated by default) for the branches of the time scaled tree:
+  
+    `./lsd2 -i rootedtree_file -d date_file -c -v 1 -e 3 -u 0.1 -l 0`
+  
+  - Similar as above, but you allow nullability for external branches of output tree:
 
+    `./lsd2 -i rootedtree_file -d date_file -c -v 1 -e 3 -u 0.1 -U 0 -l 0`
+    
 	- You know the tree partition where each part should have a different rate:
 
     `./lsd2 -i rootedtree_file -d date_file -c -v 1 -p parition_file`
@@ -165,13 +175,13 @@ Variance is used to penalize long branch lengths. The variance formula of each b
     
 ## Output files: 
 
-*.result* : contain the estimated rates, root date, possibly confidence intervals, outlier tips and the value of the objective function.
+*.result* : contain the estimated rates, root date, possibly confidence intervals, outlier nodes and the value of the objective function.
 
-*.nexus* : trees in nexus format which contain information about the dates of internal nodes, branch lengths, and the confidence intervals (CI) if option -f was used.
+*.nexus* : trees in nexus format which contain information about the dates of internal nodes, branch lengths, and the confidence intervals (if option -f was used).
     
-*.date.nexus* : similar to *.nexus* trees, but branch lengths are rescaled to time unit by multiplying with the estimated rate. 
+*.date.nexus* : similar to *.nexus* trees, but branch lengths are rescaled to time unit by multiplying to the estimated rate. 
 
-*.nwk* : trees in newick format 
+*.nwk* : similar to *.nwk* trees but in newick format, so do not contain confidence intervals information.
 
 ## Citation
 If you use this software, please cite: “ Fast dating using least-squares criteria and algorithms”, T-H. To, M. Jung, S. Lycett, O. Gascuel, Syst Biol. 2016 Jan;65(1):82-97.

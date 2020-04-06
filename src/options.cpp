@@ -35,8 +35,9 @@ Pr* getCommandLine( int argc, char** argv)
     sflag=false,
     fflag=false,
     lflag=false,
-    uflag=false;
-    while ( (c = getopt(argc, argv, ":i:d:o:s:n:g:r:v:ct:w:b:ha:z:f:kje:m:p:q:u:l:R:V")) != -1 )
+    uflag=false,
+    vflag=false;
+    while ( (c = getopt(argc, argv, ":i:d:o:s:n:g:r:v:ct:w:b:ha:z:f:kje:m:p:q:u:l:U:R:V")) != -1 )
     {
         switch (c)
         {
@@ -98,6 +99,7 @@ Pr* getCommandLine( int argc, char** argv)
                 if (opt->variance!=1 && opt->variance!=2){
                     myExit("Argument of option -v must be either 1 (for using orginal branches to compute variance) or 2 (LSD will be run twice, the second time uses the variances based on the estimated branch lengths of the first time).\n");
                 }
+                vflag = true;
                 break;
             case 'c':
                 opt->constraint = true;
@@ -177,8 +179,16 @@ Pr* getCommandLine( int argc, char** argv)
                 if ( !isReal(optarg))
                     myExit("Argument of option -u must be a real\n");
                 opt->minblen = atof(optarg);
-                if (opt->minblen<0 || opt->minblen>1)
-                    myExit("Argument of option -u must be between 0 and 1\n");
+                if (opt->minblen<0)
+                    myExit("Argument of option -u must be >= 0\n");
+                uflag = true;
+                break;
+            case 'U':
+                if ( !isReal(optarg))
+                    myExit("Argument of option -U must be a real\n");
+                opt->minblenL = atof(optarg);
+                if (opt->minblenL<0)
+                    myExit("Argument of option -U must be >= 0\n");
                 uflag = true;
                 break;
             case 'l':
@@ -197,7 +207,7 @@ Pr* getCommandLine( int argc, char** argv)
                     myExit("Argument of option -R must be positive\n");
                 break;
             case 'V':
-                printf("lsd2 " VERSION"\n");
+                cout<<"lsd2 "<<VERSION<<endl;
                 exit( EXIT_SUCCESS );
             case '?':
                 myExit("Unrecognized option: -%c\n", optopt);
@@ -216,7 +226,7 @@ Pr* getCommandLine( int argc, char** argv)
     if (!dflag && (!flagA && flagZ)){
         myExit("The input date file is not provided, so option -a is required together with option -z to estimate relative dates.\n");
     }
-    if ( !(sflag) && (fflag || !uflag || !lflag))
+    if ( !(sflag) && (fflag || !uflag || !lflag || vflag))
         myExit("Argument -s is necessary to continue.\n");
     if (!dflag && (!flagA && !flagZ)){
         opt->relative=true;
@@ -237,9 +247,13 @@ Pr* getCommandLine( int argc, char** argv)
         opt->estimate_root="a";
     }
     if( opt->outFile=="") opt->outFile = opt->inFile + ".result";
+    opt->treeFile1=opt->outFile+".nexus";
+    opt->treeFile2=opt->outFile+".date.nexus";
+    opt->treeFile3=opt->outFile+".nwk";
     if (opt->nullblen<0){
         opt->nullblen = 0.5/opt->seqLength;
     }
+    
     return opt;
 }
 
@@ -280,17 +294,21 @@ Pr* getInterface()
         }
     } while (*letter!='n' && *letter!='N' && *letter!='y' && *letter!='Y');
     opt->outFile = opt->inFile+".result";
+    opt->treeFile1=opt->outFile+".nexus";
+    opt->treeFile2=opt->outFile+".date.nexus";
+    opt->treeFile3=opt->outFile+".nwk";
     if (!opt->rooted) {
         opt->estimate_root="a";
     }
     opt->seqLength = getPositiveInputInteger("Enter the length of sequences that were used to build your tree>");
     fgets( letter, 3, stdin );
-    printInterface( stdout, opt);
+    //printInterface( stdout, opt);
+    printInterface(std::cout, opt);
     do
     {
         fgets( letter, 3, stdin );
         if( isOptionActivate( opt, *letter ) ) setOptionsWithLetter( opt, *letter);
-        printInterface( stdout, opt);
+        printInterface(std::cout, opt);
         cout<<endl;
     } while(( *letter!='y' && *letter!='Y'));
     if (opt->nullblen<0){
@@ -300,117 +318,116 @@ Pr* getInterface()
 }
 
 
-void printInterface( FILE* in, Pr* opt)
+void printInterface(ostream& in, Pr* opt)
 {
-    fprintf(in,"\nLEAST-SQUARE METHODS TO ESTIMATE RATES AND DATES - " VERSION" \n\n");
-    fprintf(in,"\nInput files:\n");
-    fprintf(in,"  i                                               Input tree file : %s\n",opt->inFile.c_str());
+    in<<"\nLEAST-SQUARE METHODS TO ESTIMATE RATES AND DATES - "<<VERSION<<" \n\n";
+    in<<"\nInput files:\n";
+    in<<"  i                                               Input tree file : "<<opt->inFile.c_str()<<"\n";
     if (opt->relative==true)
-        fprintf(in,"  d                                       Estimate relative dates : mrca date = %.2f, tips date =%.2f\n",opt->mrca,opt->leaves);
+        in<<"  d                                       Estimate relative dates : mrca date = "<<opt->mrca<<", tips date ="<<opt->leaves<<"\n";
     else
-        fprintf(in,"  d                                               Input date file : %s\n",opt->inDateFile.c_str());
-    fprintf(in,"  p                                                Partition file : ");
-    if (opt->partitionFile=="")        fprintf(in,"No\n");
-    else fprintf(in,"%s\n",opt->partitionFile.c_str());
-    fprintf(in,"Output file:\n");
-    fprintf(in,"  o                                                  Output file  : %s\n",opt->outFile.c_str());
-    fprintf(in,"Parameters:\n");
-    fprintf(in,"  c                                              With constraints : ");
-    if (!opt->constraint) fprintf(in,"No\n");
+        in<<"  d                                               Input date file : "<<opt->inDateFile.c_str()<<"\n";
+    in<<"  p                                                Partition file : ";
+    if (opt->partitionFile=="")        in<<"No\n";
+    else in<<opt->partitionFile.c_str()<<"\n";
+    in<<"Output file:\n";
+    in<<"  o                                                  Output file  : "<<opt->outFile.c_str()<<"\n";
+    in<<"Parameters:\n";
+    in<<"  c                                              With constraints : ";
+    if (!opt->constraint) in<<"No\n";
     else {
-        fprintf(in,"Yes\n");
+        in<<"Yes\n";
     }
-    fprintf(in,"  t                                      Lower bound for the rate : %.3e\n",opt->rho_min);
-    fprintf(in,"  v                                                With variances : ");
-    if (opt->variance==0) fprintf(in,"No\n");
+    in<<"  t                                      Lower bound for the rate : "<<opt->rho_min<<"\n";
+    in<<"  v                                                With variances : ";
+    if (opt->variance==0) in<<"No\n";
     else {
-        if (opt->variance==1) fprintf(in,"Yes, use variances based on input branch lengths\n");
-        else if (opt->variance==2) fprintf(in,"Yes, use variances based on estimated branch lengths\n");
-        fprintf(in,"  b                              Adjusted parameter for variances : ");
+        if (opt->variance==1) in<<"Yes, use variances based on input branch lengths\n";
+        else if (opt->variance==2) in<<"Yes, use variances based on estimated branch lengths\n";
+        in<<"  b                              Adjusted parameter for variances : ";
         if (opt->c==-1){
-            fprintf(in,"%s\n","Use median branch lengths");
+            in<<"Use median branch lengths\n";
         } else{
-            fprintf(in,"%g\n",opt->c);
+            in<<opt->c<<"\n";
         }
     }
-    fprintf(in,"  r                                             Estimate the root : ");
+    in<<"  r                                             Estimate the root : ";
     if (opt->estimate_root==""){
-        fprintf(in,"No\n");
+        in<<"No\n";
     }
     else if (opt->estimate_root.compare("l")==0){
-        fprintf(in,"Around the given root\n");
+        in<<"Around the given root\n";
     }
     else if (opt->estimate_root.compare("a")==0 && opt->constraint){
-        fprintf(in,"Use fast method to search on all branches\n");
+        in<<"Use fast method to search on all branches\n";
     }
     else if (opt->estimate_root.compare("a")==0 && !opt->constraint){
-        fprintf(in,"Search on all branches\n");
+        in<<"Search on all branches\n";
     }
     else if (opt->estimate_root.compare("as")==0){
-        fprintf(in,"Use constrained mode on all branches\n");
+        in<<"Use constrained mode on all branches\n";
     }
-    fprintf(in,"  w                                       Given substitution rate : ");
-    if (opt->rate=="") fprintf(in,"No\n");
-    else fprintf(in,"%s\n",opt->rate.c_str());
+    in<<"  w                                       Given substitution rate : ";
+    if (opt->rate=="") in<<"No\n";
+    else in<<opt->rate.c_str()<<"\n";
     if (opt->fnOutgroup=="")
-        fprintf(in,"  g                                               Given outgroups : No\n");
+        in<<"  g                                               Given outgroups : No\n";
     else {
-        fprintf(in,"  g                                       File contains outgroups : %s\n",opt->fnOutgroup.c_str());
+        in<<"  g                                       File contains outgroups : "<<opt->fnOutgroup.c_str()<<"\n";
         if (opt->keepOutgroup) {
-            fprintf(in,"  k                         Keep outgroups in the estimating tree :  Yes\n");
+            in<<"  k                         Keep outgroups in the estimating tree :  Yes\n";
         }
         else{
-            fprintf(in,"  k                         Keep outgroups in the estimating tree : No\n");
+            in<<"  k                         Keep outgroups in the estimating tree : No\n";
         }
     }
-    fprintf(in,"  n                                             Multiple data set : ");
+    in<<"  n                                             Multiple data set : ";
     if( opt->nbData< 2 )
-        fprintf(in,"No\n");
+        in<<"No\n";
     else
-        fprintf(in,"Yes, %i data sets\n",opt->nbData);
-    fprintf(in,"  f                                  Compute confidence intervals : ");
+        in<<"Yes, "<<opt->nbData<<" data sets\n";
+    in<<"  f                                  Compute confidence intervals : ";
     if (opt->ci){
-        fprintf(in,"Yes, sampling %d times\n",opt->nbSampling);
-        fprintf(in,"  q                  Standard deviation of lognormal relaxed clock: %g (for computing confidence intervals)\n",opt->q);
+        in<<"Yes, sampling "<<opt->nbSampling<<" times\n";
+        in<<"  q                  Standard deviation of lognormal relaxed clock: "<<opt->q<<" (for computing confidence intervals)\n";
     }
     else
-        fprintf(in,"No\n");
+        in<<"No\n";
     if (opt->nullblen==-1 || opt->ci){
-        fprintf(in,"  s                                               Sequence length : %i\n",opt->seqLength);
+        in<<"  s                                               Sequence length : "<<opt->seqLength<<"\n";
     }
-    fprintf(in,"  e                                          Exclude outlier tips : ");
+    in<<"  e                                          Exclude outlier tips : ";
     if (opt->e>0){
-        fprintf(in,"Yes, detect and exclude outliers from the analysis\n");
-        fprintf(in,"  m                   Number of sampling nodes to detect outliers : %i\n",opt->m);
-        fprintf(in,"  e                       The Zscore threshold to detect outliers : %g\n",opt->e);
+        in<<"Yes, detect and exclude outliers from the analysis\n";
+        in<<"  m                   Number of sampling nodes to detect outliers : "<<opt->m<<"\n";
+        in<<"  e                       The Zscore threshold to detect outliers : "<<opt->e<<"\n";
     }
     else
-        fprintf(in,"No\n");
-    fprintf(in,"  u                     Minimum branch length of time scaled tree : ");
+        in<<"No\n";
+    in<<"  u                         Min branch length of time scaled tree : ";
     if (opt->minblen==-1){
-        fprintf(in,"To estimate\n");
-        fprintf(in,"  R Rounding number for minimum branch length of time scaled tree : %g \n",opt->round_time);
+        in<<"To estimate\n";
+        in<<"  R     Rounding number for min branch length of time scaled tree : "<<opt->round_time<<" \n";
     } else {
-        fprintf(in,"%g\n",opt->minblen);
+        in<<opt->minblen<<"\n";
     }
-    fprintf(in,"  l          Max length of input branches that could be collapsed : ");
+    in<<"  l                        Collapsed internal branch length limit : ";
     if (opt->nullblen==-1){
-        fprintf(in,"%g\n",0.5/opt->seqLength);
+        in<<0.5/opt->seqLength<<"\n";
     } else {
-        fprintf(in,"%g\n",opt->nullblen);
+        in<<opt->nullblen<<"\n";
     }
-    fprintf(in,"\n  h to print Help ");
-    fprintf(in,"\n  y to accept or type a letter to change an option (x = Exit) ");
+    in<<"\n  h to print Help ";
+    in<<"\n  y to accept or type a letter to change an option (x = Exit) ";
 }
 
 void printHelp( void )
 {
-    printf(BOLD"LSD: LEAST-SQUARES METHODS TO ESTIMATE RATES AND DATES - " VERSION"\n\n");
-    printf(BOLD"DESCRIPTION\n"
+    cout<<BOLD"LSD: LEAST-SQUARES METHODS TO ESTIMATE RATES AND DATES - "<<VERSION<<"\n\n";
+    cout<<BOLD"DESCRIPTION\n"
            FLAT"\tThis program estimates the rate and the dates of the input phylogenies given some temporal constraints.\n"
-           FLAT"\tIt minimizes the square errors of the branch lengths under normal distribution model.\n\n"
-           );
-    printf(BOLD"SYNOPSIS\n"
+           FLAT"\tIt minimizes the square errors of the branch lengths under normal distribution model.\n\n";
+    cout<<BOLD"SYNOPSIS\n"
            FLAT"\t" BOLD"./lsd " FLAT"[" BOLD"-i " LINE"inputFile" FLAT"] "
            FLAT"[" BOLD"-d " LINE"inputDateFile" FLAT"] "
            FLAT"[" BOLD"-o " LINE"outputFile" FLAT"] "
@@ -420,19 +437,19 @@ void printHelp( void )
            FLAT"[" BOLD"-g " LINE"outgroupFile" FLAT"] "
            FLAT"[" BOLD"-f " LINE"nbSamplings" FLAT"] "
            FLAT"[" BOLD"-e " LINE"Zscore" FLAT"]\n"
-           FLAT"\n");
+           FLAT"\n";
     
-    printf(BOLD"OPTIONS\n"
+    cout<<BOLD"OPTIONS\n"
            FLAT"\t" BOLD"-a " LINE"rootDate\n"
            FLAT"\t   If the dates of all tips are equal (which is given by option -z), you must use this option to provide the root date.\n"
            FLAT"\t   In this case, the input date file can be omitted, and the program estimates only the relative dates based on the given\n"
            FLAT"\t   root date and tips date. By default, T[root]=0 and T[tips]=1.\n"
            FLAT"\t" BOLD"-b " LINE"varianceParameter\n"
            FLAT"\t   The parameter (between 0 and 1) to compute the variances in option -v. It is the pseudo positive constant to add to the branch lengths\n"
-           FLAT"\t   when calculating variances, to adjust the dependency of variances to branch lengths. By default b is the median branch length; but it \n"
-           FLAT"\t   should be adjusted  based on how/whether the input tree is relaxed or strict. The smaller it is the more variances would be linear to \n"
-           FLAT"\t   branch lengths, which is relevant for strict clock. The bigger it is the less effect of branch lengths on variances, which might be \n"
-           FLAT"\t   better for relaxed clock.\n"
+           FLAT"\t   when calculating variances, to adjust the dependency of variances to branch lengths. By default b is the maximum between median branch length\n"
+           FLAT"\t   and 10/seqlength; but it should be adjusted  based on how/whether the input tree is relaxed or strict. The smaller it is the more variances\n"
+           FLAT"\t   would be linear to branch lengths, which is relevant for strict clock. The bigger it is the less effect of branch lengths on variances, \n"
+           FLAT"\t   which might be better for relaxed clock.\n"
            FLAT"\t" BOLD"-c \n"
            FLAT"\t   By using this option, we impose the constraints that the date of every node is equal or smaller then\n"
            FLAT"\t   the dates of its descendants. Without constraints, the runtime is linear (LD). With constraints, the\n"
@@ -486,7 +503,7 @@ void printHelp( void )
            FLAT"\t   Use this option to keep the outgroups (given in option -g) in the estimated tree. The root position is then estimated on the\n"
            FLAT"\t   branch determined by the outgroups. If this option is not used, the outgroups will be removed.\n"
            FLAT"\t" BOLD"-l " LINE"nullBlen\n"
-           FLAT"\t   A branch in the input tree is considered informative if its length is >= this value. By default it is 0.5/seq_length. Only \n"
+           FLAT"\t   A branch in the input tree is considered informative if its length is greter this value. By default it is 0.5/seq_length. Only \n"
            FLAT"\t   informative branches are forced to be bigger than a minimum branch length (see option -u for more information about this).\n"
            FLAT"\t" BOLD"-m " LINE"samplingNumberOutlier\n"
            FLAT"\t   The number of dated nodes to be sampled when detecting outlier nodes. This should be smaller than the number of dated nodes,\n"
@@ -538,15 +555,15 @@ void printHelp( void )
            FLAT"\t" BOLD"-u " LINE"minBlen\n"
            FLAT"\t   By default without this option, lsd2 forces every branch of the time scaled tree to be greater than 1/(seq_length*rate) where rate is\n"
            FLAT"\t   an pre-estimated median rate. This value is rounded to the number of days or weeks or years, depending on the rounding parameter -R.\n"
-           FLAT"\t   By using option -u, the program will not estimate the minimum branch length but use the specified value instead. Note that minimum branch\n"
-           FLAT"\t   length only applies for informative branches, those whose length in the input tree are at least 0.5/seq_length by default (or a number\n"
-           FLAT"\t   specified through option -l).\n"
+           FLAT"\t   By using option -u, the program will not estimate the minimum branch length but use the specified value instead.\n"
+           FLAT"\t" BOLD"-U " LINE"minExBlen\n"
+           FLAT"\t   Similar to option -u but applies for external branches if specified. If it's not specified then the minimum branch length of external\n"
+           FLAT"\t   branches is set the same as the one of internal branch.\n"
            FLAT"\t" BOLD"-v " LINE"variance\n"
            FLAT"\t   Use this option if you want to apply variances for the branch lengths in order to recompense big errors on long estimated branch lengths. \n"
            FLAT"\t   The variance of the branch Bi is Vi = (Bi+b) where b is specified by option -b.\n"
            FLAT"\t   If " FLAT LINE"variance" FLAT"=1, then LSD uses the input branch lengths to calculate variances. If " FLAT LINE"variance" FLAT"=2, then LSD\n"
-           FLAT"\t   runs twice where the second time it calculates the variances based on the estimated branch lengths of the first run. However -v 2 only \n"
-           FLAT"\t   may be only useful for a strict clock tree. If your tree is likely relaxed, don't use -v 2.\n"
+           FLAT"\t   runs twice where the second time it calculates the variances based on the estimated branch lengths of the first run.\n"
            FLAT"\t" BOLD"-V \n"
            FLAT"\t   Get the actual version.\n"
            FLAT"\t" BOLD"-w " LINE"givenRte\n"
@@ -560,8 +577,7 @@ void printHelp( void )
            FLAT"\t" BOLD"-z " LINE"tipsDate\n"
            FLAT"\t   This option is used to give the date of the tips when they are all equal. It must be used with option -a to give the\n"
            FLAT"\t   root date. In this case the input date file can be omitted, and the program estimates only the relative dates based on\n"
-           FLAT"\t   the given root date and tips date. By default, T[root]=0 and T[tips]=1.\n"
-           );
+           FLAT"\t   the given root date and tips date. By default, T[root]=0 and T[tips]=1.\n";
 }
 string getInputString(string msg)
 {
@@ -579,7 +595,7 @@ string getInputFileName( string msg)
         outfile = getInputString(msg);
         if( access(outfile.c_str(), F_OK)==0 || string(outfile).length()==0)
             break;
-        printf( "The file \"%s\" does not exist.\n", outfile.c_str() );
+        cout<<"The file "<<outfile.c_str()<<" does not exist.\n";
     } while( true );
     if( access(outfile.c_str(), R_OK)!=0 && string(outfile).length()!=0)
         myExit("Could not access to the file named \"%s\" in reading.\n", outfile.c_str() );
@@ -594,7 +610,7 @@ string getOutgroupFileName( string msg)
         outfile = getInputString(msg);
         if( access(outfile.c_str(), F_OK)==0 || outfile.compare("")==0)
             break;
-        printf( "The file \"%s\" does not exist.\n", outfile.c_str() );
+        cout<<"The file "<<outfile.c_str()<<" does not exist.\n";
     } while( true );
     if (outfile.compare("")==0) {
         return outfile;
@@ -695,6 +711,7 @@ bool isOptionActivate( Pr* opt, char l )
         case 'm':
         case 'j':
         case 'u':
+        case 'U':
         case 'l':
         case 'x':
         case 'h':
@@ -870,10 +887,13 @@ void setOptionsWithLetter( Pr* opt, char letter)
             opt->e = getInputReal("Enter the Zscore threshold for outliers detection> ");
             break;
         case 'u':
-            opt->minblen = getInputPositiveReal("Enter the minimum elapsed time on a branch> ");
+            opt->minblen = getInputPositiveReal("Enter the minimum branch length of the time scaled tree> ");
+            break;
+        case 'U':
+            opt->minblenL = getInputPositiveReal("Enter the minimum external branch length of the time scaled tree> ");
             break;
         case 'l':
-            opt->nullblen = getInputNonNegativeReal("Maximum length that a branch could be collapsed (default is 1/(2*seq_length))> ");
+            opt->nullblen = getInputNonNegativeReal("Maximum length that an internal branch will be collapsed (default is 1/(2*seq_length))> ");
             break;
         case 'R':
             opt->round_time = getInputPositiveReal("Rounding number for minimum branch length of time scaled tree>");

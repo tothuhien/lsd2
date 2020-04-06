@@ -1,16 +1,8 @@
-#include <iostream>
-#include <sstream>
-#include <fstream>
-#include <string>
-#include <stdio.h>
-#include <stdlib.h>
 #include <unistd.h>
-#include "stdarg.h"
-#include <math.h>
 #include "utils.h"
 
 #ifndef VERSION
-#define VERSION "v1.4.11"
+#define VERSION "v1.4.12"
 #endif
 #ifndef BOLD
 #define BOLD      "\033[00;01m"
@@ -36,7 +28,7 @@ Pr* getInterface( );
 void     printHelp( void );
 string    getInputFileName( string );
 string    getOutgroupFileName( string );
-void     printInterface( FILE*, Pr*);
+void     printInterface(ostream& result, Pr*);
 void     setOptionsWithLetter( Pr* , char);
 double   getInputReal( string );
 double   getInputPositiveReal( string );

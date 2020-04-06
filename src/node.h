@@ -1,13 +1,5 @@
 #ifndef NODE_H
 #define NODE_H
-#include <iostream>
-#include <sstream>
-#include <fstream>
-#include <string>
-#include <stdio.h>
-#include <stdlib.h>
-#include <unistd.h>
-#include <math.h>
 #include <vector>
 #include "date.h"
 

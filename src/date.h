@@ -1,16 +1,8 @@
 #ifndef DATE_H
 #define DATE_H
-#include <iostream>
-#include <sstream>
-#include <fstream>
-#include <string>
-#include <stdio.h>
-#include <stdlib.h>
-#include <unistd.h>
-#include <math.h>
 
 using namespace std;
-
+#include <iostream>
 typedef struct Date
 {
 	char type;
