@@ -8,9 +8,6 @@
 #include <cmath>
 #include "stdarg.h"
 #include <algorithm>
-#ifndef maxIter
-#define maxIter 1000
-#endif
 #include "node.h"
 #include "pr.h"
 #include "pair.h"

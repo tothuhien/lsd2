@@ -452,7 +452,7 @@ bool without_constraint_active_set_lambda(double br,Pr* &pr,Node** &nodes){
         int nb_iter=0;
         double alpha;
         double* dir = new double[pr->nbBranches+1];
-        while (val && !conditions(lambda,pr,nodes) && nb_iter<=maxIter){
+        while (val && !conditions(lambda,pr,nodes) && nb_iter<=1000){
             for (int i=0;i<=pr->nbBranches;i++)  {dir[i]=nodes[i]->D-D_old[i];}
             alpha=1;
             int as=0;
@@ -503,7 +503,7 @@ bool without_constraint_active_set_lambda(double br,Pr* &pr,Node** &nodes){
             val = without_constraint_lambda(br,pr,nodes,active_set,lambda);
             nb_iter++;
         }
-        if (nb_iter>maxIter){
+        if (nb_iter>1000){
             for (int i=0;i<=pr->nbBranches;i++) nodes[i]->D=D_old[i];
         }
         delete[] D_old;
@@ -1077,7 +1077,7 @@ bool with_constraint_active_set_lambda(double br,Pr* &pr,Node** &nodes){
         bool val = with_constraint_lambda(br,pr,nodes,active_set,lambda);
         int nb_iter=0;
         double alpha;
-        while (val && !conditionsQP(lambda,pr,nodes) && nb_iter<=maxIter){
+        while (val && !conditionsQP(lambda,pr,nodes) && nb_iter<=1000){
             for (int i=0;i<=pr->nbBranches;i++)  {dir[i]=nodes[i]->D-D_old[i];}
             alpha=1;
             int as=2*pr->nbBranches+2;
@@ -1139,7 +1139,7 @@ bool with_constraint_active_set_lambda(double br,Pr* &pr,Node** &nodes){
             val=with_constraint_lambda(br,pr,nodes,active_set,lambda);
             nb_iter++;
         }
-        if (nb_iter>maxIter){
+        if (nb_iter>1000){
             for (int i=0;i<=pr->nbBranches;i++) nodes[i]->D=D_old[i];
         }
         delete[] D_old;
