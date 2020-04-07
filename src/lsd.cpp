@@ -85,13 +85,11 @@ int main( int argc, char** argv )
         opt->init();
         Node** nodes=tree2data(tree,opt,s);
         if (!opt->relative) readDateFile(opt,nodes,constraintConsistent);
-        if (!opt->rooted){
-            nodes = unrooted2rooted(opt,nodes,s);
-        }
-        else{
-            computeSuc_polytomy(opt,nodes);
-        }
+        computeSuc_polytomy(opt,nodes);
         collapseUnInformativeBranches(opt,nodes);
+        if (!opt->rooted){
+            nodes = unrooted2rooted(opt,nodes);
+        }
         if (opt->relative){
             for (int i=0;i<opt->nbINodes;i++) nodes[i]->removeConstraint();
             for (int i=opt->nbINodes;i<=opt->nbBranches;i++){
@@ -137,10 +135,10 @@ int main( int argc, char** argv )
             }
         }
         constraintConsistent=initConstraint(opt, nodes);
+        if (opt->e>0) constraintConsistent = calculateOutliers(opt,nodes,median_rate);
+        else if (opt->minblen<0) calculateMedianRate(opt,nodes,median_rate);
+        imposeMinBlen(result,opt,nodes,median_rate);
         if (!opt->constraint){//LD without constraints
-            if (opt->e>0) constraintConsistent = calculateOutliers(opt,nodes,median_rate);
-            else calculateMedianRate(opt,nodes,median_rate);
-            imposeMinBlen(result,opt,nodes,median_rate);
             if (!constraintConsistent){
                 ostringstream oss;
                 oss<<"- There's conflict in the input temporal constraints.\n";
@@ -193,9 +191,6 @@ int main( int argc, char** argv )
         }
         else {//QPD with temporal constrains
             if (constraintConsistent || (opt->estimate_root!="" && opt->estimate_root!="k")){
-                if (opt->e>0) constraintConsistent = calculateOutliers(opt,nodes,median_rate);
-                else calculateMedianRate(opt,nodes,median_rate);
-                imposeMinBlen(result,opt,nodes,median_rate);
                 if (constraintConsistent){
                     if (opt->estimate_root==""){//keep the given root
                         if (constraintConsistent){

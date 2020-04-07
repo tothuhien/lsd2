@@ -964,7 +964,7 @@ bool without_constraint_multirates(Pr* pr,Node** nodes,bool reassign){
         for (int i=1;i<pr->multiplierRate.size();i++) cout<<pr->multiplierRate[i]<<" ";
     }
     bool val = without_constraint_active_set(pr,nodes);
-    if (pr->verbose) cout<<pr->rho<<endl;
+    //if (pr->verbose) cout<<pr->rho<<endl;
     if (!val) return false;
     if (pr->ratePartition.size()>0) {
         double old_phi = 0;

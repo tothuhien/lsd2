@@ -159,7 +159,7 @@ bool remove_one_tip(Pr* pr,Node** nodes,int t,int* &tab){//return false if remov
     }
     if (suct.size()==1){
         int sibling_t = suct[0];
-        if (p==0) {
+        if (p==0 && (nodes[sibling_t]->suc.size()==2 || pr->estimate_root=="" || pr->estimate_root=="k")) {
             tab[sibling_t] = -1;
             nodes[0]->L = nodes[sibling_t]->L;
             nodes[0]->V = nodes[sibling_t]->V;
@@ -175,6 +175,17 @@ bool remove_one_tip(Pr* pr,Node** nodes,int t,int* &tab){//return false if remov
                 nodes[0]->suc.push_back(nodes[sibling_t]->suc[i]);
             }
             bl = false;
+        } else if (p==0){
+            int s = nodes[sibling_t]->suc[0];
+            double br=nodes[s]->B;
+            nodes[s]->B=br/2;
+            nodes[sibling_t]->B=br/2;
+            nodes[s]->P=0;
+            nodes[sibling_t]->P=0;
+            nodes[sibling_t]->suc.erase(nodes[sibling_t]->suc.begin());
+            nodes[0]->suc.clear();
+            nodes[0]->suc.push_back(sibling_t);
+            nodes[0]->suc.push_back(s);
         }
         else {
             tab[p] = -1;
@@ -659,8 +670,20 @@ bool outliers_unrooted(Pr* &pr,Node** &nodes,double& median_rate){
         for (int i=0;i<=pr->nbBranches;i++) delete nodes_new[i];
         delete[] nodes_new;
         pr->outlier.clear();
+        double mean_freq = 0;
+        double var_freq = 0;
+        for (int i=1;i<=pr->nbBranches;i++){
+            mean_freq += outliersFreq[i];
+        }
+        mean_freq /= pr->nbBranches;
+        for (int i=0;i<pr->nbBranches;i++){
+            var_freq += (outliersFreq[i] - mean_freq)*(outliersFreq[i] - mean_freq);
+        }
+        var_freq /= (pr->nbBranches-1);
+        
         for (int i=0;i<outliersFreq.size();i++){
-            if ((outliersFreq[i])>pr->e){//to we need to normalize?
+            outliersFreq[i] = (outliersFreq[i] - mean_freq)/sqrt(var_freq);
+            if ((outliersFreq[i])>pr->e){//do we need to normalize?
                 pr->outlier.push_back(i);
             }
         }

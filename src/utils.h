@@ -133,13 +133,13 @@ stack<int>* computeFeuilles(list<int> ls,Pr* pr,Node** nodes);
 
 list<int> suc(int i,int j,Pr* pr,Node** nodes,int* & Pre,list<int> &sucL,list<int> &sucI);
 
-bool reroot_rootedtree(double& br,int r,int s10,int s20,Pr* pr,Node** nodes,Node** &nodes_new);
+bool reroot_rootedtree(double& br,int r,int s1, int s2,Pr* pr,Node** nodes,Node** &nodes_new);
 
 int reroot_rootedtree(int r,Pr* pr,Node** nodes,Node** &nodes_new);
 
-bool reroot_rootedtree(double& br,int r,int s10,int s20,Pr* pr,Node** nodes,Node** &nodes_new,int* & P_ref,int* & tab);
+bool reroot_rootedtree(double& br,int r,int s1, int s2,Pr* pr,Node** nodes,Node** &nodes_new,int* & P_ref,int* & tab);
 
-Node** unrooted2rooted(Pr* &pr,Node** nodes,int s);
+Node** unrooted2rooted(Pr* &pr,Node** nodes);
 
 Node** unrooted2rootedS(Pr* &pr,Node** nodes,int s);
 
