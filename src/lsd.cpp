@@ -38,7 +38,7 @@ int main( int argc, char** argv )
     filebuf result_file;
     result_file.open(opt->outFile.c_str(),ios::out);
     if (!result_file.is_open()){
-        cout<<"Error: can not create the output file "<<opt->outFile<<endl;
+        cerr<<"Error: can not create the output file "<<opt->outFile<<endl;
         exit(EXIT_FAILURE);
     }
     ostream result(&result_file);
@@ -52,7 +52,7 @@ int main( int argc, char** argv )
     ifstream tree;
     tree.open(opt->inFile.c_str());
     if (!tree.is_open()){
-        cout<<"Error: can not open the input tree file."<<endl;
+        cerr<<"Error: can not open the input tree file."<<endl;
         exit(EXIT_FAILURE);
     }
     filebuf tree_file1,tree_file2,tree_file3;
@@ -135,9 +135,10 @@ int main( int argc, char** argv )
             }
         }
         constraintConsistent=initConstraint(opt, nodes);
-        if (opt->e>0) constraintConsistent = calculateOutliers(opt,nodes,median_rate);
-        else if (opt->minblen<0) calculateMedianRate(opt,nodes,median_rate);
-        imposeMinBlen(result,opt,nodes,median_rate);
+        bool medianRateOK;
+        if (opt->e>0) medianRateOK = calculateOutliers(opt,nodes,median_rate);
+        else if (opt->minblen<0) medianRateOK = calculateMedianRate(opt,nodes,median_rate);
+        imposeMinBlen(result,opt,nodes,median_rate,medianRateOK);
         if (!opt->constraint){//LD without constraints
             if (!constraintConsistent){
                 ostringstream oss;

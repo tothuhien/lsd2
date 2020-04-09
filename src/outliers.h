@@ -15,4 +15,4 @@ void calculateRoot2DatedNode(Pr* pr,Node** nodes,vector<double> &paths,vector<do
 void calculateRoot2DatedNode(Pr* pr,Node** nodes,vector<double> &paths,vector<double> &dates_min,vector<double> &dates_max);
 vector<int> outliers_rooted(Pr* pr,Node** nodes,vector<int>* samples, vector<double> dates_min, vector<double> dates_max, bool addInternalDates, bool both,double& median_rate,bool& consistent);
 bool outliers_unrooted(Pr* &pr,Node** &nodes,double& median_rate);
-void calculateMedianRate(Pr* pr,Node** nodes,double& median_rate);
+bool calculateMedianRate(Pr* pr,Node** nodes,double& median_rate);

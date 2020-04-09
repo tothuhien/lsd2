@@ -25,7 +25,7 @@ Pr* getOptions( int argc, char** argv )
 
 Pr* getCommandLine( int argc, char** argv)
 {
-    const string VERSION="v1.4.15";
+    const string VERSION="v1.4.16";
     Pr* opt = new Pr();
     int c;
     string s;
@@ -328,7 +328,7 @@ Pr* getInterface()
 
 void printInterface(ostream& in, Pr* opt)
 {
-    const string VERSION = "v1.4.15";
+    const string VERSION = "v1.4.16";
 
     in<<"\nLEAST-SQUARE METHODS TO ESTIMATE RATES AND DATES - "<<VERSION<<" \n\n";
     in<<"\nInput files:\n";
@@ -414,12 +414,23 @@ void printInterface(ostream& in, Pr* opt)
     }
     else
         in<<"No\n";
-    in<<"  u                         Min branch length of time scaled tree : ";
+    in<<"  u                Min internal branch length of time scaled tree : ";
     if (opt->minblen==-1){
         in<<"To estimate\n";
         in<<"  R     Rounding number for min branch length of time scaled tree : "<<opt->round_time<<" \n";
     } else {
         in<<opt->minblen<<"\n";
+    }
+    in<<"  U                Min external branch length of time scaled tree : ";
+    if (opt->minblenL==-1){
+        if (opt->minblen>0) {
+            opt->minblenL = opt->minblen;
+            in<<opt->minblenL<<"\n";
+        } else {
+            in<<"To estimate\n";
+        }
+    } else {
+        in<<opt->minblenL<<"\n";
     }
     in<<"  l                        Collapsed internal branch length limit : ";
     if (opt->nullblen==-1){
@@ -436,7 +447,7 @@ void printHelp( void )
     const string BOLD = "\033[00;01m";
     const string LINE = "\033[00;04m";
     const string FLAT = "\033[00;00m";
-    const string VERSION = "v1.4.15";
+    const string VERSION = "v1.4.16";
     
     cout<<BOLD<<"LSD: LEAST-SQUARES METHODS TO ESTIMATE RATES AND DATES - "<<VERSION<<"\n\n";
     cout<<BOLD<<"DESCRIPTION\n"

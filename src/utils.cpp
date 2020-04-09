@@ -55,7 +55,7 @@ char readChar(ifstream& f,string fn){
     char r;
     if (f.get(r)) return r;
     else {
-        cout<<"Error in the file "<<fn<<endl;
+        cerr<<"Error in the file "<<fn<<endl;
         exit(EXIT_FAILURE);
     }
 }
@@ -64,7 +64,7 @@ double readdouble(ifstream& f,string fn){
     double r;
     if (f >>r) return r;
     else {
-        cout<<"Error in the file "<<fn<<" : real expected"<<endl;
+        cerr<<"Error in the file "<<fn<<" : real expected"<<endl;
         exit(EXIT_FAILURE);
     }
 }
@@ -94,40 +94,12 @@ double readDouble(string line,int& pos){
     return result;
 }
 
-/*double readdouble(FILE *f,char c){
- double r;
- if (fscanf(f,"%lf",&r)==1){
- if (c=='-') {
- return -r;
- }
- else{
- return pow(10,log10(r)+1)*(c-'0')+r;
- }
- }
- else {
- if (c=='-') {
- return 0;
- }
- else return c-'0';
- }
- }
- double readdouble(FILE *f,int c){
- double r=c;
- char ch;
- fscanf(f,"%c",&ch);
- while (ch>='0' && ch<='9') {
- r=r*10+(ch-'0');
- fscanf(f,"%c",&ch);
- }
- return r;
- }*/
-
 int readInt(ifstream& f,string msg){
     int c;
     if (f >> c) {
         return (int)(c);
     } else {
-        cout<<msg<<endl;
+        cerr<<msg<<endl;
         exit(EXIT_FAILURE);
     }
 }
@@ -181,7 +153,7 @@ int getPosition(Node** nodes,string s,int n,int m){
     }
     if (count==0) return -1;
     else if (count>1){
-        cout<<"There are at least two leaves that have the same label"<<endl;
+        cerr<<"There are at least two leaves that have the same label"<<endl;
         exit(EXIT_FAILURE);
     }
     else return k;
@@ -461,7 +433,6 @@ void myExit( string msg, ... )
     va_start( ptr, msg );
     vfprintf( stderr, msg.c_str(), ptr );
     va_end( ptr );
-    //fflush( NULL );
     exit( EXIT_FAILURE );
 }
 
@@ -1425,7 +1396,7 @@ list<string> getOutgroup(string fn){
     else{
         int ino=readInt(o,"Error in the outgroup file, the file should begin with an integer (the number of outgroups)");
         if (lineNb-1<ino) {
-            cout<<"The number of given outgroups is small than the number of outgroups to read. Please change the number of outgroups to read at the first line of the outgroup file."<<endl;
+            cerr<<"The number of given outgroups is small than the number of outgroups to read. Please change the number of outgroups to read at the first line of the outgroup file."<<endl;
             exit(EXIT_FAILURE);
         }
         for (int i=0;i<ino;i++) result.push_back(readWord(o,fn));
@@ -1671,7 +1642,7 @@ void checkRooted(Pr* &opt){
     ifstream tree;
     tree.open(opt->inFile.c_str());
     if (!tree.is_open()){
-        cout<<"Error: can not open the input file"<<endl;
+        cerr<<"Error: can not open the input file"<<endl;
         exit(EXIT_FAILURE);
     }
     stack<int> pileNode;
@@ -1759,7 +1730,7 @@ int getInternalNodeId(Pr* pr,Node** nodes,string s){
         while (c!=')'){
             int newp = s.find_first_of(",)",p);
             if (newp==-1){
-                cout<<s<<": wrong format"<<endl;
+                cerr<<s<<": wrong format"<<endl;
                 exit(EXIT_FAILURE);
             }
             c=s.at(newp);
@@ -1770,7 +1741,7 @@ int getInternalNodeId(Pr* pr,Node** nodes,string s){
                 mr.push_back(k1);
             }
             else{
-                cout<<"taxa "<<s1<<" not found"<<endl;
+                cerr<<"taxa "<<s1<<" not found"<<endl;
                 exit(EXIT_FAILURE);
             }
         }
@@ -2003,9 +1974,10 @@ double median(vector<double> array){
     }
 }
 
-void imposeMinBlen(ostream& file,Pr* pr, Node** nodes, double median_rate){
+
+void imposeMinBlen(ostream& file,Pr* pr, Node** nodes, double median_rate,bool medianRateOK){
     double minblen = pr->minblen;
-    if (pr->minblen<0){
+    if (medianRateOK && pr->minblen<0){
         if (!pr->relative){
             minblen = (int)(pr->round_time/(pr->seqLength*median_rate))/(double)pr->round_time;
             if (pr->minblenL < 0){
@@ -2030,7 +2002,15 @@ void imposeMinBlen(ostream& file,Pr* pr, Node** nodes, double median_rate){
                 file<<"Minimum external branches lengths of time scaled tree was set to "<<pr->minblenL<<" (settable via option -U)"<<endl;
             }
         }
-    } else {
+    } else if (!medianRateOK && pr->minblen<0){
+        cout<<"Can not estimate minimum branch lengths for time scaled tree: the temporal constraints provided are not enough, or conflict."<<endl;
+        cout<<"Minimum branch length is then set to 0 (settable via option -u and -U)."<<endl;
+        std::ostringstream oss;
+        oss<<"- Can not estimate minimum branch lengths for time scaled tree: the temporal constraints provided are not enough, or conflict. Minimum branch length is then set to 0.\n";
+        pr->warningMessage.push_back(oss.str());
+        minblen = 0;
+        
+    } else{
         if (pr->minblen < 0) minblen = 0;
         if (pr->minblenL <0){
             cout<<"Minimum branch length of time scaled tree was set to "<<minblen<<" (settable via option -u and -U)"<<endl;
@@ -2059,7 +2039,7 @@ double median_branch_lengths(Pr* pr,Node** nodes){
         }
     }
     if (bl.size()==0){
-        cout<<"Not any branch length >= "<<pr->nullblen<<" (informative branch length threshold set via option -l)"<<endl;
+        cerr<<"Not any branch length >= "<<pr->nullblen<<" (informative branch length threshold set via option -l)"<<endl;
         exit(EXIT_FAILURE);
     }
     return median(bl);
@@ -2069,7 +2049,7 @@ void collapse(int i,int j,Pr* pr,Node** nodes,Node** nodes_new,int &cc,int* &tab
     if (nodes[j]->type!='n') {
         bool bl = nodes_new[i]->addConstraint(nodes[j]);
         if (!bl){
-            cout<<"Can not collapse branches due to inconsitent temporal constraints"<<endl;
+            cerr<<"Can not collapse branches due to inconsitent temporal constraints"<<endl;
             exit(EXIT_FAILURE);
         }
     }

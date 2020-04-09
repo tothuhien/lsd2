@@ -302,7 +302,7 @@ void output(double br,int y, Pr* pr,Node** nodes,ostream& f,ostream& tree1,ostre
         double rho_left,rho_right;
         double* other_rhos_left = new double[pr->ratePartition.size()+1];
         double* other_rhos_right = new double[pr->ratePartition.size()+1];
-        cout<<"Computing confidence intervals using sequence length "<<pr->seqLength<<" and a lognormal relaxed clock with mean 1, standard deviation "<<pr->q<<" ..."<<endl;
+        cout<<"Computing confidence intervals using sequence length "<<pr->seqLength<<" and a lognormal relaxed clock with mean 1, standard deviation "<<pr->q<<" (settable via option -q)"<<endl;
         computeIC(br,pr,nodes,T_min,T_max,H_min,H_max,HD_min,HD_max,rho_left,rho_right,other_rhos_left,other_rhos_right);
         
         std::ostringstream oss;
