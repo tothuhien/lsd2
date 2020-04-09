@@ -67,7 +67,12 @@ bool calculateOutliers(Pr* & pr,Node** & nodes,double & median_rate){
             samples[i] = sampleNoRepeat(index, i ,pr->m);
         }
         if (pr->estimate_root==""){
-            pr->outlier = outliers_rooted(pr,nodes,samples,dates_min,dates_max,false,both,median_rate);
+            bool consistent;
+            pr->outlier = outliers_rooted(pr,nodes,samples,dates_min,dates_max,false,both,median_rate,consistent);
+            if (!consistent){
+                cout<<"Can not esimate outliers, temporal constraints are inconsistent"<<endl;
+                exit(EXIT_FAILURE);
+            }
         }
         if (pr->estimate_root=="k"){
             double br=0;
@@ -77,13 +82,18 @@ bool calculateOutliers(Pr* & pr,Node** & nodes,double & median_rate){
             iter++;
             s2=(*iter);
             br=nodes[s1]->B+nodes[s2]->B;
+            bool consistent1, consistent2;
             double median_rate1, median_rate2;
             nodes[s1]->B = 0;
             nodes[s2]->B = br;
-            vector<int> outliers1 = outliers_rooted(pr,nodes,samples,dates_min,dates_max,false,both,median_rate1);
+            vector<int> outliers1 = outliers_rooted(pr,nodes,samples,dates_min,dates_max,false,both,median_rate1,consistent1);
             nodes[s1]->B = br;
             nodes[s2]->B = 0;
-            vector<int> outliers2 = outliers_rooted(pr,nodes,samples,dates_min,dates_max,false,both,median_rate2);
+            vector<int> outliers2 = outliers_rooted(pr,nodes,samples,dates_min,dates_max,false,both,median_rate2,consistent2);
+            if (!consistent1 && !consistent2){
+                cout<<"Can not esimate outliers, temporal constraints are inconsistent"<<endl;
+                exit(EXIT_FAILURE);
+            }
             pr->outlier = intersect(outliers1,outliers2);
             median_rate = (median_rate1+median_rate2)/2;
         }
@@ -159,7 +169,7 @@ bool remove_one_tip(Pr* pr,Node** nodes,int t,int* &tab){//return false if remov
     }
     if (suct.size()==1){
         int sibling_t = suct[0];
-        if (p==0) {
+        if (p==0 && (nodes[sibling_t]->suc.size()==2 || pr->estimate_root=="" || pr->estimate_root=="k")) {
             tab[sibling_t] = -1;
             nodes[0]->L = nodes[sibling_t]->L;
             nodes[0]->V = nodes[sibling_t]->V;
@@ -175,6 +185,17 @@ bool remove_one_tip(Pr* pr,Node** nodes,int t,int* &tab){//return false if remov
                 nodes[0]->suc.push_back(nodes[sibling_t]->suc[i]);
             }
             bl = false;
+        } else if (p==0){
+            int s = nodes[sibling_t]->suc[0];
+            double br=nodes[s]->B;
+            nodes[s]->B=br/2;
+            nodes[sibling_t]->B=br/2;
+            nodes[s]->P=0;
+            nodes[sibling_t]->P=0;
+            nodes[sibling_t]->suc.erase(nodes[sibling_t]->suc.begin());
+            nodes[0]->suc.clear();
+            nodes[0]->suc.push_back(sibling_t);
+            nodes[0]->suc.push_back(s);
         }
         else {
             tab[p] = -1;
@@ -439,9 +460,10 @@ void calculateRoot2DatedNode(Pr* pr,Node** nodes,vector<double> &paths,vector<do
     }
 }
 
-void median_rate(Pr* pr,Node** nodes, vector<double> dates, vector<int>* samples,bool addInternalDates,double& rate){
+bool median_rate(Pr* pr,Node** nodes, vector<double> dates, vector<int>* samples,bool addInternalDates,double& rate){
     if (pr->givenRate[0]){
         rate = pr->rho;
+        return true;
     }
     else{
         vector<double> paths;
@@ -457,18 +479,26 @@ void median_rate(Pr* pr,Node** nodes, vector<double> dates, vector<int>* samples
                 }
             }
             if (!slopes.empty()){
-                rates.push_back(median(slopes));
+                double m = median(slopes);
+                //if (m>0)
+                rates.push_back(m);
             }
         }
-        rate = median(rates);
+        if (rates.size()==0) return false;
+        else {
+            rate = median(rates);
+            if (rate>0) return true;
+            else return false;
+        }
     }
 }
 
 
-void median_rate(Pr* pr,Node** nodes, vector<double> dates_min,vector<double> dates_max, vector<int>* samples,bool addInternalDates,double& rate1, double& rate2){
+bool median_rate(Pr* pr,Node** nodes, vector<double> dates_min,vector<double> dates_max, vector<int>* samples,bool addInternalDates,double& rate1, double& rate2){
     if (pr->givenRate[0]){
         rate1 = pr->rho;
         rate2 = pr->rho;
+        return true;
     }
     else{
         vector<double> paths;
@@ -490,34 +520,71 @@ void median_rate(Pr* pr,Node** nodes, vector<double> dates_min,vector<double> da
                 }
             }
             if (!slopeMin.empty()){
-                rates_min.push_back(median(slopeMin));
-                rates_max.push_back(median(slopeMax));
+                double mm = median(slopeMin);
+                double mM = median(slopeMax);
+                //if (mm>0)
+                rates_min.push_back(mm);
+                //if (mM>0)
+                rates_max.push_back(mM);
             }
         }
-        rate1 = median(rates_min);
-        rate2 = median(rates_max);
+        if (rates_min.size()>0 && rates_max.size()>0){
+            rate1 = median(rates_min);
+            rate2 = median(rates_max);
+            if (rate1>0 && rate2>0) return true;
+            else if (rate1>0){
+                rate2=rate1;
+                return true;
+            }
+            else if (rate2>0){
+                rate1=rate2;
+                return true;
+            }
+            else{
+                return false;
+            }
+        } else {
+            if (rates_min.size()==0){
+                rate2 = median(rates_max);
+                if (rate2>0){
+                    rate1 = rate2;
+                    return true;
+                } else{
+                    return false;
+                }
+            }
+            if (rates_max.size()==0){
+                rate1 = median(rates_min);
+                if (rate1>0){
+                    rate2 = rate1;
+                    return true;
+                } else{
+                    return false;
+                }
+            }
+            else return false;
+        }
     }
 }
 
-vector<int> outliers_rooted(Pr* pr,Node** nodes,vector<int>* samples, vector<double> dates_min, vector<double> dates_max, bool addInternalDates, bool both,double & med_rate){
+vector<int> outliers_rooted(Pr* pr,Node** nodes,vector<int>* samples, vector<double> dates_min, vector<double> dates_max, bool addInternalDates, bool both,double & med_rate,bool& consistent){
     double rate_min, rate_max;
     if (!both) {
-        median_rate(pr,nodes,dates_min, samples,addInternalDates, rate_min);
+        consistent = median_rate(pr,nodes,dates_min, samples,addInternalDates, rate_min);
         med_rate = rate_min;
     } else {
-        median_rate(pr,nodes,dates_min, dates_max,samples,addInternalDates, rate_min, rate_max);
+        consistent = median_rate(pr,nodes,dates_min, dates_max,samples,addInternalDates, rate_min, rate_max);
         med_rate = (rate_min+rate_max)/2;
     }
-    
+    vector<int> outliers_min;
+    if (!consistent) return outliers_min;
     pr->givenRate[0] = true;
-    
     pr->rho = rate_min;
-    without_constraint_multirates(pr,nodes,true);
+    without_constraint_multirates(pr,nodes,true); 
     double mean_res = 0;
     double var_res = 0;
     vector<double> res = residus_lsd(pr,nodes,mean_res,var_res);
     for (int i=0;i<res.size();i++) res[i] = (res[i]-mean_res)/sqrt(var_res);
-    vector<int> outliers_min;
     for (int i=pr->nbINodes;i<=pr->nbBranches;i++){
         if (abs(res[i-1])>pr->e){
             if (nodes[i]->type == 'p' || nodes[i]->type == 'b'){
@@ -609,6 +676,7 @@ bool outliers_unrooted(Pr* &pr,Node** &nodes,double& median_rate){
         bl=reroot_rootedtree(br,y,s1,s2,pr,nodes,nodes_new);
         y++;
     }
+    bool consistent;
     if (bl){
         for (int i=0; i< pr->internalConstraints.size();i++){
             if (pr->internalConstraints[i]->type == 'p' || pr->internalConstraints[i]->type == 'b') nbFixedNodes++;
@@ -633,10 +701,12 @@ bool outliers_unrooted(Pr* &pr,Node** &nodes,double& median_rate){
         bool givenRate = pr->givenRate[0];
         vector<double> median_rates;
         double med_rate;
-        vector<int> outs=outliers_rooted(pr,nodes_new,samples,originalD_min,originalD_max,true,both,med_rate);
-        median_rates.push_back(med_rate);
-        for (int i=0;i<outs.size();i++){
-            outliersFreq[outs[i]] ++;
+        vector<int> outs=outliers_rooted(pr,nodes_new,samples,originalD_min,originalD_max,true,both,med_rate,consistent);
+        if (consistent){
+            median_rates.push_back(med_rate);
+            for (int i=0;i<outs.size();i++){
+                outliersFreq[outs[i]] ++;
+            }
         }
         pr->givenRate[0] = givenRate;
         y++;
@@ -645,10 +715,12 @@ bool outliers_unrooted(Pr* &pr,Node** &nodes,double& median_rate){
             if (bl){
                 nodes_new[y]->B = 0;
                 nodes_new[nodes[y]->P]->B = br;
-                vector<int> outs=outliers_rooted(pr,nodes_new,samples,originalD_min,originalD_max,true,both,med_rate);
-                median_rates.push_back(med_rate);
-                for (int i=0;i<outs.size();i++){
-                    outliersFreq[outs[i]] ++;
+                vector<int> outs=outliers_rooted(pr,nodes_new,samples,originalD_min,originalD_max,true,both,med_rate,consistent);
+                if (consistent){
+                    median_rates.push_back(med_rate);
+                    for (int i=0;i<outs.size();i++){
+                        outliersFreq[outs[i]] ++;
+                    }
                 }
             }
             pr->givenRate[0] = givenRate;
@@ -659,8 +731,20 @@ bool outliers_unrooted(Pr* &pr,Node** &nodes,double& median_rate){
         for (int i=0;i<=pr->nbBranches;i++) delete nodes_new[i];
         delete[] nodes_new;
         pr->outlier.clear();
+        double mean_freq = 0;
+        double var_freq = 0;
+        for (int i=1;i<=pr->nbBranches;i++){
+            mean_freq += outliersFreq[i];
+        }
+        mean_freq /= pr->nbBranches;
+        for (int i=0;i<pr->nbBranches;i++){
+            var_freq += (outliersFreq[i] - mean_freq)*(outliersFreq[i] - mean_freq);
+        }
+        var_freq /= (pr->nbBranches-1);
+        
         for (int i=0;i<outliersFreq.size();i++){
-            if ((outliersFreq[i])>pr->e){//to we need to normalize?
+            outliersFreq[i] = (outliersFreq[i] - mean_freq)/sqrt(var_freq);
+            if ((outliersFreq[i])>pr->e){//do we need to normalize?
                 pr->outlier.push_back(i);
             }
         }
@@ -717,11 +801,12 @@ void calculateMedianRate(Pr* pr,Node** nodes,double& med_rate){
         for (int i = 0; i< index.size();i++){
             samples[i] = sampleNoRepeat(index, i ,pr->m);
         }
+        bool consistent;
         if (pr->estimate_root==""){
             if (!both) {
-                median_rate(pr,nodes,dates_min, samples,false, med_rate);
+                consistent = median_rate(pr,nodes,dates_min, samples,false, med_rate);
             } else {
-                median_rate(pr,nodes,dates_min, dates_max,samples,false, rate_min, rate_max);
+                consistent = median_rate(pr,nodes,dates_min, dates_max,samples,false, rate_min, rate_max);
                 med_rate = (rate_min+rate_max)/2;
             }
         }
@@ -737,20 +822,24 @@ void calculateMedianRate(Pr* pr,Node** nodes,double& med_rate){
             nodes[s1]->B = 0;
             nodes[s2]->B = br;
             if (!both) {
-                median_rate(pr,nodes,dates_min, samples,false, median_rate1);
+                consistent = median_rate(pr,nodes,dates_min, samples,false, median_rate1);
             } else {
-                median_rate(pr,nodes,dates_min, dates_max,samples,false, rate_min, rate_max);
+                consistent = median_rate(pr,nodes,dates_min, dates_max,samples,false, rate_min, rate_max);
                 median_rate1 = (rate_min+rate_max)/2;
             }
             nodes[s1]->B = br;
             nodes[s2]->B = 0;
             if (!both) {
-                median_rate(pr,nodes,dates_min, samples,false, median_rate2);
+                consistent = consistent && median_rate(pr,nodes,dates_min, samples,false, median_rate2);
             } else {
-                median_rate(pr,nodes,dates_min, dates_max,samples,false, rate_min, rate_max);
+                consistent = consistent && median_rate(pr,nodes,dates_min, dates_max,samples,false, rate_min, rate_max);
                 median_rate2 = (rate_min+rate_max)/2;
             }
             med_rate = (median_rate1+median_rate2)/2;
+        }
+        if (!consistent){
+            cout<<"Temporal constraints are inconsistent"<<endl;
+            exit(EXIT_FAILURE);
         }
         pr->givenRate[0] = givenRate;
         delete[] samples;
@@ -805,13 +894,16 @@ void calculateMedianRate(Pr* pr,Node** nodes,double& med_rate){
             bool givenRate = pr->givenRate[0];
             vector<double> median_rates;
             double mrate;
+            bool consistent;
             if (!both) {
-                 median_rate(pr,nodes_new,originalD_min,samples,true, mrate);
+                 consistent = median_rate(pr,nodes_new,originalD_min,samples,true, mrate);
             } else {
-                median_rate(pr,nodes_new,originalD_min,originalD_max, samples,true, rate_min, rate_max);
+                consistent = median_rate(pr,nodes_new,originalD_min,originalD_max, samples,true, rate_min, rate_max);
                 mrate = (rate_min+rate_max)/2;
             }
-            median_rates.push_back(mrate);
+            if (consistent){
+                median_rates.push_back(mrate);
+            }
             pr->givenRate[0] = givenRate;
             y++;
             while (y<=pr->nbBranches){
@@ -820,12 +912,12 @@ void calculateMedianRate(Pr* pr,Node** nodes,double& med_rate){
                     nodes_new[y]->B = 0;
                     nodes_new[nodes[y]->P]->B = br;
                     if (!both) {
-                        median_rate(pr,nodes_new,originalD_min,samples,true, mrate);
+                        consistent = median_rate(pr,nodes_new,originalD_min,samples,true, mrate);
                     } else {
-                        median_rate(pr,nodes_new,originalD_min,originalD_max, samples,true, rate_min, rate_max);
+                        consistent = median_rate(pr,nodes_new,originalD_min,originalD_max, samples,true, rate_min, rate_max);
                         mrate = (rate_min+rate_max)/2;
                     }
-                    median_rates.push_back(mrate);
+                    if (consistent) median_rates.push_back(mrate);
                 }
                 pr->givenRate[0] = givenRate;
                 y++;

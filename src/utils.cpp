@@ -309,7 +309,7 @@ char read2P(ifstream f,string fn){
     return c;
 }
 
-Node** unrooted2rooted(Pr* & pr,Node** nodes,int s){
+Node** unrooted2rooted(Pr* & pr,Node** nodes){
     Node** nodes_new = new Node*[pr->nbBranches+1];
     for (int i=pr->nbINodes; i<=pr->nbBranches; i++) {
         nodes_new[i]=new Node();
@@ -322,14 +322,16 @@ Node** unrooted2rooted(Pr* & pr,Node** nodes,int s){
         nodes_new[i]->upper=nodes[i]->upper;
         nodes_new[i]->status=nodes[i]->status;
     }
+    nodes_new[0]=new Node();
+    nodes_new[0]->P=-1;
     for (int i=1; i<pr->nbINodes; i++) {
         nodes_new[i] = new Node();
         nodes_new[i]->P=nodes[i]->P;
         nodes_new[i]->B=nodes[i]->B;
         nodes_new[i]->L=nodes[i]->L;
+        nodes_new[i]->suc=nodes[i]->suc;
     }
-    nodes_new[0]=new Node();
-    nodes_new[0]->P=-1;
+    int s = nodes[1]->suc[0];
     double br=nodes[s]->B;
     nodes_new[s]->B=br/2;
     nodes_new[1]->B=br/2;
@@ -337,10 +339,14 @@ Node** unrooted2rooted(Pr* & pr,Node** nodes,int s){
     //nodes_new[1]->V=variance(pr,br);
     nodes_new[s]->P=0;
     nodes_new[1]->P=0;
+    nodes_new[1]->suc.erase(nodes_new[1]->suc.begin());
+    nodes_new[0]->suc.push_back(1);
+    nodes_new[0]->suc.push_back(s);
     shiftInternalConstraints(pr);
-    computeSuc_polytomy(pr,nodes_new);
-    for (int i=0;i<=pr->nbBranches;i++) delete nodes[i];
+    //computeSuc_polytomy(pr,nodes_new);
+    for (int i=1;i<=pr->nbBranches;i++) delete nodes[i];
     delete[] nodes;
+    pr->rooted = true;
     return nodes_new;
 }
 
@@ -368,6 +374,7 @@ Node** unrooted2rootedS(Pr* &pr,Node** nodes,int s){//simplier version, use only
     delete[] nodes;
     shiftInternalConstraints(pr);
     computeSuc_polytomy(pr,nodes_new);
+    pr->rooted = true;
     return nodes_new;
 }
 
@@ -1455,17 +1462,18 @@ list<int> getActiveSet(Pr* pr,Node** nodes){
 }*/
 
 void computeSuc_polytomy(Pr* pr,Node** nodes){
-    for (int i=0;i<pr->nbINodes;i++){
+    int root = (int)(!pr->rooted);
+    for (int i=root;i<pr->nbINodes;i++){
         nodes[i]->suc.clear();
     }
     bool* visited = new bool[pr->nbINodes];
-    for (int i=0; i<pr->nbINodes;i++) visited[i] = false;
+    for (int i=root; i<pr->nbINodes;i++) visited[i] = false;
     int v = pr->nbBranches;
     while (v!= (pr->nbINodes-1)){
         int vt = v;
         int p = nodes[v]->P;
         nodes[p]->suc.push_back(v);
-        while (p!=0 && !visited[p]){
+        while (p!=root && !visited[p]){
             visited[p] = true;
             v = p;
             p = nodes[v]->P;
@@ -1997,22 +2005,30 @@ double median(vector<double> array){
 
 void imposeMinBlen(ostream& file,Pr* pr, Node** nodes, double median_rate){
     double minblen = pr->minblen;
-    if (pr->minblen<0 && !pr->relative){
-        minblen = (int)(pr->round_time/(pr->seqLength*median_rate))/(double)pr->round_time;
-        string timeunit;
-        if (pr->round_time == 365){
-            timeunit = "day(s)";
-        } else if(pr->round_time == 52) {
-            timeunit = "week(s)";
+    if (pr->minblen<0){
+        if (!pr->relative){
+            minblen = (int)(pr->round_time/(pr->seqLength*median_rate))/(double)pr->round_time;
+            if (pr->minblenL < 0){
+                cout<<"Minimum branch length of time scaled tree (settable via option -u and -U): "<<1./(pr->seqLength*median_rate)<<", rounded to "<<minblen<<" ("<<(int)(pr->round_time/(pr->seqLength*median_rate))<<"/"<<pr->round_time<<") using factor "<<pr->round_time<<" (settable via option -R)"<<endl;
+                file<<"Minimum branch length of time scaled tree (settable via option -u and -U): "<<1./(pr->seqLength*median_rate)<<", rounded to "<<minblen<<" ("<<(int)(pr->round_time/(pr->seqLength*median_rate))<<"/"<<pr->round_time<<") using factor "<<pr->round_time<<" (settable via option -R)\n";
+            } else {
+                cout<<"Minimum internal branches lengths of time scaled tree (settable via option -u): "<<1./(pr->seqLength*median_rate)<<", rounded to "<<minblen<<" ("<<(int)(pr->round_time/(pr->seqLength*median_rate))<<"/"<<pr->round_time<<") using factor "<<pr->round_time<<" (settable via option -R)"<<endl;
+                cout<<"Minimum external branches lengths of time scaled tree was set to "<<pr->minblenL<<" (settable via option -U)"<<endl;
+                file<<"Minimum internal branches lengths of time scaled tree (settable via option -u): "<<1./(pr->seqLength*median_rate)<<", rounded to "<<minblen<<" ("<<(int)(pr->round_time/(pr->seqLength*median_rate))<<"/"<<pr->round_time<<") using factor "<<pr->round_time<<" (settable via option -R)\n";
+                file<<"Minimum external branches lengths of time scaled tree was set to "<<pr->minblenL<<" (settable via option -U)"<<endl;
+            }
         }
-        if (pr->minblenL <0){
-            cout<<"Minimum branch length of time scaled tree (settable via option -u and -U): "<<1./(pr->seqLength*median_rate)<<", rounded to "<<minblen<<" ("<<(int)(pr->round_time/(pr->seqLength*median_rate))<<"/"<<pr->round_time<<") using factor "<<pr->round_time<<" (settable via option -R)"<<endl;
-            file<<"Minimum branch length of time scaled tree (settable via option -u and -U): "<<1./(pr->seqLength*median_rate)<<", rounded to "<<minblen<<" ("<<(int)(pr->round_time/(pr->seqLength*median_rate))<<"/"<<pr->round_time<<") using factor "<<pr->round_time<<" (settable via option -R)\n";
-        } else {
-            cout<<"Minimum internal branches lengths of time scaled tree (settable via option -u): "<<1./(pr->seqLength*median_rate)<<", rounded to "<<minblen<<" ("<<(int)(pr->round_time/(pr->seqLength*median_rate))<<"/"<<pr->round_time<<") using factor "<<pr->round_time<<" (settable via option -R)"<<endl;
-            cout<<"Minimum external branches lengths of time scaled tree was set to "<<pr->minblenL<<" (settable via option -U)"<<endl;
-            file<<"Minimum internal branches lengths of time scaled tree (settable via option -u): "<<1./(pr->seqLength*median_rate)<<", rounded to "<<minblen<<" ("<<(int)(pr->round_time/(pr->seqLength*median_rate))<<"/"<<pr->round_time<<") using factor "<<pr->round_time<<" (settable via option -R)\n";
-            file<<"Minimum external branches lengths of time scaled tree was set to "<<pr->minblenL<<" (settable via option -U)"<<endl;
+        else {
+            minblen = 1./(pr->seqLength*median_rate);
+            if (pr->minblenL < 0){
+                cout<<"Minimum branch length of time scaled tree (settable via option -u and -U): "<<minblen<<endl;
+                file<<"Minimum branch length of time scaled tree (settable via option -u and -U): "<<minblen<<"\n";
+            } else {
+                cout<<"Minimum internal branches lengths of time scaled tree (settable via option -u): "<<minblen<<endl;
+                cout<<"Minimum external branches lengths of time scaled tree was set to "<<pr->minblenL<<" (settable via option -U)"<<endl;
+                file<<"Minimum internal branches lengths of time scaled tree (settable via option -u): "<<minblen<<"\n";
+                file<<"Minimum external branches lengths of time scaled tree was set to "<<pr->minblenL<<" (settable via option -U)"<<endl;
+            }
         }
     } else {
         if (pr->minblen < 0) minblen = 0;
@@ -2076,8 +2092,9 @@ void collapse(int i,int j,Pr* pr,Node** nodes,Node** nodes_new,int &cc,int* &tab
 
 int collapseTree(Pr* pr,Node** nodes,Node** nodes_new,int* &tab, double toCollapse, bool& useSupport){
     double* support = new double[pr->nbINodes];
+    int root = (int)(!pr->rooted);
     if (useSupport){
-        for (int i=0; i<pr->nbINodes;i++){
+        for (int i=root; i<pr->nbINodes;i++){
                 try {
                     support[i] = std::stod(nodes[i]->L.c_str());
                 } catch (const std::invalid_argument&) {
@@ -2090,7 +2107,7 @@ int collapseTree(Pr* pr,Node** nodes,Node** nodes_new,int* &tab, double toCollap
                 pr->warningMessage.push_back(oss.str());
         }
     }
-    for (int i=0;i<=pr->nbBranches;i++){
+    for (int i=root;i<=pr->nbBranches;i++){
         nodes_new[i]= new Node();
         nodes_new[i]->P=nodes[i]->P;
         nodes_new[i]->type=nodes[i]->type;
@@ -2107,9 +2124,9 @@ int collapseTree(Pr* pr,Node** nodes,Node** nodes_new,int* &tab, double toCollap
     }
     int cc=0;//number of internal nodes reduced
     cc++;
-    tab[0]=0;
-    for (int i=0;i<pr->nbINodes;i++){
-        if ((abs(nodes_new[i]->B) > toCollapse && (!useSupport || support[i] > pr->support)) || i==0){
+    tab[root]=root;
+    for (int i=root;i<pr->nbINodes;i++){
+        if ((abs(nodes_new[i]->B) > toCollapse && (!useSupport || support[i] > pr->support)) || i==root){
             for (vector<int>::iterator iter=nodes[i]->suc.begin(); iter!=nodes[i]->suc.end(); iter++) {
                 int s=*iter;
                 if (s<pr->nbINodes && (abs(nodes[s]->B) <= toCollapse  || (useSupport && support[s]<= pr->support))) {
@@ -2134,13 +2151,14 @@ int collapseTree(Pr* pr,Node** nodes,Node** nodes_new,int* &tab, double toCollap
 }
 
 void collapseTreeReOrder(Pr* pr,Node** nodes,Pr* prReduced,Node** nodesReduced,int* &tab){
-    nodesReduced[0]=new Node();
-    nodesReduced[0]->P=-1;
-    nodesReduced[0]->type=nodes[0]->type;
-    nodesReduced[0]->lower=nodes[0]->lower;
-    nodesReduced[0]->upper=nodes[0]->upper;
-    nodesReduced[0]->D=nodes[0]->D;
-    for (int i=1; i<=pr->nbBranches; i++) {
+    int root = (int)(!pr->rooted);
+    nodesReduced[root]=new Node();
+    nodesReduced[root]->P=-1;
+    nodesReduced[root]->type=nodes[root]->type;
+    nodesReduced[root]->lower=nodes[root]->lower;
+    nodesReduced[root]->upper=nodes[root]->upper;
+    nodesReduced[root]->D=nodes[root]->D;
+    for (int i=(root+1); i<=pr->nbBranches; i++) {
         if (tab[i]!=-1) {
             nodesReduced[tab[i]]=new Node();
             nodesReduced[tab[i]]->P=tab[nodes[i]->P];
@@ -2153,7 +2171,7 @@ void collapseTreeReOrder(Pr* pr,Node** nodes,Pr* prReduced,Node** nodesReduced,i
         }
     }
     if (pr->ratePartition.size()>0) {
-        for (int i=0;i<=pr->nbBranches;i++){
+        for (int i=root;i<=pr->nbBranches;i++){
             if (tab[i]!=-1) nodesReduced[tab[i]]->rateGroup = nodes[i]->rateGroup;
         }
     }
@@ -2171,7 +2189,7 @@ void collapseUnInformativeBranches(Pr* &pr,Node** &nodes){
     prReduced->copy(pr);
     prReduced->internalConstraints.clear();
     collapseTreeReOrder( pr, nodes_new, prReduced, nodesReduced,tab);
-    for (int i=0;i<pr->nbBranches+1;i++){
+    for (int i=(!pr->rooted);i<pr->nbBranches+1;i++){
         delete nodes_new[i];
     }
     delete[] nodes_new;
