@@ -43,7 +43,8 @@ typedef struct Pr
     double minblenL;
     double rho;
     double round_time;
-    int dateFormat;// 1 for real ; 2 for year-month-day
+    int inDateFormat;//2 for year-month-day; 1 for real from 9-9999; 0 for everything else
+    int outDateFormat;//2 for year-month-day; 1 for real
     vector<double> multiplierRate;
     vector<bool> givenRate;
     double objective;
@@ -94,12 +95,14 @@ typedef struct Pr
         minblenL=pr->minblenL;
         nullblen=pr->nullblen;
         verbose=pr->verbose;
-        dateFormat=pr->dateFormat;
+        inDateFormat=pr->inDateFormat;
+        outDateFormat=pr->outDateFormat;
         rho=pr->rho;
         rho_min=pr->rho_min;
         givenRate=pr->givenRate;
         nbSampling=pr->nbSampling;
         ratePartition = pr->ratePartition;
+        internalConstraints = pr->internalConstraints;
         multiplierRate =  vector<double>();
         if (pr->ratePartition.size()>0) {
             for (int i=0;i<pr->multiplierRate.size();i++){
@@ -140,7 +143,8 @@ typedef struct Pr
         ci = false;
         nbSampling=100;
         round_time=-1;
-        dateFormat=1;
+        inDateFormat=0;
+        outDateFormat=0;
         rooted=true;
         keepOutgroup=false;
         ratePartition = vector<Part* >();

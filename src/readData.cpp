@@ -175,13 +175,7 @@ void readDateFile(Pr* pr,Node** &nodes,bool& constraintConsistent){
                     else if (c=='b' || c=='B'){
                         type='b';
                         v1=readDate(dateFile,pr->inDateFile,pr);
-                        if (readChar(dateFile,pr->inDateFile)==','){
-                            v2=readDate(dateFile,pr->inDateFile,pr);
-                        }
-                        else{
-                            cerr<<"date constraint of type 'b' must have two values"<<endl;
-                            exit(EXIT_FAILURE);
-                        }
+                        v2=readDate(dateFile,pr->inDateFile,pr);
                         if (v1>v2) {
                             double t=v1;
                             v1=v2;
@@ -241,6 +235,7 @@ void readDateFile(Pr* pr,Node** &nodes,bool& constraintConsistent){
         else oss<<"- There nodes that have more than one temporal constraint.\n";
         pr->warningMessage.push_back(oss.str());
     }
+    if (pr->inDateFormat==2 && pr->outDateFormat==0) pr->outDateFormat=2;
     dateFile.close();
 }
 

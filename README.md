@@ -67,11 +67,11 @@ For example you have an input tree: ((A:0.12,D:0.12)n1:0.3,(B:0.3,C:0.5)n2:0.4)r
 then an input date file can be as follows:
 
     5
-    A 2000
-    n1 l(2001)
-    C b(2001,2004)
-    n2 u(2003)
-    root b(1998,1999)
+    A 2000-07-12
+    n1 l(2001-05-11)
+    C b(2001-04-11,2004-01-15)
+    n2 u(2003-02-12)
+    root b(1998-10-11,1999-11-12)
 
 ### Given rate file
 

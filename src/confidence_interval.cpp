@@ -25,8 +25,8 @@ void computeIC(double br,Pr* pr,Node** nodes,double* &T_left,double* &T_right,do
     Node** nodesReduced = new Node*[nbC+pr->nbBranches-pr->nbINodes+1];
     Pr* prReduced = new Pr(nbC,nbC+pr->nbBranches-pr->nbINodes);
     prReduced->copy(pr);
-    prReduced->init();
     collapseTreeReOrder( pr, nodes_new, prReduced, nodesReduced,tab);
+    initConstraint(prReduced, nodesReduced);
     for (int i=0;i<pr->nbBranches+1;i++){
         delete nodes_new[i];
     }
@@ -189,7 +189,7 @@ void output(double br,int y, Pr* pr,Node** nodes,ostream& f,ostream& tree1,ostre
         pr->warningMessage.push_back(oss.str());
     }
     ostringstream tMRCA;
-    if (pr->dateFormat==2){
+    if (pr->outDateFormat==2){
         tMRCA<<realToYearMonthDay(nodes[0]->D);
     } else {
         tMRCA<<nodes[0]->D;
@@ -239,7 +239,7 @@ void output(double br,int y, Pr* pr,Node** nodes,ostream& f,ostream& tree1,ostre
         oss<<"- Results of the second run using variances based on the branch lengths of the first run:\n";
         pr->resultMessage.push_back(oss.str());
         ostringstream tMRCA;
-        if (pr->dateFormat==2){
+        if (pr->outDateFormat==2){
             tMRCA<<realToYearMonthDay(nodes[0]->D);
         } else {
             tMRCA<<nodes[0]->D;
@@ -321,7 +321,7 @@ void output(double br,int y, Pr* pr,Node** nodes,ostream& f,ostream& tree1,ostre
         oss<<"- Results with confidence intervals:\n";
         pr->resultMessage.push_back(oss.str());
         ostringstream tMRCA,tmin,tmax;
-        if (pr->dateFormat==2){
+        if (pr->outDateFormat==2){
             tMRCA<<realToYearMonthDay(nodes[0]->D);
             tmin<<realToYearMonthDay(T_min[0]);
             tmax<<realToYearMonthDay(T_max[0]);

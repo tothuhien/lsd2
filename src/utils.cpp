@@ -167,8 +167,11 @@ double readDate(ifstream& f,string fn,Pr* pr){
     double y;
     if (f >> y) {
         char c = readChar(f,fn);
-        if (c==')'){
-            if (pr->dateFormat!=2) pr->dateFormat=1;
+        if (c==')' || c==','){
+            if (pr->inDateFormat!=2){
+                if (y>=9 && y<=9999) pr->inDateFormat=1;
+                else if (pr->inDateFormat!=1) pr->inDateFormat=0;
+            }
             return y;
         }
         else if (c=='-' && y==round(y)){
@@ -179,8 +182,8 @@ double readDate(ifstream& f,string fn,Pr* pr){
                     int d;
                     if (f >> d){
                         c = readChar(f,fn);
-                        if (c==')') {
-                            pr->dateFormat=2;
+                        if (c==')' || c==',') {
+                            pr->inDateFormat=2;
                             return (y+monthDayToReal(m,d));
                         }
                     }
@@ -212,14 +215,17 @@ double readDate1(ifstream& f,string fn,char c,Pr* pr){
                 if (c=='-'){
                     int d;
                     if (f >> d){
-                        pr->dateFormat=2;
+                        pr->inDateFormat=2;
                         return (y+monthDayToReal(m,d));
                     }
                 }
             }
     }
     else {
-        if (pr->dateFormat!=2) pr->dateFormat=1;
+        if (pr->inDateFormat!=2){
+            if (y>=9 && y<=9999) pr->inDateFormat=1;
+            else if (pr->inDateFormat!=1) pr->inDateFormat=0;
+        }
         return y;
     }
     cerr<<"Error in the file "<<fn<<" : real or date format year-month-date expected"<<endl;
@@ -1340,7 +1346,7 @@ string nexus(int i,Pr* pr,Node** nodes){
     if (i>0){
         b<<nodes[i]->B;
     }
-    if (pr->dateFormat==2){
+    if (pr->outDateFormat==2){
         date<<realToYearMonthDay(nodes[i]->D);
     } else{
         date<<nodes[i]->D;
@@ -1369,7 +1375,7 @@ string nexusDate(int i,Pr* pr,Node** nodes){
     if (i>0){
         b<< (nodes[i]->D - nodes[nodes[i]->P]->D);
     }
-    if (pr->dateFormat==2){
+    if (pr->outDateFormat==2){
         date<<realToYearMonthDay(nodes[i]->D);
     } else{
         date<<nodes[i]->D;
@@ -1392,55 +1398,29 @@ string nexusDate(int i,Pr* pr,Node** nodes){
         }
     }
 }
-/*
-string nexusIC(int i,Pr* pr,Node** nodes,double* T_min,double* T_max){
-    ostringstream b,date;
-    if (i>0){
-        b<<nodes[i]->B;
-    }
-    date<<nodes[i]->D;
-    if (i>=pr->nbINodes && nodes[i]->type=='p') return nodes[i]->L+"[&date="+date.str()+"]:"+b.str();
-    else{
-        ostringstream tmin,tmax;
-        tmin << T_min[i];
-        tmax << T_max[i];
-        if (i>=pr->nbINodes) {
-            return nodes[i]->L+"[&date="+date.str()+"][&CI=\""+date.str()+"("+tmin.str()+","+tmax.str()+")\"]:"+b.str();
-        }
-        else{
-            string newLabel="(";
-            for (vector<int>::iterator iter=nodes[i]->suc.begin(); iter!=nodes[i]->suc.end(); iter++) {
-                int s = *iter;
-                string l=nexusIC(s,pr,nodes,T_min,T_max);
-                if (iter==nodes[i]->suc.begin()) newLabel+=l;
-                else newLabel+=","+l;
-            }
-            if (i>0) {
-                if (abs(nodes[i]->B)>toCollapse) return newLabel+")"+nodes[i]->L+"[&date="+date.str()+"][&CI=\""+date.str()+"("+tmin.str()+","+tmax.str()+")\"]:"+b.str();
-                else return newLabel+")"+nodes[i]->L+":"+b.str();
-            }
-            else{
-                return newLabel+")"+nodes[i]->L+"[&date="+date.str()+"][&CI=\""+date.str()+"("+tmin.str()+","+tmax.str()+")\"];\n";
-            }
-            
-        }
-    }
-}
-*/
 
 string nexusIC(int i,Pr* pr,Node** nodes,double* D_min,double* D_max,double* H_min,double* H_max){
     ostringstream b,date;
     if (i>0){
         b<<nodes[i]->B;
     }
-    date<<nodes[i]->D;
+    if (pr->outDateFormat==2){
+        date<<realToYearMonthDay(nodes[i]->D);
+    } else{
+        date<<nodes[i]->D;
+    }
     if (i>=pr->nbINodes && nodes[i]->type=='p') return nodes[i]->L+"[&date="+date.str()+"]:"+b.str();
     else{
         ostringstream hmin,hmax,dmin,dmax;
+        if (pr->outDateFormat==2){
+            dmin<< realToYearMonthDay(D_min[i]);
+            dmax<< realToYearMonthDay(D_max[i]);
+        } else {
+            dmin<< D_min[i];
+            dmax<< D_max[i];
+        }
         hmin<< H_min[i];
         hmax<< H_max[i];
-        dmin<< D_min[i];
-        dmax<< D_max[i];
         if (i>=pr->nbINodes) {
             return nodes[i]->L+"[&date="+date.str()+",CI_height={"+hmin.str()+","+hmax.str()+"}][&CI_date=\""+date.str()+"("+dmin.str()+","+dmax.str()+")\"]:"+b.str();
         }
@@ -1469,14 +1449,23 @@ string nexusICDate(int i,Pr* pr,Node** nodes,double* D_min,double* D_max,double*
     if (i>0){
         b<< (nodes[i]->D - nodes[nodes[i]->P]->D) ;
     }
-    date<<nodes[i]->D;
+    if (pr->outDateFormat==2){
+        date<<realToYearMonthDay(nodes[i]->D);
+    } else{
+        date<<nodes[i]->D;
+    }
     if (i>=pr->nbINodes && nodes[i]->type=='p') return nodes[i]->L+"[&date="+date.str()+"]:"+b.str();
     else{
         ostringstream hmin,hmax,dmin,dmax;
+        if (pr->outDateFormat==2){
+            dmin<< realToYearMonthDay(D_min[i]);
+            dmax<< realToYearMonthDay(D_max[i]);
+        } else{
+            dmin<< D_min[i];
+            dmax<< D_max[i];
+        }
         hmin<< H_min[i];
         hmax<< H_max[i];
-        dmin<< D_min[i];
-        dmax<< D_max[i];
         if (i>=pr->nbINodes) {
             return nodes[i]->L+"[&date="+date.str()+",CI_height={"+hmin.str()+","+hmax.str()+"}][&CI_date=\""+date.str()+"("+dmin.str()+","+dmax.str()+")\"]:"+b.str();
         }
@@ -2118,14 +2107,15 @@ void imposeMinBlen(ostream& file,Pr* pr, Node** nodes, double median_rate,bool m
     double round_time = pr->round_time;
     double m = 1./(pr->seqLength*median_rate);
     if (round_time <0){
-        if (pr->dateFormat == 2 || pr->dateFormat == 0){
+        if (pr->inDateFormat == 2 || pr->inDateFormat == 1){
             round_time = 365;
         } else {
             if (m>=1) round_time = 100;
             else {
                 round_time = 10;
-                while (m<1){
-                    m = m*10;
+                double mm = m;
+                while (mm<1){
+                    mm = mm*10;
                     round_time = round_time*10;
                 }
             }
@@ -2202,13 +2192,13 @@ double median_branch_lengths(Pr* pr,Node** nodes){
 }
 
 void collapse(int i,int j,Pr* pr,Node** nodes,Node** nodes_new,int &cc,int* &tab, double toCollapse, bool useSupport, double* support){
-    if (nodes[j]->type!='n') {
+    /*if (nodes[j]->type!='n') {
         bool bl = nodes_new[i]->addConstraint(nodes[j]);
         if (!bl){
             cerr<<"Can not collapse branches due to inconsitent temporal constraints"<<endl;
             exit(EXIT_FAILURE);
         }
-    }
+    }*/
     for (vector<int>::iterator iter=nodes[j]->suc.begin(); iter!=nodes[j]->suc.end(); iter++) {
         int s= *iter;
         if (s<pr->nbINodes && (abs(nodes[s]->B) <= toCollapse  || (useSupport && support[s]<= pr->support))) {
@@ -2323,7 +2313,6 @@ void collapseUnInformativeBranches(Pr* &pr,Node** &nodes){
     Node** nodesReduced = new Node*[nbC+pr->nbBranches-pr->nbINodes+1];
     Pr* prReduced = new Pr(nbC,nbC+pr->nbBranches-pr->nbINodes);
     prReduced->copy(pr);
-    prReduced->internalConstraints.clear();
     collapseTreeReOrder( pr, nodes_new, prReduced, nodesReduced,tab);
     for (int i=(!pr->rooted);i<pr->nbBranches+1;i++){
         delete nodes_new[i];

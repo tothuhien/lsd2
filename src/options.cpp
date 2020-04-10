@@ -25,7 +25,7 @@ Pr* getOptions( int argc, char** argv )
 
 Pr* getCommandLine( int argc, char** argv)
 {
-    const string VERSION="v1.5";
+    const string VERSION="v1.5.1";
     Pr* opt = new Pr();
     int c;
     string s;
@@ -57,8 +57,8 @@ Pr* getCommandLine( int argc, char** argv)
             case 'D':
                 if( !isInteger(optarg) )
                     myExit("Argument of option -D must be an integer.\n");
-                opt->dateFormat = atoi(optarg);
-                if (opt->dateFormat !=1 && opt->dateFormat != 2){
+                opt->outDateFormat = atoi(optarg);
+                if (opt->outDateFormat !=1 && opt->outDateFormat != 2){
                     myExit("Argument of option -D must be either 1 (date as real) or 2 (date as YY-MM-DD).\n");
                 }
                 break;
@@ -336,7 +336,7 @@ Pr* getInterface()
 
 void printInterface(ostream& in, Pr* opt)
 {
-    const string VERSION = "v1.5";
+    const string VERSION = "v1.5.1";
 
     in<<"\nLEAST-SQUARE METHODS TO ESTIMATE RATES AND DATES - "<<VERSION<<" \n\n";
     in<<"\nInput files:\n";
@@ -455,7 +455,7 @@ void printHelp( void )
     const string BOLD = "\033[00;01m";
     const string LINE = "\033[00;04m";
     const string FLAT = "\033[00;00m";
-    const string VERSION = "v1.5";
+    const string VERSION = "v1.5.1";
     
     cout<<BOLD<<"LSD: LEAST-SQUARES METHODS TO ESTIMATE RATES AND DATES - "<<VERSION<<"\n\n";
     cout<<BOLD<<"DESCRIPTION\n"
@@ -503,7 +503,7 @@ void printHelp( void )
            <<FLAT<<"\t    mrca(a,b,c,d) b(2000,2001)\n"
            <<FLAT<<"\t    n l(2004.3)\n"
            <<FLAT<<"\t   If this option is omitted, the program will estimate relative dates by giving T[root]=0 and T[tips]=1.\n"
-           <<FLAT<<"\t" <<BOLD<<"-D " <<LINE<<"dateFormat\n"
+           <<FLAT<<"\t" <<BOLD<<"-D " <<LINE<<"outDateFormat\n"
            <<FLAT<<"\t    Specify output date format: 1 for real, 2 for year-month-day. By default the program will guess the format of input dates and uses it for\n"
            <<FLAT<<"\t    output dates.\n"
            <<FLAT<<"\t" <<BOLD<<"-e " <<LINE<<"ZscoreOutlier\n"
