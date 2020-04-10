@@ -345,8 +345,8 @@ Node** unrooted2rootedS(Pr* &pr,Node** nodes,int s){//simplier version, use only
     for (int i=0;i<=pr->nbBranches;i++) delete nodes[i];
     delete[] nodes;
     shiftInternalConstraints(pr);
-    computeSuc_polytomy(pr,nodes_new);
     pr->rooted = true;
+    computeSuc_polytomy(pr,nodes_new);
     return nodes_new;
 }
 
