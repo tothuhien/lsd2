@@ -9,3 +9,4 @@ Something new lsd2:
 - The adjusted paramater for variances is set be the same unit of branch length (instead of count as before), and set by default to the maximum between median branch length and 10/seqlength.
 - Use variance in estimating the root position. 
 - Can use variances twice where the second time uses the branches lengths of the estimated tree to calculate variances.
+- Accept date format year-month-date

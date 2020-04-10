@@ -25,7 +25,7 @@ Pr* getOptions( int argc, char** argv )
 
 Pr* getCommandLine( int argc, char** argv)
 {
-    const string VERSION="v1.4.17";
+    const string VERSION="v1.5.1";
     Pr* opt = new Pr();
     int c;
     string s;
@@ -38,7 +38,7 @@ Pr* getCommandLine( int argc, char** argv)
     lflag=false,
     uflag=false,
     vflag=false;
-    while ( (c = getopt(argc, argv, ":i:d:o:s:n:g:r:v:ct:w:b:ha:z:f:kje:m:p:q:u:l:U:R:S:V")) != -1 )
+    while ( (c = getopt(argc, argv, ":i:d:D:o:s:n:g:r:v:ct:w:b:ha:z:f:kje:m:p:q:u:l:U:R:S:V")) != -1 )
     {
         switch (c)
         {
@@ -53,6 +53,14 @@ Pr* getCommandLine( int argc, char** argv)
                     myExit( "Cannot read the file named \"%s\"\n", optarg );
                 opt->inDateFile = optarg;
                 dflag = true;
+                break;
+            case 'D':
+                if( !isInteger(optarg) )
+                    myExit("Argument of option -D must be an integer.\n");
+                opt->outDateFormat = atoi(optarg);
+                if (opt->outDateFormat !=1 && opt->outDateFormat != 2){
+                    myExit("Argument of option -D must be either 1 (date as real) or 2 (date as YY-MM-DD).\n");
+                }
                 break;
             case 'p':
                 if( access( optarg, R_OK )!=0 )
@@ -328,7 +336,7 @@ Pr* getInterface()
 
 void printInterface(ostream& in, Pr* opt)
 {
-    const string VERSION = "v1.4.17";
+    const string VERSION = "v1.5.1";
 
     in<<"\nLEAST-SQUARE METHODS TO ESTIMATE RATES AND DATES - "<<VERSION<<" \n\n";
     in<<"\nInput files:\n";
@@ -356,7 +364,7 @@ void printInterface(ostream& in, Pr* opt)
         else if (opt->variance==2) in<<"Yes, use variances based on estimated branch lengths\n";
         in<<"  b                              Adjusted parameter for variances : ";
         if (opt->c==-1){
-            in<<"Use median branch lengths\n";
+            in<<"To estimate\n";
         } else{
             in<<opt->c<<"\n";
         }
@@ -447,7 +455,7 @@ void printHelp( void )
     const string BOLD = "\033[00;01m";
     const string LINE = "\033[00;04m";
     const string FLAT = "\033[00;00m";
-    const string VERSION = "v1.4.17";
+    const string VERSION = "v1.5.1";
     
     cout<<BOLD<<"LSD: LEAST-SQUARES METHODS TO ESTIMATE RATES AND DATES - "<<VERSION<<"\n\n";
     cout<<BOLD<<"DESCRIPTION\n"
@@ -483,18 +491,21 @@ void printHelp( void )
            <<FLAT<<"\t" <<BOLD<<"-d " <<LINE<<"inputDateFile\n"
            <<FLAT<<"\t   This options is used to read the name of the input date file which contains temporal constraints of internal nodes\n"
            <<FLAT<<"\t   or tips. An internal node can be defined either by its label (given in the input tree) or by a subset of tips that have it as \n"
-           <<FLAT<<"\t   the most recent common ancestor (mrca).\n"
-           <<FLAT<<"\t   The first line of this file is the number of temporal constraints. A temporal constraint can be a real, or a \n"
+           <<FLAT<<"\t   the most recent common ancestor (mrca). A date could be a real or a string or format year-month-day.\n"
+           <<FLAT<<"\t   The first line of this file is the number of temporal constraints. A temporal constraint can be fixed date, or a \n"
            <<FLAT<<"\t   lower bound " <<FLAT<<LINE<<"l(value)" <<FLAT<<", or an upper bound " <<FLAT<<LINE<<"u(value)" <<FLAT<<", or an interval " <<LINE<<"b(v1,v2)\n"
            <<FLAT<<"\t   For example, if the input tree has 4 taxa a,b,c,d, and an internal node named n, then following is a possible date file:\n"
            <<FLAT<<"\t    6\n"
-           <<FLAT<<"\t    a l(2003)\n"
-           <<FLAT<<"\t    b u(2007)\n"
+           <<FLAT<<"\t    a l(2003.12)\n"
+           <<FLAT<<"\t    b u(2007.07)\n"
            <<FLAT<<"\t    c 2005\n"
-           <<FLAT<<"\t    d b(2001,2007)\n"
+           <<FLAT<<"\t    d b(2001.2,2007.11)\n"
            <<FLAT<<"\t    mrca(a,b,c,d) b(2000,2001)\n"
-           <<FLAT<<"\t    n l(2004)\n"
+           <<FLAT<<"\t    n l(2004.3)\n"
            <<FLAT<<"\t   If this option is omitted, the program will estimate relative dates by giving T[root]=0 and T[tips]=1.\n"
+           <<FLAT<<"\t" <<BOLD<<"-D " <<LINE<<"outDateFormat\n"
+           <<FLAT<<"\t    Specify output date format: 1 for real, 2 for year-month-day. By default the program will guess the format of input dates and uses it for\n"
+           <<FLAT<<"\t    output dates.\n"
            <<FLAT<<"\t" <<BOLD<<"-e " <<LINE<<"ZscoreOutlier\n"
            <<FLAT<<"\t   This option is used to estimate and exclude outlier nodes before dating process.\n"
            <<FLAT<<"\t   LSD2 normalize the branch residus and decide a node is outlier if its related residus is great than the " <<LINE<<"ZscoreOutlier.\n"

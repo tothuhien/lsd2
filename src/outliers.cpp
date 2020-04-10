@@ -59,7 +59,7 @@ bool calculateOutliers(Pr* & pr,Node** & nodes,double & median_rate){
             index.push_back(i);
         }
         if (((pr->m +1) > index.size())){
-            cerr<<"Error: there are "<<index.size()<<" input dates, not enough to estimate outliers. The number of input dates must be bigger than "<<pr->m<<" (option settable by -m)."<<endl;
+            cerr<<"Error: can not estimate outliers. The number of sampling dates ("<<pr->m<<", setable via option -m) should be smaller than the number of input temporal constraints ("<<index.size()<<"). Adjust option -m and try again.\n";
             exit(EXIT_FAILURE);
         }
         vector<int>* samples = new vector<int>[index.size()];
@@ -808,7 +808,7 @@ bool calculateMedianRate(Pr* pr,Node** nodes,double& med_rate){
             index.push_back(i);
         }
         if (((pr->m +1) > index.size())){
-            cerr<<"Error: there are "<<index.size()<<" input dates, not enough to estimate median rate. The number of input dates must be bigger than "<<pr->m<<" (option settable by -m)."<<endl;
+            cerr<<"Error: can not estimate minimum branch lengths. The number of sampling dates ("<<pr->m<<", setable via option -m) should be smaller than the number of input temporal constraints ("<<index.size()<<"). Adjust option -m and try again.\n";
             exit(EXIT_FAILURE);
         }
         vector<int>* samples = new vector<int>[index.size()];
