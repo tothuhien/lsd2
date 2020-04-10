@@ -59,7 +59,7 @@ bool calculateOutliers(Pr* & pr,Node** & nodes,double & median_rate){
             index.push_back(i);
         }
         if (((pr->m +1) > index.size())){
-            cout<<"Error: there are "<<index.size()<<" input dates, not enough to estimate outliers. The number of input dates must be bigger than "<<pr->m<<" (option settable by -m)."<<endl;
+            cerr<<"Error: there are "<<index.size()<<" input dates, not enough to estimate outliers. The number of input dates must be bigger than "<<pr->m<<" (option settable by -m)."<<endl;
             exit(EXIT_FAILURE);
         }
         vector<int>* samples = new vector<int>[index.size()];
@@ -69,9 +69,10 @@ bool calculateOutliers(Pr* & pr,Node** & nodes,double & median_rate){
         if (pr->estimate_root==""){
             bool consistent;
             pr->outlier = outliers_rooted(pr,nodes,samples,dates_min,dates_max,false,both,median_rate,consistent);
+            pr->givenRate[0] = givenRate;
+            delete[] samples;
             if (!consistent){
-                cout<<"Can not esimate outliers, temporal constraints are inconsistent"<<endl;
-                exit(EXIT_FAILURE);
+                return false;
             }
         }
         if (pr->estimate_root=="k"){
@@ -90,15 +91,25 @@ bool calculateOutliers(Pr* & pr,Node** & nodes,double & median_rate){
             nodes[s1]->B = br;
             nodes[s2]->B = 0;
             vector<int> outliers2 = outliers_rooted(pr,nodes,samples,dates_min,dates_max,false,both,median_rate2,consistent2);
-            if (!consistent1 && !consistent2){
-                cout<<"Can not esimate outliers, temporal constraints are inconsistent"<<endl;
-                exit(EXIT_FAILURE);
+            pr->givenRate[0] = givenRate;
+            delete[] samples;
+            if (consistent1 && consistent2){
+                pr->outlier = intersect(outliers1,outliers2);
+                median_rate = (median_rate1+median_rate2)/2;
+            } else if (consistent1){
+                pr->outlier = outliers1;
+                median_rate = median_rate1;
+            } else if (consistent2){
+                pr->outlier = outliers2;
+                median_rate = median_rate2;
+            } else {
+                cout<<"Ignore estimating outliers: the temporal constraints provided are not enough, or conflict."<<endl;
+                std::ostringstream oss;
+                oss<<"- Ignore estimating outliers: the temporal constraints provided are not enough, or conflict.\n";
+                pr->warningMessage.push_back(oss.str());
+                return false;
             }
-            pr->outlier = intersect(outliers1,outliers2);
-            median_rate = (median_rate1+median_rate2)/2;
         }
-        pr->givenRate[0] = givenRate;
-        delete[] samples;
         if (pr->outlier.size()>0){
             std::ostringstream oss;
             oss<<"- The input dates associated with the following "<<pr->outlier.size()<<" nodes are considered as outliers, so the nodes were removed from the analysis: ";
@@ -124,7 +135,6 @@ bool calculateOutliers(Pr* & pr,Node** & nodes,double & median_rate){
             oss<<"- There is not any outlier date.\n";
             pr->resultMessage.push_back(oss.str());
         }
-        return true;
     }
     else {
         bool bl = outliers_unrooted(pr,nodes,median_rate);
@@ -149,6 +159,10 @@ bool calculateOutliers(Pr* & pr,Node** & nodes,double & median_rate){
                 pr->resultMessage.push_back(oss.str());
             }
         } else {
+            cout<<"Ignore estimating outliers: the temporal constraints provided are not enough, or conflict."<<endl;
+            std::ostringstream oss;
+            oss<<"- Ignore estimating outliers: the temporal constraints provided are not enough, or conflict.\n";
+            pr->warningMessage.push_back(oss.str());
             return false;
         }
     }
@@ -480,7 +494,6 @@ bool median_rate(Pr* pr,Node** nodes, vector<double> dates, vector<int>* samples
             }
             if (!slopes.empty()){
                 double m = median(slopes);
-                //if (m>0)
                 rates.push_back(m);
             }
         }
@@ -520,12 +533,10 @@ bool median_rate(Pr* pr,Node** nodes, vector<double> dates_min,vector<double> da
                 }
             }
             if (!slopeMin.empty()){
-                double mm = median(slopeMin);
-                double mM = median(slopeMax);
-                //if (mm>0)
-                rates_min.push_back(mm);
-                //if (mM>0)
-                rates_max.push_back(mM);
+                rates_min.push_back(median(slopeMin));
+            }
+            if (!slopeMax.empty()){
+                rates_max.push_back(median(slopeMax));
             }
         }
         if (rates_min.size()>0 && rates_max.size()>0){
@@ -544,7 +555,7 @@ bool median_rate(Pr* pr,Node** nodes, vector<double> dates_min,vector<double> da
                 return false;
             }
         } else {
-            if (rates_min.size()==0){
+            if (rates_max.size()>0){
                 rate2 = median(rates_max);
                 if (rate2>0){
                     rate1 = rate2;
@@ -553,7 +564,7 @@ bool median_rate(Pr* pr,Node** nodes, vector<double> dates_min,vector<double> da
                     return false;
                 }
             }
-            if (rates_max.size()==0){
+            else if (rates_min.size()>0){
                 rate1 = median(rates_min);
                 if (rate1>0){
                     rate2 = rate1;
@@ -726,6 +737,9 @@ bool outliers_unrooted(Pr* &pr,Node** &nodes,double& median_rate){
             pr->givenRate[0] = givenRate;
             y++;
         }
+        if (median_rates.empty()){
+            return false;
+        }
         median_rate = median(median_rates);
         delete[] samples;
         for (int i=0;i<=pr->nbBranches;i++) delete nodes_new[i];
@@ -760,7 +774,7 @@ bool outliers_unrooted(Pr* &pr,Node** &nodes,double& median_rate){
 
 //just calculate median rate, do not estimate and exclude outliers
 
-void calculateMedianRate(Pr* pr,Node** nodes,double& med_rate){
+bool calculateMedianRate(Pr* pr,Node** nodes,double& med_rate){
     double rate_min, rate_max;
     if (pr->estimate_root=="" || pr->estimate_root=="k"){
         bool givenRate = pr->givenRate[0];
@@ -794,7 +808,7 @@ void calculateMedianRate(Pr* pr,Node** nodes,double& med_rate){
             index.push_back(i);
         }
         if (((pr->m +1) > index.size())){
-            cout<<"Error: there are "<<index.size()<<" input dates, not enough to estimate median rate. The number of input dates must be bigger than "<<pr->m<<" (option settable by -m)."<<endl;
+            cerr<<"Error: there are "<<index.size()<<" input dates, not enough to estimate median rate. The number of input dates must be bigger than "<<pr->m<<" (option settable by -m)."<<endl;
             exit(EXIT_FAILURE);
         }
         vector<int>* samples = new vector<int>[index.size()];
@@ -837,12 +851,9 @@ void calculateMedianRate(Pr* pr,Node** nodes,double& med_rate){
             }
             med_rate = (median_rate1+median_rate2)/2;
         }
-        if (!consistent){
-            cout<<"Temporal constraints are inconsistent"<<endl;
-            exit(EXIT_FAILURE);
-        }
         pr->givenRate[0] = givenRate;
         delete[] samples;
+        return consistent;
     }
     else {
         Node** nodes_new = cloneLeaves(pr,nodes,0);
@@ -922,11 +933,17 @@ void calculateMedianRate(Pr* pr,Node** nodes,double& med_rate){
                 pr->givenRate[0] = givenRate;
                 y++;
             }
-            med_rate = median(median_rates);
             delete[] samples;
             for (int i=0;i<=pr->nbBranches;i++) delete nodes_new[i];
             delete[] nodes_new;
-            
+            if (median_rates.empty()){
+                return false;
+            } else {
+                med_rate = median(median_rates);
+                return true;
+            }
+        } else {
+            return false;
         }
     }
 }

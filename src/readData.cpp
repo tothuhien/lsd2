@@ -39,33 +39,26 @@ Node** tree2data(ifstream& tree,Pr* pr,int & s){
             //stack<int> listSuc;
             while (!pileNode.empty() && s!=0){
                 s=pileNode.top();pileNode.pop();
-                //cout<<s<<" "<<inode<<endl;
-                if (s>0){//s!=-1){
-                    internal_nodes[s]->P=inode;//nodes[s]->P=pr->nbINodes-inode;
+                if (s>0){
+                    internal_nodes[s]->P=inode;
                 } else{
                     leaves[-s]->P=inode;
                 }
-                //listSuc.push(s);
                 nbChild++;
             }
-            /*while (!listSuc.empty()) {
-                s=listSuc.top();
-                listSuc.pop();
-                nodes[inode]->suc.push_back(s);//nodes[pr->nbINodes-inode]->suc.push_back(s);
-            }*/
-            if (a>0) new_inode->B=readdouble(tree,"input tree");//nodes[pr->nbINodes-inode]->B=readdouble(tree,"input tree");
-            pileNode.push(inode);//pileNode.push(pr->nbINodes-inode);
+            if (a>0) new_inode->B=readdouble(tree,"input tree");
+            pileNode.push(inode);
             inode++;
             internal_nodes.push_back(new_inode);
         }
         else if (c!='(' && c!=',' && c!=-1 && c!=';' && c!='\n'){
             string lb=readLabel(c,tree,a);
-            pileNode.push(-countleaf);//pileNode.push(pr->nbBranches-countleaf);
-            Node* new_leaf = new Node();//nodes[pr->nbBranches-countleaf]=new Node();
-            new_leaf->L=lb;//nodes[pr->nbBranches-countleaf]->L=lb;
-            new_leaf->B=readdouble(tree,"input tree");//nodes[pr->nbBranches-countleaf]->B=readdouble(tree,"input tree");
+            pileNode.push(-countleaf);
+            Node* new_leaf = new Node();
+            new_leaf->L=lb;
+            new_leaf->B=readdouble(tree,"input tree");
             leaves.push_back(new_leaf);
-            countleaf++;//countleaf++;
+            countleaf++;
         }
         else if (c=='(') {a++;pileNode.push(0);}
         else if (c=='\n') {
@@ -114,7 +107,7 @@ Node** tree2data(ifstream& tree,Pr* pr,int & s){
     delete leaves[0];
     if (!pr->rooted){
         if (pr->estimate_root=="" && pr->fnOutgroup=="") {
-            cout<<"The input trees are not rooted, use either option -g to specify the outgroups file or -r to estimate the root"<<endl;
+            cerr<<"The input trees are not rooted, use either option -g to specify the outgroups file or -r to estimate the root"<<endl;
             exit(EXIT_FAILURE);
         }
     }
@@ -130,7 +123,7 @@ void readDateFile(Pr* pr,Node** &nodes,bool& constraintConsistent){
     dateFile.open(pr->inDateFile.c_str());
     int ino=readInt(dateFile,"Error in the date file, the file should begin with an integer (the number of temporal constrains)");
     if (lineNb-1<ino) {
-        cout<<"The number of given constraints is small than the number of constraints to read. Please change the number of constraints to read at the first line of the input date file."<<endl;
+        cerr<<"The number of given constraints is small than the number of constraints to read. Please change the number of constraints to read at the first line of the input date file."<<endl;
         exit(EXIT_FAILURE);
     }
     string w1="";//store temporal constraints that are not in the tree;
@@ -185,7 +178,7 @@ void readDateFile(Pr* pr,Node** &nodes,bool& constraintConsistent){
                             v2=readdouble(dateFile,pr->inDateFile);
                         }
                         else{
-                            cout<<"date constraint of type 'b' must have two values"<<endl;
+                            cerr<<"date constraint of type 'b' must have two values"<<endl;
                             exit(EXIT_FAILURE);
                         }
                         if (v1>v2) {
@@ -204,7 +197,7 @@ void readDateFile(Pr* pr,Node** &nodes,bool& constraintConsistent){
                     while (c<33 || c>126) c=readChar(dateFile,pr->inDateFile);
                 }
                 else{
-                    cout<<"Error reading "<<pr->inDateFile<<" file: calibration point must be defined as either 'l(lower_bound)' or 'u(upper_bound)' or 'b(lower_bound,upper_bound)'"<<endl;
+                    cerr<<"Error reading "<<pr->inDateFile<<" file: calibration point must be defined as either 'l(lower_bound)' or 'u(upper_bound)' or 'b(lower_bound,upper_bound)'"<<endl;
                     exit(EXIT_FAILURE);
                 }
             }
@@ -267,7 +260,7 @@ void readPartitionFile(Pr* pr){
         string groupName = readWord(line,pos);
         double m = readDouble(line,pos);
         if (m<=0){
-            cout<<"Error in the partition file: after the group name must be a positive real which is the prior proportion of the group rate compared to the main rate. Put 1 if you don't known about this value. Selecting appropriate value helps to converge faster."<<endl;
+            cerr<<"Error in the partition file: after the group name must be a positive real which is the prior proportion of the group rate compared to the main rate. Put 1 if you don't known about this value. Selecting appropriate value helps to converge faster."<<endl;
             exit(EXIT_FAILURE);
         }
         pr->multiplierRate.push_back(m);

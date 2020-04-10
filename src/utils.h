@@ -242,7 +242,7 @@ bool checkAllConstraintConsistent(Pr* pr,Node** nodes);
 
 double median(vector<double> array);
 
-void imposeMinBlen(ostream& result,Pr* pr, Node** nodes, double median_rate);
+void imposeMinBlen(ostream& result,Pr* pr, Node** nodes, double median_rate,bool medianRateOK);
 
 double median_branch_lengths(Pr* pr,Node** nodes);
 
