@@ -188,10 +188,16 @@ void output(double br,int y, Pr* pr,Node** nodes,ostream& f,ostream& tree1,ostre
         oss<<"- The results correspond to the estimation of relative dates when T[mrca]="<<pr->mrca<<" and T[tips]="<<pr->leaves<<"\n";
         pr->warningMessage.push_back(oss.str());
     }
+    ostringstream tMRCA;
+    if (pr->dateFormat==2){
+        tMRCA<<realToYearMonthDay(nodes[0]->D);
+    } else {
+        tMRCA<<nodes[0]->D;
+    }
     if (pr->ratePartition.size()==0) {
         std::ostringstream oss;
         oss<<"- Dating results:\n";
-        oss<<" rate "<<pr->rho<<", tMRCA "<<nodes[0]->D<<", objective function "<<pr->objective<<"\n";
+        oss<<" rate "<<pr->rho<<", tMRCA "<<tMRCA.str()<<", objective function "<<pr->objective<<"\n";
         pr->resultMessage.push_back(oss.str());
     }
     else{
@@ -204,7 +210,7 @@ void output(double br,int y, Pr* pr,Node** nodes,ostream& f,ostream& tree1,ostre
             if (pr->multiplierRate[i]>0)
                 oss<<"rate "<<pr->ratePartition[i-1]->name.c_str()<<" "<<pr->rho*pr->multiplierRate[i]<<", ";
         }
-        oss<<"tMRCA "<<nodes[0]->D<<", objective function "<<pr->objective<<"\n";
+        oss<<"tMRCA "<<tMRCA.str()<<", objective function "<<pr->objective<<"\n";
         pr->resultMessage.push_back(oss.str());
     }
     
@@ -232,9 +238,15 @@ void output(double br,int y, Pr* pr,Node** nodes,ostream& f,ostream& tree1,ostre
         std::ostringstream oss;
         oss<<"- Results of the second run using variances based on the branch lengths of the first run:\n";
         pr->resultMessage.push_back(oss.str());
+        ostringstream tMRCA;
+        if (pr->dateFormat==2){
+            tMRCA<<realToYearMonthDay(nodes[0]->D);
+        } else {
+            tMRCA<<nodes[0]->D;
+        }
         if (pr->ratePartition.size()==0) {
             std::ostringstream oss;
-            oss<<" rate "<<pr->rho<<", tMRCA "<<nodes[0]->D<<", objective function "<<pr->objective<<"\n";
+            oss<<" rate "<<pr->rho<<", tMRCA "<<tMRCA.str()<<", objective function "<<pr->objective<<"\n";
             pr->resultMessage.push_back(oss.str());
         }
         else{
@@ -246,7 +258,7 @@ void output(double br,int y, Pr* pr,Node** nodes,ostream& f,ostream& tree1,ostre
                 if (pr->multiplierRate[i]>0)
                     oss<<"rate "<<pr->ratePartition[i-1]->name.c_str()<<" "<<pr->rho*pr->multiplierRate[i]<<", ";
             }
-            oss<<"tMRCA "<<nodes[0]->D<<", objective function "<<pr->objective<<"\n";
+            oss<<"tMRCA "<<tMRCA.str()<<", objective function "<<pr->objective<<"\n";
             pr->resultMessage.push_back(oss.str());
         }
     }
@@ -308,10 +320,19 @@ void output(double br,int y, Pr* pr,Node** nodes,ostream& f,ostream& tree1,ostre
         std::ostringstream oss;
         oss<<"- Results with confidence intervals:\n";
         pr->resultMessage.push_back(oss.str());
-
+        ostringstream tMRCA,tmin,tmax;
+        if (pr->dateFormat==2){
+            tMRCA<<realToYearMonthDay(nodes[0]->D);
+            tmin<<realToYearMonthDay(T_min[0]);
+            tmax<<realToYearMonthDay(T_max[0]);
+        } else {
+            tMRCA<<nodes[0]->D;
+            tmin<<T_min[0];
+            tmax<<T_max[0];
+        }
         if (pr->ratePartition.size()==0) {
             std::ostringstream oss;
-            oss<<" rate "<<pr->rho<<" ["<<rho_left<<"; "<<rho_right<<"], tMRCA "<<nodes[0]->D<<" ["<<T_min[0]<<"; "<<T_max[0]<<"], objective function "<<pr->objective<<"\n";
+            oss<<" rate "<<pr->rho<<" ["<<rho_left<<"; "<<rho_right<<"], tMRCA "<<tMRCA.str()<<" ["<<tmin.str()<<"; "<<tmax.str()<<"], objective function "<<pr->objective<<"\n";
             pr->resultMessage.push_back(oss.str());
         }
         else{
@@ -322,7 +343,7 @@ void output(double br,int y, Pr* pr,Node** nodes,ostream& f,ostream& tree1,ostre
             for (int i=1; i<=pr->ratePartition.size(); i++) {
                 if (pr->multiplierRate[i]>0) oss<<"rate "<<pr->ratePartition[i-1]->name.c_str()<<" "<<pr->rho*pr->multiplierRate[i]<<" ["<<other_rhos_left[i]<<"; "<<other_rhos_right[i]<<"], ";
             }
-            oss<<"tMRCA "<<nodes[0]->D<<" ["<<T_min[0]<<"; "<<T_max[0]<<"], objective function "<<pr->objective<<"\n";
+            oss<<"tMRCA "<<tMRCA.str()<<" ["<<tmin.str()<<"; "<<tmax.str()<<"], objective function "<<pr->objective<<"\n";
             pr->resultMessage.push_back(oss.str());
         }
         
