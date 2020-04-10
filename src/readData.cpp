@@ -136,6 +136,7 @@ void readDateFile(Pr* pr,Node** &nodes,bool& constraintConsistent){
         int k = getPosition(nodes,s,0,pr->nbBranches+1);
         vector<int> mr;
         string ld=s;
+        int dateFormat=0;
         if (k==-1 && (s.compare("mrca")==0)){
             char c='(';
             ld="";
@@ -165,17 +166,17 @@ void readDateFile(Pr* pr,Node** &nodes,bool& constraintConsistent){
                 if (p=='('){
                     if (c=='l' || c=='L'){
                         type='l';
-                        v1=readdouble(dateFile,pr->inDateFile);
+                        v1=readDate(dateFile,pr->inDateFile,pr);
                     }
                     else if (c=='u' || c=='U'){
                         type='u';
-                        v1=readdouble(dateFile,pr->inDateFile);
+                        v1=readDate(dateFile,pr->inDateFile,pr);
                     }
                     else if (c=='b' || c=='B'){
                         type='b';
-                        v1=readdouble(dateFile,pr->inDateFile);
+                        v1=readDate(dateFile,pr->inDateFile,pr);
                         if (readChar(dateFile,pr->inDateFile)==','){
-                            v2=readdouble(dateFile,pr->inDateFile);
+                            v2=readDate(dateFile,pr->inDateFile,pr);
                         }
                         else{
                             cerr<<"date constraint of type 'b' must have two values"<<endl;
@@ -193,7 +194,6 @@ void readDateFile(Pr* pr,Node** &nodes,bool& constraintConsistent){
                             type='b';
                         }
                     }
-                    c=readChar(dateFile,pr->inDateFile);
                     while (c<33 || c>126) c=readChar(dateFile,pr->inDateFile);
                 }
                 else{
@@ -201,13 +201,8 @@ void readDateFile(Pr* pr,Node** &nodes,bool& constraintConsistent){
                     exit(EXIT_FAILURE);
                 }
             }
-            else {//precise value
-                string wd="";
-                wd+=c;
-                while (dateFile.get(c) && c>=33 && c<=126) {
-                    wd+=c;
-                }
-                v1=atof(wd.c_str());
+            else {
+                v1 = readDate1(dateFile,pr->inDateFile,c,pr);
                 type='p';
             }
             Date* newdate;

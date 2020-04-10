@@ -841,6 +841,7 @@ bool with_constraint_lambda(double br,Pr* &pr,Node** &nodes,list<int> active_set
                 }
             }
             pr->rho = -b/2/a;
+            if (pr->rho < pr->rho_min) pr->rho=pr->rho_min;
             delete[] F;
             delete[] G;
         }

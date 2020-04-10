@@ -25,7 +25,7 @@ Pr* getOptions( int argc, char** argv )
 
 Pr* getCommandLine( int argc, char** argv)
 {
-    const string VERSION="v1.4.17";
+    const string VERSION="v1.5";
     Pr* opt = new Pr();
     int c;
     string s;
@@ -38,7 +38,7 @@ Pr* getCommandLine( int argc, char** argv)
     lflag=false,
     uflag=false,
     vflag=false;
-    while ( (c = getopt(argc, argv, ":i:d:o:s:n:g:r:v:ct:w:b:ha:z:f:kje:m:p:q:u:l:U:R:S:V")) != -1 )
+    while ( (c = getopt(argc, argv, ":i:d:D:o:s:n:g:r:v:ct:w:b:ha:z:f:kje:m:p:q:u:l:U:R:S:V")) != -1 )
     {
         switch (c)
         {
@@ -53,6 +53,14 @@ Pr* getCommandLine( int argc, char** argv)
                     myExit( "Cannot read the file named \"%s\"\n", optarg );
                 opt->inDateFile = optarg;
                 dflag = true;
+                break;
+            case 'D':
+                if( !isInteger(optarg) )
+                    myExit("Argument of option -D must be an integer.\n");
+                opt->dateFormat = atoi(optarg);
+                if (opt->dateFormat !=1 && opt->dateFormat != 2){
+                    myExit("Argument of option -D must be either 1 (date as real) or 2 (date as YY-MM-DD).\n");
+                }
                 break;
             case 'p':
                 if( access( optarg, R_OK )!=0 )
@@ -328,7 +336,7 @@ Pr* getInterface()
 
 void printInterface(ostream& in, Pr* opt)
 {
-    const string VERSION = "v1.4.17";
+    const string VERSION = "v1.5";
 
     in<<"\nLEAST-SQUARE METHODS TO ESTIMATE RATES AND DATES - "<<VERSION<<" \n\n";
     in<<"\nInput files:\n";
@@ -356,7 +364,7 @@ void printInterface(ostream& in, Pr* opt)
         else if (opt->variance==2) in<<"Yes, use variances based on estimated branch lengths\n";
         in<<"  b                              Adjusted parameter for variances : ";
         if (opt->c==-1){
-            in<<"Use median branch lengths\n";
+            in<<"To estimate\n";
         } else{
             in<<opt->c<<"\n";
         }
@@ -447,7 +455,7 @@ void printHelp( void )
     const string BOLD = "\033[00;01m";
     const string LINE = "\033[00;04m";
     const string FLAT = "\033[00;00m";
-    const string VERSION = "v1.4.17";
+    const string VERSION = "v1.5";
     
     cout<<BOLD<<"LSD: LEAST-SQUARES METHODS TO ESTIMATE RATES AND DATES - "<<VERSION<<"\n\n";
     cout<<BOLD<<"DESCRIPTION\n"
@@ -495,6 +503,9 @@ void printHelp( void )
            <<FLAT<<"\t    mrca(a,b,c,d) b(2000,2001)\n"
            <<FLAT<<"\t    n l(2004)\n"
            <<FLAT<<"\t   If this option is omitted, the program will estimate relative dates by giving T[root]=0 and T[tips]=1.\n"
+           <<FLAT<<"\t" <<BOLD<<"-D " <<LINE<<"dateFormat\n"
+           <<FLAT<<"\t    Specify output date format: 1 for real, 2 for year-month-day. By default the program will guess the format of input dates and uses it for\n"
+           <<FLAT<<"\t    output dates.\n"
            <<FLAT<<"\t" <<BOLD<<"-e " <<LINE<<"ZscoreOutlier\n"
            <<FLAT<<"\t   This option is used to estimate and exclude outlier nodes before dating process.\n"
            <<FLAT<<"\t   LSD2 normalize the branch residus and decide a node is outlier if its related residus is great than the " <<LINE<<"ZscoreOutlier.\n"

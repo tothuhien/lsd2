@@ -41,7 +41,7 @@ Further options can be specified, see *./lsd2 -h* for more details.
 
 ### Input_tree_file
 
-Input tree(s) in newick format are compulsory. A tree can be either binary or polytomy - and either having support value or not. The input file must contain one tree per line, for example:
+Input tree(s) in __newick__ format are compulsory. A tree can be either binary or polytomy - and either having support value or not. The input file must contain one tree per line, for example:
 
     ((A:0.12,D:0.12):0.3,(B:0.3,C:0.5):0.4);
 
@@ -52,15 +52,15 @@ Input tree(s) in newick format are compulsory. A tree can be either binary or po
 An input date file is optional. If it's not provided then the program estimates the relative dates by
 assuming all tips have the same date (1 by default), and the root has date 0 by default.
 
-Suppose that we have an input ((A:0.12,D:0.12):0.3,(B:0.3,C:0.5):0.4); then an example of
+A correct date can be a __real__ or a string of format __year-month-date__. Suppose that we have an input ((A:0.12,D:0.12):0.3,(B:0.3,C:0.5):0.4); then an example of
 input date file can be as follows:
 
     5			# number of temporal constraints
-    A 1999		# the date of A is 1999
-    B 2000		# the date of B is 2000
-    C l(1990)		# the date of C is at least 1990
-    D b(1998,2000)	# the date of D is between 1998 and 2000
-    mrca(A,B,C) u(2000)	# the date of the most recent ancestor of A,B, and C is at most 2000
+    A 1999.2		# the date of A is 1999.2
+    B 2000.1		# the date of B is 2000.1
+    C l(1990.5)		# the date of C is at least 1990.5
+    D b(1998.21,2000.5)	# the date of D is between 1998.21 and 2000.5
+    mrca(A,B,C) u(2000.12)	# the date of the most recent ancestor of A,B, and C is at most 2000.12
     
 You can also define the labels for internal nodes and use them to define their dates. 
 For example you have an input tree: ((A:0.12,D:0.12)n1:0.3,(B:0.3,C:0.5)n2:0.4)root; 
@@ -118,7 +118,7 @@ Note that if the internal nodes don't have labels, then they can be defined by m
 
 ## Using variances
 
-Variance is used to penalize long branch lengths. The variance formula of each branch v_i is proprtion to (b_i + b), where b (specified by option __-b__) is the pseudo constant added to adjust the dependency of variances to branch lengths. This parameter is a positive number, and by defaul is maximum of median branch length and 10/seqlength. It could be adjusted based on how much your input tree is relaxed. The smaller it is, the more variances are linear to branch lengths, which is more appropriate for strict clock tree. The bigger it is the less dependent of branch lengths on variances, which may be better for relaxed tree. Set __v -1__ to use variances, and __v -2__ to run program twice where the second time calculates variances based of the estimated branch length of the first time.
+Variance is used to penalize long branch lengths. The variance formula of each branch v_i is proprtion to (b_i + b), where b (specified by option __-b__) is the pseudo constant added to adjust the dependency of variances to branch lengths. This parameter is a positive number, and by defaul is maximum of median branch length and 10/seqlength. It could be adjusted based on how much your input tree is relaxed. The smaller it is, the more variances are linear to branch lengths, which is more appropriate for strict clock tree. The bigger it is the less dependent of branch lengths on variances, which may be better for relaxed tree. Set __-v 1__ to use variances, and __-v 2__ to run program twice where the second time calculates variances based of the estimated branch length of the first time. Simulation shows that -v 2 give slightly better result than -v 1 in average.
 
 ## Some examples of command lines:
 
@@ -183,4 +183,4 @@ Variance is used to penalize long branch lengths. The variance formula of each b
 *.nwk* : similar to *.nwk* trees but in newick format, so do not contain confidence intervals information.
 
 ## Citation
-If you use this software, please cite: “ Fast dating using least-squares criteria and algorithms”, T-H. To, M. Jung, S. Lycett, O. Gascuel, Syst Biol. 2016 Jan;65(1):82-97.
+If you use this software, please cite: “Fast dating using least-squares criteria and algorithms”, T-H. To, M. Jung, S. Lycett, O. Gascuel, Syst Biol. 2016 Jan;65(1):82-97.

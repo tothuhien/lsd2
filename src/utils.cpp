@@ -69,6 +69,163 @@ double readdouble(ifstream& f,string fn){
     }
 }
 
+string realToYearMonthDay(double year){
+    ostringstream oss;
+    double days = abs(year) - floor(abs(year));
+    int y;
+    if (year>0) {
+        y = floor(year);
+    } else {
+        y = ceil(year);
+    }
+    int d = round(365*days);
+    if (d==0) oss<<y;
+    if (d>=1 && d<=31){
+        oss<<y<<"-01-"<<d;
+    }
+    if (d>=32 && d<=59){
+        oss<<y<<"-02-"<<(d-31);
+    }
+    if (d>=60 && d<=90){
+        oss<<y<<"-03-"<<(d-59);
+    }
+    if (d>=91 && d<=120){
+        oss<<y<<"-04-"<<(d-90);
+    }
+    if (d>=121 && d<=151){
+        oss<<y<<"-05-"<<(d-120);
+    }
+    if (d>=152 && d<=181){
+        oss<<y<<"-06-"<<(d-151);
+    }
+    if (d>=182 && d<=212){
+        oss<<y<<"-07-"<<(d-181);
+    }
+    if (d>=213 && d<=243){
+        oss<<y<<"-08-"<<(d-212);
+    }
+    if (d>=244 && d<=273){
+        oss<<y<<"-09-"<<(d-243);
+    }
+    if (d>=274 && d<=304){
+        oss<<y<<"-10-"<<(d-273);
+    }
+    if (d>=305 && d<=334){
+        oss<<y<<"-11-"<<(d-304);
+    }
+    if (d>=335){
+        oss<<y<<"-12-"<<(d-334);
+    }
+    return oss.str();
+}
+
+double monthDayToReal(int m,int d){
+    switch (m)
+    {
+        case 1:
+            if (d>=1 && d<=31) return (double)d/365.;
+            break;
+        case 2:
+            if (d>=1 && d<=29) return (d+31.)/365.;
+            break;
+        case 3:
+            if (d>=1 && d<=31) return (d+59.)/365.;
+            break;
+        case 4:
+            if (d>=1 && d<=30) return (d+90.)/365.;
+            break;
+        case 5:
+            if (d>=1 && d<=31) return (d+120.)/365.;
+            break;
+        case 6:
+            if (d>=1 && d<=30) return (d+151.)/365.;
+            break;
+        case 7:
+            if (d>=1 && d<=31) return (d+181.)/365.;
+            break;
+        case 8:
+            if (d>=1 && d<=31) return (d+212.)/365.;
+            break;
+        case 9:
+            if (d>=1 && d<=30) return (d+243.)/365.;
+            break;
+        case 10:
+            if (d>=1 && d<=31) return (d+273.)/365.;
+            break;
+        case 11:
+            if (d>=1 && d<=30) return (d+304.)/365.;
+            break;
+        case 12:
+            if (d>=1 && d<=31) return (d+334.)/365.;
+            break;
+    }
+    cerr<<"Invalid month-day "<<m<<"-"<<d<<endl;
+    exit(EXIT_FAILURE);
+}
+
+double readDate(ifstream& f,string fn,Pr* pr){
+    double y;
+    if (f >> y) {
+        char c = readChar(f,fn);
+        if (c==')'){
+            if (pr->dateFormat!=2) pr->dateFormat=1;
+            return y;
+        }
+        else if (c=='-' && y==round(y)){
+            int m;
+            if (f >> m){
+                c = readChar(f,fn);
+                if (c=='-'){
+                    int d;
+                    if (f >> d){
+                        c = readChar(f,fn);
+                        if (c==')') {
+                            pr->dateFormat=2;
+                            return (y+monthDayToReal(m,d));
+                        }
+                    }
+                }
+            }
+        }
+    }
+    cerr<<"Error in the file "<<fn<<" : real or date format year-month-date expected"<<endl;
+    exit(EXIT_FAILURE);
+}
+
+double readDate1(ifstream& f,string fn,char c,Pr* pr){
+    string wd="";
+    wd+=c;
+    double y;
+    while (f.get(c) && c>=33 && c<=126 && c!='-') {
+        wd+=c;
+    }
+    try {
+        y=stod(wd.c_str());
+    } catch (const std::invalid_argument&) {
+        cerr<<"Error in the file "<<fn<<" : real or date format year-month-date expected, found "<<wd<<endl;
+        exit(EXIT_FAILURE);
+    }
+    if (c=='-' && y==round(y)){
+            int m;
+            if (f >> m){
+                c = readChar(f,fn);
+                if (c=='-'){
+                    int d;
+                    if (f >> d){
+                        pr->dateFormat=2;
+                        return (y+monthDayToReal(m,d));
+                    }
+                }
+            }
+    }
+    else {
+        if (pr->dateFormat!=2) pr->dateFormat=1;
+        return y;
+    }
+    cerr<<"Error in the file "<<fn<<" : real or date format year-month-date expected"<<endl;
+    exit(EXIT_FAILURE);
+}
+
 vector<double> read_double_from_line(string line){
     stringstream ss(line);
     vector<double> results;
@@ -224,18 +381,6 @@ list<int> intersect(list<int> l1,list<int> l2){
         it2++;
     }
     return common;
-}
-
-string readLabel(ifstream& f,FILE *w){
-    string s="";
-    char c=readChar(f,"input tree");
-    fprintf(w,"%c",c);
-    while (c!=':' && c!=')'){
-        s=s+c;
-        f.get(c);
-        fprintf(w,"%c",c);
-    }
-    return s.c_str();
 }
 
 string readLabel(char ch,ifstream& f,int& a){
@@ -559,22 +704,7 @@ int mrca(Node** nodes,vector<int> taxa){
     }
     return t;
 }
-/*
- int mrca(Node** nodes,list<int> taxa){
- int t=taxa.front();
- taxa.pop_front();
- bool flag = false;
- while (!flag && nodes[t]->P!=-1){
- t = nodes[t]->P;
- flag=true;
- for (list<int>::iterator ia=taxa.begin();ia!=taxa.end();ia++){
- int j=*ia;
- if (!isAncestor(nodes,t,j)) {flag=false;break;}
- }
- }
- return t;
- }
- */
+
 void computeSuc(int* & Pre,int* & Suc1,int* & Suc2,int size,int n){
     for (int i=0;i<n;i++){
         Suc1[i]=-1;
@@ -1210,7 +1340,11 @@ string nexus(int i,Pr* pr,Node** nodes){
     if (i>0){
         b<<nodes[i]->B;
     }
-    date<<nodes[i]->D;
+    if (pr->dateFormat==2){
+        date<<realToYearMonthDay(nodes[i]->D);
+    } else{
+        date<<nodes[i]->D;
+    }
     if (i>=pr->nbINodes) return nodes[i]->L+"[&date="+date.str()+"]:"+b.str();
     else{
         string newLabel="(";
@@ -1235,7 +1369,11 @@ string nexusDate(int i,Pr* pr,Node** nodes){
     if (i>0){
         b<< (nodes[i]->D - nodes[nodes[i]->P]->D);
     }
-    date<<nodes[i]->D;
+    if (pr->dateFormat==2){
+        date<<realToYearMonthDay(nodes[i]->D);
+    } else{
+        date<<nodes[i]->D;
+    }
     if (i>=pr->nbINodes) return nodes[i]->L+"[&date="+date.str()+"]:"+b.str();
     else{
         string newLabel="(";
@@ -1977,28 +2115,46 @@ double median(vector<double> array){
 
 void imposeMinBlen(ostream& file,Pr* pr, Node** nodes, double median_rate,bool medianRateOK){
     double minblen = pr->minblen;
+    double round_time = pr->round_time;
+    double m = 1./(pr->seqLength*median_rate);
+    if (round_time <0){
+        if (pr->dateFormat == 2 || pr->dateFormat == 0){
+            round_time = 365;
+        } else {
+            if (m>=1) round_time = 100;
+            else {
+                round_time = 10;
+                while (m<1){
+                    m = m*10;
+                    round_time = round_time*10;
+                }
+            }
+        }
+    }
+    string unit="";
+    if (round_time==365) unit=" days";
+    if (round_time==52) unit=" weeks";
     if (medianRateOK && pr->minblen<0){
         if (!pr->relative){
-            minblen = (int)(pr->round_time/(pr->seqLength*median_rate))/(double)pr->round_time;
+            minblen = round(round_time*m)/(double)round_time;
             if (pr->minblenL < 0){
-                cout<<"Minimum branch length of time scaled tree (settable via option -u and -U): "<<1./(pr->seqLength*median_rate)<<", rounded to "<<minblen<<" ("<<(int)(pr->round_time/(pr->seqLength*median_rate))<<"/"<<pr->round_time<<") using factor "<<pr->round_time<<" (settable via option -R)"<<endl;
-                file<<"Minimum branch length of time scaled tree (settable via option -u and -U): "<<1./(pr->seqLength*median_rate)<<", rounded to "<<minblen<<" ("<<(int)(pr->round_time/(pr->seqLength*median_rate))<<"/"<<pr->round_time<<") using factor "<<pr->round_time<<" (settable via option -R)\n";
+                cout<<"Minimum branch length of time scaled tree (settable via option -u and -U): "<<m<<", rounded to "<<minblen<<" ("<<round(round_time*m)<<unit<<"/"<<round_time<<") using factor "<<round_time<<" (settable via option -R)"<<endl;
+                file<<"Minimum branch length of time scaled tree (settable via option -u and -U): "<<m<<", rounded to "<<minblen<<" ("<<round(round_time*m)<<"/"<<round_time<<") using factor "<<round_time<<" (settable via option -R)\n";
             } else {
-                cout<<"Minimum internal branches lengths of time scaled tree (settable via option -u): "<<1./(pr->seqLength*median_rate)<<", rounded to "<<minblen<<" ("<<(int)(pr->round_time/(pr->seqLength*median_rate))<<"/"<<pr->round_time<<") using factor "<<pr->round_time<<" (settable via option -R)"<<endl;
+                cout<<"Minimum internal branches lengths of time scaled tree (settable via option -u): "<<m<<", rounded to "<<minblen<<" ("<<round(round_time*m)<<"/"<<round_time<<") using factor "<<round_time<<" (settable via option -R)"<<endl;
                 cout<<"Minimum external branches lengths of time scaled tree was set to "<<pr->minblenL<<" (settable via option -U)"<<endl;
-                file<<"Minimum internal branches lengths of time scaled tree (settable via option -u): "<<1./(pr->seqLength*median_rate)<<", rounded to "<<minblen<<" ("<<(int)(pr->round_time/(pr->seqLength*median_rate))<<"/"<<pr->round_time<<") using factor "<<pr->round_time<<" (settable via option -R)\n";
+                file<<"Minimum internal branches lengths of time scaled tree (settable via option -u): "<<m<<", rounded to "<<minblen<<" ("<<round(round_time*m)<<"/"<<round_time<<") using factor "<<round_time<<" (settable via option -R)\n";
                 file<<"Minimum external branches lengths of time scaled tree was set to "<<pr->minblenL<<" (settable via option -U)"<<endl;
             }
         }
         else {
-            minblen = 1./(pr->seqLength*median_rate);
             if (pr->minblenL < 0){
-                cout<<"Minimum branch length of time scaled tree (settable via option -u and -U): "<<minblen<<endl;
-                file<<"Minimum branch length of time scaled tree (settable via option -u and -U): "<<minblen<<"\n";
+                cout<<"Minimum branch length of time scaled tree (settable via option -u and -U): "<<m<<endl;
+                file<<"Minimum branch length of time scaled tree (settable via option -u and -U): "<<m<<"\n";
             } else {
-                cout<<"Minimum internal branches lengths of time scaled tree (settable via option -u): "<<minblen<<endl;
+                cout<<"Minimum internal branches lengths of time scaled tree (settable via option -u): "<<m<<endl;
                 cout<<"Minimum external branches lengths of time scaled tree was set to "<<pr->minblenL<<" (settable via option -U)"<<endl;
-                file<<"Minimum internal branches lengths of time scaled tree (settable via option -u): "<<minblen<<"\n";
+                file<<"Minimum internal branches lengths of time scaled tree (settable via option -u): "<<m<<"\n";
                 file<<"Minimum external branches lengths of time scaled tree was set to "<<pr->minblenL<<" (settable via option -U)"<<endl;
             }
         }

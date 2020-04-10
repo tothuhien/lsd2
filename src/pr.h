@@ -43,6 +43,7 @@ typedef struct Pr
     double minblenL;
     double rho;
     double round_time;
+    int dateFormat;// 1 for real ; 2 for year-month-day
     vector<double> multiplierRate;
     vector<bool> givenRate;
     double objective;
@@ -93,6 +94,7 @@ typedef struct Pr
         minblenL=pr->minblenL;
         nullblen=pr->nullblen;
         verbose=pr->verbose;
+        dateFormat=pr->dateFormat;
         rho=pr->rho;
         rho_min=pr->rho_min;
         givenRate=pr->givenRate;
@@ -137,7 +139,8 @@ typedef struct Pr
         rho_min = 1e-10;
         ci = false;
         nbSampling=100;
-        round_time=365;
+        round_time=-1;
+        dateFormat=1;
         rooted=true;
         keepOutgroup=false;
         ratePartition = vector<Part* >();

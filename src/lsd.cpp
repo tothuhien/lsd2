@@ -134,8 +134,8 @@ int main( int argc, char** argv )
                 opt->givenRate[0] = false;
             }
         }
-        constraintConsistent=initConstraint(opt, nodes);
-        bool medianRateOK;
+        constraintConsistent = initConstraint(opt, nodes);
+        bool medianRateOK = true;
         if (opt->e>0) medianRateOK = calculateOutliers(opt,nodes,median_rate);
         else if (opt->minblen<0) medianRateOK = calculateMedianRate(opt,nodes,median_rate);
         imposeMinBlen(result,opt,nodes,median_rate,medianRateOK);

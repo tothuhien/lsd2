@@ -27,6 +27,14 @@ double readDouble(string line,int& pos);
 
 double readdouble(ifstream& f,string fn);
 
+string realToYearMonthDay(double y);
+
+double monthDayToReal(int m,int d);
+
+double readDate(ifstream& f,string fn,Pr* pr);
+
+double readDate1(ifstream& f,string fn,char c,Pr* pr);
+
 vector<double> read_double_from_line(string line);
 
 int readInt(ifstream& f,string msg);
