@@ -9,30 +9,14 @@ bool calculateOutliers(Pr* & pr,Node** & nodes,double & median_rate){
         oss<<"- Rate partition can not be included in estimating outliers.\n";
         pr->warningMessage.push_back(oss.str());
     }
-    cout<<"Calculating the outlier nodes ..."<<endl;
-    string nodes_imprecise_date="";
-    for (int i = pr->nbINodes; i <= pr->nbBranches; i++){
-        if (nodes[i]->type == 'l' || nodes[i]->type == 'u'){
-            nodes_imprecise_date = nodes_imprecise_date+" "+nodes[i]->L;
-        }
-    }
-    for (int i = 0; i < pr->internalConstraints.size(); i++){
-        Date* no = pr->internalConstraints[i];
-        if (nodes[no->id]->type == 'l' || nodes[no->id]->type == 'u'){
-            nodes_imprecise_date = nodes_imprecise_date+" "+no->label;
-        }
-    }
-    if (nodes_imprecise_date.size()>0){
-        std::ostringstream oss;
-        oss<<"- The node(s)"+nodes_imprecise_date+" do not have precise date value, so will not be included in estimating outliers.\n";
-        pr->warningMessage.push_back(oss.str());
-    }
+    cout<<"Calculating the outlier nodes with Zscore threshold 3 (setable via option -e) ..."<<endl;
     if (pr->estimate_root=="" || pr->estimate_root=="k"){
         bool givenRate = pr->givenRate[0];
         vector<double> dates_min;
         vector<double> dates_max;
         vector<int> index;
         bool both = false;
+        vector<int> ignoredNodes;
         for (int i=pr->nbINodes;i<=pr->nbBranches;i++) {
             if (nodes[i]->type == 'p'){
                 dates_min.push_back(nodes[i]->D);
@@ -42,6 +26,9 @@ bool calculateOutliers(Pr* & pr,Node** & nodes,double & median_rate){
                 both = true;
                 dates_min.push_back(nodes[i]->lower);
                 dates_max.push_back(nodes[i]->upper);
+            }
+            if (nodes[i]->type == 'u' || nodes[i]->type == 'l'){
+                ignoredNodes.push_back(i);
             }
         }
         for (int i=0; i< pr->nbINodes;i++) {
@@ -54,17 +41,39 @@ bool calculateOutliers(Pr* & pr,Node** & nodes,double & median_rate){
                 dates_min.push_back(nodes[i]->lower);
                 dates_max.push_back(nodes[i]->upper);
             }
+            if (nodes[i]->type == 'u' || nodes[i]->type == 'l'){
+                ignoredNodes.push_back(i);
+            }
+        }
+        if (ignoredNodes.size()>0){
+            cout<<"Ignore the nodes that only have upper/lower values in estimating outliers: ";
+            std::ostringstream oss;
+            oss<<" - The following nodes only have upper/lower values, so were ignored in estimating outliers: ";
+            for (int i = 0; i<ignoredNodes.size();i++){
+                cout<<nodes[ignoredNodes[i]]->L<<" ";
+                oss<<nodes[ignoredNodes[i]]->L<<" ";
+            }
+            cout<<"\n";
+            oss<<"\n";
+            pr->warningMessage.push_back(oss.str());
         }
         for (int i=0;i<dates_min.size();i++){
             index.push_back(i);
         }
-        if (((pr->m +1) > index.size())){
-            cerr<<"Error: can not estimate outliers. The number of sampling dates ("<<pr->m<<", setable via option -m) should be smaller than the number of input temporal constraints ("<<index.size()<<"). Adjust option -m and try again.\n";
-            exit(EXIT_FAILURE);
+        int m = pr->m;
+        if ((m +1) > index.size()){
+            m = index.size() - 1;
+            if (m<2){
+                cout<<"Ignore estimating outliers: the temporal constraints provided are not enough, or conflict."<<endl;
+                std::ostringstream oss;
+                oss<<"- Ignore estimating outliers: the temporal constraints provided are not enough, or conflict.\n";
+                pr->warningMessage.push_back(oss.str());
+                return false;
+            }
         }
         vector<int>* samples = new vector<int>[index.size()];
         for (int i = 0; i< index.size();i++){
-            samples[i] = sampleNoRepeat(index, i ,pr->m);
+            samples[i] = sampleNoRepeat(index, i , m);
         }
         if (pr->estimate_root==""){
             bool consistent;
@@ -696,12 +705,20 @@ bool outliers_unrooted(Pr* &pr,Node** &nodes,double& median_rate){
         for (int i=0;i<nbFixedNodes;i++){
             index.push_back(i);
         }
-        if (pr->m > (index.size()-1)){
-            pr->m = index.size()-1;
+        int m = pr->m;
+        if (m > (index.size()-1)){
+            m = index.size()-1;
+            if (m<2){
+                cout<<"Ignore estimating outliers: the temporal constraints provided are not enough, or conflict."<<endl;
+                std::ostringstream oss;
+                oss<<"- Ignore estimating outliers: the temporal constraints provided are not enough, or conflict.\n";
+                pr->warningMessage.push_back(oss.str());
+                return false;
+            }
         }
         vector<int>* samples = new vector<int>[index.size()];
         for (int i = 0; i< index.size();i++){
-            samples[i] = sampleNoRepeat(index, i ,pr->m);
+            samples[i] = sampleNoRepeat(index, i , m);
         }
         vector<int> outliersFreq;
         for (int i=0;i<=pr->nbBranches;i++){
@@ -758,7 +775,7 @@ bool outliers_unrooted(Pr* &pr,Node** &nodes,double& median_rate){
         
         for (int i=0;i<outliersFreq.size();i++){
             outliersFreq[i] = (outliersFreq[i] - mean_freq)/sqrt(var_freq);
-            if ((outliersFreq[i])>pr->e){//do we need to normalize?
+            if ((outliersFreq[i])>pr->e){
                 pr->outlier.push_back(i);
             }
         }
@@ -807,13 +824,14 @@ bool calculateMedianRate(Pr* pr,Node** nodes,double& med_rate){
         for (int i=0;i<dates_min.size();i++){
             index.push_back(i);
         }
-        if (((pr->m +1) > index.size())){
-            cerr<<"Error: can not estimate minimum branch lengths. The number of sampling dates ("<<pr->m<<", setable via option -m) should be smaller than the number of input temporal constraints ("<<index.size()<<"). Adjust option -m and try again.\n";
-            exit(EXIT_FAILURE);
+        int m = pr->m;
+        if ((m +1) > index.size()){
+            m = index.size() - 1;
+            if (m<2) return false;
         }
         vector<int>* samples = new vector<int>[index.size()];
         for (int i = 0; i< index.size();i++){
-            samples[i] = sampleNoRepeat(index, i ,pr->m);
+            samples[i] = sampleNoRepeat(index, i , m);
         }
         bool consistent;
         if (pr->estimate_root==""){
@@ -893,12 +911,14 @@ bool calculateMedianRate(Pr* pr,Node** nodes,double& med_rate){
             for (int i=0;i<nbFixedNodes;i++){
                 index.push_back(i);
             }
-            if (pr->m > (index.size()-1)){
-                pr->m = index.size()-1;
+            int m = pr->m;
+            if (m > (index.size()-1)){
+                m = index.size()-1;
+                if (m<2) return false;
             }
             vector<int>* samples = new vector<int>[index.size()];
             for (int i = 0; i< index.size();i++){
-                samples[i] = sampleNoRepeat(index, i ,pr->m);
+                samples[i] = sampleNoRepeat(index, i , m);
             }
             nodes_new[y]->B = 0;
             nodes_new[nodes[y]->P]->B = br;

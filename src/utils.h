@@ -252,6 +252,8 @@ double median(vector<double> array);
 
 void imposeMinBlen(ostream& result,Pr* pr, Node** nodes, double median_rate,bool medianRateOK);
 
+void imposeMinBlen2(ostream& file,Pr* pr, Node** nodes);
+
 double median_branch_lengths(Pr* pr,Node** nodes);
 
 int collapseTree(Pr* pr,Node** nodes,Node** nodes_new,int* &tab, double toCollapse,bool& useSupport);

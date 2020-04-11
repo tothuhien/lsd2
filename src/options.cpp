@@ -25,7 +25,7 @@ Pr* getOptions( int argc, char** argv )
 
 Pr* getCommandLine( int argc, char** argv)
 {
-    const string VERSION="v1.5.1";
+    const string VERSION="v1.6.1";
     Pr* opt = new Pr();
     int c;
     string s;
@@ -336,7 +336,7 @@ Pr* getInterface()
 
 void printInterface(ostream& in, Pr* opt)
 {
-    const string VERSION = "v1.5.1";
+    const string VERSION = "v1.6.1";
 
     in<<"\nLEAST-SQUARE METHODS TO ESTIMATE RATES AND DATES - "<<VERSION<<" \n\n";
     in<<"\nInput files:\n";
@@ -425,7 +425,9 @@ void printInterface(ostream& in, Pr* opt)
     in<<"  u                Min internal branch length of time scaled tree : ";
     if (opt->minblen==-1){
         in<<"To estimate\n";
-        in<<"  R     Rounding number for min branch length of time scaled tree : "<<opt->round_time<<" \n";
+        in<<"  R     Rounding number for min branch length of time scaled tree : ";
+        if (opt->round_time>0) in<<opt->round_time<<"\n";
+        else in<<"To guess\n";
     } else {
         in<<opt->minblen<<"\n";
     }
@@ -446,6 +448,16 @@ void printInterface(ostream& in, Pr* opt)
     } else {
         in<<opt->nullblen<<"\n";
     }
+    in<<"  D                                            Output date format :";
+    if (opt->outDateFormat==0){
+        in<<" Based on input date format\n";
+    }
+    if (opt->outDateFormat==1){
+        in<<" Real number\n";
+    }
+    if (opt->outDateFormat==2){
+        in<<" Year-Month-Day\n";
+    }
     in<<"\n  h to print Help ";
     in<<"\n  y to accept or type a letter to change an option (x = Exit) ";
 }
@@ -455,7 +467,7 @@ void printHelp( void )
     const string BOLD = "\033[00;01m";
     const string LINE = "\033[00;04m";
     const string FLAT = "\033[00;00m";
-    const string VERSION = "v1.5.1";
+    const string VERSION = "v1.6.1";
     
     cout<<BOLD<<"LSD: LEAST-SQUARES METHODS TO ESTIMATE RATES AND DATES - "<<VERSION<<"\n\n";
     cout<<BOLD<<"DESCRIPTION\n"
@@ -754,6 +766,7 @@ bool isOptionActivate( Pr* opt, char l )
         case 'U':
         case 'l':
         case 'S':
+        case 'D':
         case 'x':
         case 'h':
         return true;
@@ -804,6 +817,11 @@ void setOptionsWithLetter( Pr* opt, char letter)
                     opt->relative=false;
                 }
             } while (*letter!='n' && *letter!='N' && *letter!='y' && *letter!='Y');
+            break;
+        case 'D':
+            if (opt->outDateFormat==0) opt->outDateFormat=1;
+            if (opt->outDateFormat==1) opt->outDateFormat=2;
+            if (opt->outDateFormat==2) opt->outDateFormat=0;
             break;
         case 'p':
             opt->partitionFile = getInputFileName("Enter your Partition File name> ");

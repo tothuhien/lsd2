@@ -79,42 +79,60 @@ string realToYearMonthDay(double year){
         y = ceil(year);
     }
     int d = round(365*days);
-    if (d==0) oss<<y;
+    int m = 0;
     if (d>=1 && d<=31){
-        oss<<y<<"-01-"<<d;
+        m = 1;
     }
     if (d>=32 && d<=59){
-        oss<<y<<"-02-"<<(d-31);
+        m = 2;
+        d = d -31;
     }
     if (d>=60 && d<=90){
-        oss<<y<<"-03-"<<(d-59);
+        m = 3;
+        d = d - 59;
     }
     if (d>=91 && d<=120){
-        oss<<y<<"-04-"<<(d-90);
+        m = 4;
+        d = d - 90;
     }
     if (d>=121 && d<=151){
-        oss<<y<<"-05-"<<(d-120);
+        m = 5;
+        d = d - 120;
     }
     if (d>=152 && d<=181){
-        oss<<y<<"-06-"<<(d-151);
+        m = 6;
+        d = d - 151;
     }
     if (d>=182 && d<=212){
-        oss<<y<<"-07-"<<(d-181);
+        m = 7;
+        d = d - 181;
     }
     if (d>=213 && d<=243){
-        oss<<y<<"-08-"<<(d-212);
+        m = 8;
+        d = d -212;
     }
     if (d>=244 && d<=273){
-        oss<<y<<"-09-"<<(d-243);
+        m = 9;
+        d = d - 243;
     }
     if (d>=274 && d<=304){
-        oss<<y<<"-10-"<<(d-273);
+        m = 10;
+        d = d - 273;
     }
     if (d>=305 && d<=334){
-        oss<<y<<"-11-"<<(d-304);
+        m = 11;
+        d = d - 304;
     }
     if (d>=335){
-        oss<<y<<"-12-"<<(d-334);
+        m = 12;
+        d = d - 334;
+    }
+    oss<<y;
+    if (d!=0 && m!=0) {
+        if (m<=9) oss<<"-0"<<m;
+        else oss<<"-"<<m;
+        if (d<=9) oss<<"-0"<<d;
+        else oss<<"-"<<d;
     }
     return oss.str();
 }
@@ -2163,6 +2181,63 @@ void imposeMinBlen(ostream& file,Pr* pr, Node** nodes, double median_rate,bool m
         } else {
             cout<<"Minimum internal branches lengths of time scaled tree was set to "<<minblen<<" (settable via option -u)"<<endl;
             cout<<"Minimum external branches lengths of time scaled tree was set to "<<pr->minblenL<<" (settable via option -U)"<<endl;
+        }
+    }
+    nodes[0]->minblen = minblen;
+    double minblenL = minblen;
+    if (pr->minblenL >= 0) minblenL = pr->minblenL;
+    for (int i=1;i<=pr->nbBranches;i++){
+        if (i<pr->nbINodes) {
+            nodes[i]->minblen = minblen;
+        } else{
+            nodes[i]->minblen = minblenL;
+        }
+    }
+}
+
+
+void imposeMinBlen2(ostream& file,Pr* pr, Node** nodes){
+    double round_time = pr->round_time;
+    double m = 1./(pr->seqLength*pr->rho);
+    if (round_time <0){
+        if (pr->inDateFormat == 2 || pr->inDateFormat == 1){
+            round_time = 365;
+        } else {
+            if (m>=1) round_time = 100;
+            else {
+                round_time = 10;
+                double mm = m;
+                while (mm<1){
+                    mm = mm*10;
+                    round_time = round_time*10;
+                }
+            }
+        }
+    }
+    string unit="";
+    if (round_time==365) unit=" days";
+    if (round_time==52) unit=" weeks";
+    double minblen = round(round_time*m)/(double)round_time;
+    if (!pr->relative){
+        if (pr->minblenL < 0){
+            cout<<"Minimum branch length of time scaled tree (settable via option -u and -U): "<<m<<", rounded to "<<minblen<<" ("<<round(round_time*m)<<unit<<"/"<<round_time<<") using factor "<<round_time<<" (settable via option -R)"<<endl;
+            file<<"Minimum branch length of time scaled tree (settable via option -u and -U): "<<m<<", rounded to "<<minblen<<" ("<<round(round_time*m)<<"/"<<round_time<<") using factor "<<round_time<<" (settable via option -R)\n";
+        } else {
+            cout<<"Minimum internal branches lengths of time scaled tree (settable via option -u): "<<m<<", rounded to "<<minblen<<" ("<<round(round_time*m)<<"/"<<round_time<<") using factor "<<round_time<<" (settable via option -R)"<<endl;
+            cout<<"Minimum external branches lengths of time scaled tree was set to "<<pr->minblenL<<" (settable via option -U)"<<endl;
+            file<<"Minimum internal branches lengths of time scaled tree (settable via option -u): "<<m<<", rounded to "<<minblen<<" ("<<round(round_time*m)<<"/"<<round_time<<") using factor "<<round_time<<" (settable via option -R)\n";
+            file<<"Minimum external branches lengths of time scaled tree was set to "<<pr->minblenL<<" (settable via option -U)"<<endl;
+        }
+    }
+    else {
+        if (pr->minblenL < 0){
+            cout<<"Minimum branch length of time scaled tree (settable via option -u and -U): "<<m<<endl;
+            file<<"Minimum branch length of time scaled tree (settable via option -u and -U): "<<m<<"\n";
+        } else {
+            cout<<"Minimum internal branches lengths of time scaled tree (settable via option -u): "<<m<<endl;
+            cout<<"Minimum external branches lengths of time scaled tree was set to "<<pr->minblenL<<" (settable via option -U)"<<endl;
+            file<<"Minimum internal branches lengths of time scaled tree (settable via option -u): "<<m<<"\n";
+            file<<"Minimum external branches lengths of time scaled tree was set to "<<pr->minblenL<<" (settable via option -U)"<<endl;
         }
     }
     nodes[0]->minblen = minblen;
