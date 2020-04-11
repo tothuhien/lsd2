@@ -1,3 +1,6 @@
+#ifndef UTILS_H_
+#define UTILS_H_
+
 #include <iostream>
 #include <sstream>
 #include <fstream>
@@ -16,32 +19,98 @@
 
 
 using namespace std;
-  
-string readWord(ifstream& f,string fn);
+
+/**
+ input/output stream for interface as a library
+ added by BQM 2020-04-09
+ */
+class InputOutputStream {
+public:
+    /** input tree stream */
+    istream *inTree;
+    
+    /** input outgroup stream */
+    istream *inOutgroup;
+    
+    /** input date stream */
+    istream *inDate;
+
+    /** output result stream */
+    ostream *outResult;
+    
+    /** output tree 1 stream */
+    ostream *outTree1;
+
+    /** output tree 2 stream */
+    ostream *outTree2;
+
+    /** output tree 3 stream */
+    ostream *outTree3;
+    
+    /** constructor */
+    InputOutputStream();
+
+    /** destructor */
+    virtual ~InputOutputStream();
+
+    /**
+     set the content of the tree stream
+     @param str a tree string
+     */
+    virtual void setTree(string str);
+};
+
+/**
+ input/output files for stand-alone program
+ */
+class InputOutputFile : public InputOutputStream {
+public:
+    /**
+     constructor
+     @param opt input option
+     */
+    InputOutputFile(Pr *opt);
+    
+    /** destructor */
+    virtual ~InputOutputFile();
+
+    /**
+     set the content of the tree stream
+     @param str a tree string
+     */
+    virtual void setTree(string str);
+
+protected:
+    /** true tree is a file, false other (e.g. stringstream) */
+    bool treeIsFile;
+};
+
+
+string readWord(istream& f,string fn);
 
 string readWord(string line,int& pos);
 
-char readChar(ifstream& f,string fn);
+char readChar(istream& f,string fn);
 
 double readDouble(string line,int& pos);
 
-double readdouble(ifstream& f,string fn);
+double readdouble(istream& f,string fn);
 
 string realToYearMonthDay(double y);
 
 double monthDayToReal(int m,int d);
 
-double readDate(ifstream& f,string fn,Pr* pr);
+double readDate(istream& f,string fn,Pr* pr);
 
-double readDate1(ifstream& f,string fn,char c,Pr* pr);
+double readDate1(istream& f,string fn,char c,Pr* pr);
 
 vector<double> read_double_from_line(string line);
 
-int readInt(ifstream& f,string msg);
+int readInt(istream& f,string msg);
 
-int getLineNumber(string fn);
+int getLineNumber(istream &f);
 
-string readSupport(ifstream& f,string fn);
+string readSupport(istream& f,string fn);
 
 void concat(list<int> & l1,list<int> l2);
 
@@ -69,16 +138,16 @@ bool contain(int s,list<int> l);
 
 bool contain(string s,list<string> l);
 
-string readLabel(ifstream& f,FILE *w);
+//string readLabel(istream& f,FILE *w);
 
-string readLabel(char ch,ifstream& f,int& a);
+string readLabel(char ch,istream& f,int& a);
 
 
-char readBracket(ifstream& f,string fn);
+char readBracket(istream& f,string fn);
 
-char readCommaBracket(ifstream& f,string fn,string& s);
+char readCommaBracket(istream& f,string fn,string& s);
 
-char read2P(ifstream& f,string fn);
+char read2P(istream& f,string fn);
 
 void computeSuc(int* & Pre,int* & Suc1,int* & Suc2,int size,int n);
 
@@ -176,7 +245,7 @@ double variance(Pr* pr,double b);
 
 double* newvariance(int m,double rho,int* P,double* T,int c,int s);
 
-list<string> getOutgroup(string fn);
+list<string> getOutgroup(istream &o, string fn);
 
 bool initConstraintReRooted(Pr* pr,Node** nodes);
 
@@ -261,3 +330,5 @@ void collapse(int i,int j,Pr* pr,Node** nodes,Node** nodes_new,int &cc,int* &tab
 void collapseTreeReOrder(Pr* pr,Node** nodes,Pr* prReduced,Node** nodesReduced,int* &tab);
 
 void collapseUnInformativeBranches(Pr* &pr,Node** &nodes);
+
+#endif

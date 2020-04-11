@@ -24,6 +24,7 @@
 #include "estimate_root.h"
 #include "confidence_interval.h"
 #include "outliers.h"
+#include "lsd.h"
 
 
 using namespace std;
@@ -35,39 +36,18 @@ int main( int argc, char** argv )
 #endif
 {
     Pr* opt = getOptions( argc, argv);
-    filebuf result_file;
-    result_file.open(opt->outFile.c_str(),ios::out);
-    if (!result_file.is_open()){
-        cerr<<"Error: can not create the output file "<<opt->outFile<<endl;
-        exit(EXIT_FAILURE);
-    }
-    ostream result(&result_file);
-    printInterface( result, opt);
+    // initialise input and output streams
+    InputOutputStream *io = new InputOutputFile(opt);
+    printInterface(*(io->outResult), opt);
     clock_t start = clock();
     double elapsed_time;
-    if (opt->fnOutgroup!=""){
-        list<string> outgroup = getOutgroup(opt->fnOutgroup);
-        extrait_outgroup(opt,outgroup);
+    if (io->inOutgroup){
+        list<string> outgroup = getOutgroup(*(io->inOutgroup), opt->fnOutgroup);
+        extrait_outgroup(io, opt,outgroup);
     }
-    ifstream tree;
-    tree.open(opt->inFile.c_str());
-    if (!tree.is_open()){
-        cerr<<"Error: can not open the input tree file."<<endl;
-        exit(EXIT_FAILURE);
-    }
-    filebuf tree_file1,tree_file2,tree_file3;
-    tree_file1.open(opt->treeFile1.c_str(),ios::out);
-    tree_file2.open(opt->treeFile2.c_str(),ios::out);
-    tree_file3.open(opt->treeFile3.c_str(),ios::out);
-    ostream tree1(&tree_file1);
-    ostream tree2(&tree_file2);
-    ostream tree3(&tree_file3);
     ifstream gr(opt->rate.c_str());
-    if (!tree_file1.is_open() || !tree_file2.is_open() || !tree_file3.is_open()){
-        cout<<"Error: can not create the output tree files."<<endl;
-    }
-    tree1<<"#NEXUS\n";
-    tree2<<"#NEXUS\n";
+    *(io->outTree1)<<"#NEXUS\n";
+    *(io->outTree2)<<"#NEXUS\n";
     bool constraintConsistent=true;
     int s=0;
     double median_rate = opt->rho_min;
@@ -78,13 +58,13 @@ int main( int argc, char** argv )
         }
     }
     for (int y=1;y<=opt->nbData;y++){
-        result<<"\nTree "<<y<<" \n";
+        *(io->outResult)<<"\nTree "<<y<<" \n";
         cout<<"\nTREE "<<y<<endl;
         cout<<"*PROCESSING:"<<endl;
         cout<<"Reading the tree ... "<<endl;
         opt->init();
-        Node** nodes=tree2data(tree,opt,s);
-        if (!opt->relative) readDateFile(opt,nodes,constraintConsistent);
+        Node** nodes=tree2data(*(io->inTree),opt,s);
+        if (!opt->relative) readDateFile(*(io->inDate), opt,nodes,constraintConsistent);
         computeSuc_polytomy(opt,nodes);
         collapseUnInformativeBranches(opt,nodes);
         if (!opt->rooted){
@@ -100,14 +80,14 @@ int main( int argc, char** argv )
             opt->internalConstraints.push_back(dateRoot);
         }
         if (y==1){
-            tree1<<"Begin trees;\n";
-            tree2<<"Begin trees;\n";
+            *(io->outTree1)<<"Begin trees;\n";
+            *(io->outTree2)<<"Begin trees;\n";
         }
         if (opt->c == -1){
             opt->b = max(median_branch_lengths(opt,nodes),10./opt->seqLength);
             if (opt->variance>0){
                 cout<<"Parameter to adjust variances was set to "<<opt->b<<" (settable via option -b)"<<endl;
-                result<<"Parameter to adjust variances was set to "<<opt->b<<" (settable via option -b)\n";
+                *(io->outResult)<<"Parameter to adjust variances was set to "<<opt->b<<" (settable via option -b)\n";
             }
         } else {
             opt->b = opt->c;
@@ -138,7 +118,7 @@ int main( int argc, char** argv )
         bool medianRateOK = true;
         if (opt->e>0) medianRateOK = calculateOutliers(opt,nodes,median_rate);
         else if (opt->minblen<0) medianRateOK = calculateMedianRate(opt,nodes,median_rate);
-        imposeMinBlen(result,opt,nodes,median_rate,medianRateOK);
+        imposeMinBlen(*(io->outResult),opt,nodes,median_rate,medianRateOK);
         if (!opt->constraint){//LD without constraints
             if (!constraintConsistent){
                 ostringstream oss;
@@ -148,7 +128,7 @@ int main( int argc, char** argv )
             if (opt->estimate_root==""){//keep the given root
                 cout<<"Dating without temporal constraints ..."<<endl;
                 without_constraint_multirates(opt,nodes,true);
-                output(br,y,opt,nodes,result,tree1,tree2,tree3);
+                output(br,y,opt,nodes,*(io->outResult),*(io->outTree1),*(io->outTree2),*(io->outTree3));
             }
             else if (opt->estimate_root=="k"){
                 cout<<"Estimating the root position on the branch defined by given root ..."<<endl;
@@ -161,7 +141,7 @@ int main( int argc, char** argv )
                 nodes[s1]->V=variance(opt,br);
                 nodes[s2]->V=nodes[s1]->V;
                 without_constraint_active_set_lambda_multirates(br,opt,nodes,true);
-                output(br,y,opt,nodes,result,tree1,tree2,tree3);
+                output(br,y,opt,nodes,*(io->outResult),*(io->outTree1),*(io->outTree2),*(io->outTree3));
             }
             else{//estimate the root
                 int r;
@@ -184,7 +164,7 @@ int main( int argc, char** argv )
                     }
                     reroot_rootedtree(br,r,s1,s2,opt,nodes,nodes_new);
                     without_constraint_active_set_lambda_multirates(br,opt,nodes_new,true);
-                    output(br,y,opt,nodes_new,result,tree1,tree2,tree3);
+                    output(br,y,opt,nodes_new,*(io->outResult),*(io->outTree1),*(io->outTree2),*(io->outTree3));
                     for (int i=0;i<opt->nbBranches+1;i++) delete nodes_new[i];
                     delete[] nodes_new;
                 }
@@ -199,7 +179,7 @@ int main( int argc, char** argv )
                             constraintConsistent = with_constraint_multirates(opt,nodes,true);
                         }
                         if (constraintConsistent) {
-                            output(br,y,opt,nodes,result,tree1,tree2,tree3);
+                            output(br,y,opt,nodes,*(io->outResult),*(io->outTree1),*(io->outTree2),*(io->outTree3));
                         }
                         else{
                             cout<<"*WARNING: There's conflict in the input temporal constraints."<<endl;
@@ -219,7 +199,7 @@ int main( int argc, char** argv )
                             constraintConsistent = with_constraint_active_set_lambda_multirates(br,opt,nodes,true);
                         }
                         if (constraintConsistent) {
-                            output(br,y,opt,nodes,result,tree1,tree2,tree3);
+                            output(br,y,opt,nodes,*(io->outResult),*(io->outTree1),*(io->outTree2),*(io->outTree3));
                         } else {
                             cout<<"*WARNING: There's conflict in the input temporal constraints."<<endl;
                         }
@@ -249,7 +229,7 @@ int main( int argc, char** argv )
                         }
                         reroot_rootedtree(br,r,s1,s2,opt,nodes,nodes_new);
                         with_constraint_active_set_lambda_multirates(br,opt,nodes_new,true);
-                        output(br,y,opt,nodes_new,result,tree1,tree2,tree3);
+                        output(br,y,opt,nodes_new,*(io->outResult),*(io->outTree1),*(io->outTree2),*(io->outTree3));
                         for (int i=0;i<opt->nbBranches+1;i++) delete nodes_new[i];
                         delete[] nodes_new;
                     }
@@ -265,16 +245,12 @@ int main( int argc, char** argv )
     }
     delete opt;
     elapsed_time = (double)(clock()-start)/CLOCKS_PER_SEC;
-    result<<"\n*********************************************************\n";
-    result<<"\nTOTAL ELAPSED TIME: "<<elapsed_time<<" seconds\n";
-    tree1<<"End;";
-    tree2<<"End;";
+    *(io->outResult)<<"\n*********************************************************\n";
+    *(io->outResult)<<"\nTOTAL ELAPSED TIME: "<<elapsed_time<<" seconds\n";
+    *(io->outTree1)<<"End;";
+    *(io->outTree2)<<"End;";
     cout<<"\nTOTAL ELAPSED TIME: "<<elapsed_time<<" seconds"<<endl;
-    tree.close();
-    result_file.close();
-    tree_file1.close();
-    tree_file2.close();
-    tree_file3.close();
     gr.close();
+    delete io;
     return EXIT_SUCCESS;
 }
