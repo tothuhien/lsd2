@@ -53,7 +53,7 @@ int lsd::buildTimeTree( int argc, char** argv, InputOutputStream *inputOutput)
     int s=0;
     double median_rate = opt->rho_min;
     if (opt->partitionFile!="") {
-        readPartitionFile(opt);
+        readPartitionFile(*(io->inPartition), opt);
         for (int i=0;i<=opt->ratePartition.size();i++){
             opt->givenRate.push_back(false);
         }
@@ -65,7 +65,9 @@ int lsd::buildTimeTree( int argc, char** argv, InputOutputStream *inputOutput)
         cout<<"Reading the tree ... "<<endl;
         opt->init();
         Node** nodes=tree2data(*(io->inTree),opt,s);
-        if (!opt->relative) readDateFile(*(io->inDate), opt,nodes,constraintConsistent);
+        io->inDate = new ifstream(opt->inDateFile);//read the same date file for each tree in the tree set
+        if (!opt->relative) readDateFile(*io->inDate, opt,nodes,constraintConsistent);
+        ((ifstream*)io->inDate)->close();
         computeSuc_polytomy(opt,nodes);
         collapseUnInformativeBranches(opt,nodes);
         if (!opt->rooted){

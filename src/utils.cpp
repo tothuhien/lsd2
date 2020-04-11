@@ -21,16 +21,18 @@ InputOutputStream::InputOutputStream () {
     inTree = nullptr;
     inOutgroup = nullptr;
     inDate = nullptr;
+    inPartition = nullptr;
     outResult = nullptr;
     outTree1 = nullptr;
     outTree2 = nullptr;
     outTree3 = nullptr;
 }
 
-InputOutputStream::InputOutputStream(string tree, string outgroup, string date) {
+InputOutputStream::InputOutputStream(string tree, string outgroup, string date, string partition) {
     setTree(tree);
     setOutgroup(outgroup);
     setDate(date);
+    setPartition(partition);
     outResult = new ostringstream;
     outTree1 = new ostringstream;
     outTree2 = new ostringstream;
@@ -49,6 +51,10 @@ InputOutputStream::~InputOutputStream() {
     if (inDate) {
         delete inDate;
         inDate = nullptr;
+    }
+    if (inPartition) {
+        delete inPartition;
+        inPartition = nullptr;
     }
     if (outResult) {
         delete outResult;
@@ -90,6 +96,14 @@ void InputOutputStream::setDate(string str) {
     inDate = new istringstream(str);
 }
 
+void InputOutputStream::setPartition(string str) {
+    if (str.empty())
+        return;
+    if (inPartition)
+        delete inPartition;
+    inPartition = new istringstream(str);
+}
+
 InputOutputFile::InputOutputFile(Pr *opt) : InputOutputStream() {
     treeIsFile = true;
     // open the tree file
@@ -120,6 +134,16 @@ InputOutputFile::InputOutputFile(Pr *opt) : InputOutputStream() {
         }
     }
 
+    // open date file
+    if (opt->partitionFile != "") {
+        ifstream *part_file = new ifstream(opt->partitionFile);
+        inPartition = part_file;
+        if (!part_file->is_open()) {
+            cerr << "Error: cannot open date file " << opt->partitionFile << endl;
+            exit(EXIT_FAILURE);
+        }
+    }
+    
     // open the result file
     ofstream *result_file = new ofstream(opt->outFile);
     outResult = result_file;
@@ -159,6 +183,9 @@ InputOutputFile::~InputOutputFile() {
     }
     if (inDate) {
         ((ifstream*)inDate)->close();
+    }
+    if (inPartition) {
+        ((ifstream*)inPartition)->close();
     }
     if (outResult) {
         ((ofstream*)outResult)->close();

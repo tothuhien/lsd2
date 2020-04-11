@@ -23,6 +23,9 @@ public:
     /** input date stream */
     istream *inDate;
     
+    /** input partition stream */
+    istream *inPartition;
+    
     /** output result stream */
     ostream *outResult;
     
@@ -44,7 +47,7 @@ public:
      @param outgroup outgroup string
      @param date date string
      */
-    InputOutputStream(string tree, string outgroup, string date);
+    InputOutputStream(string tree, string outgroup, string date,string partition);
 
     /** destructor */
     virtual ~InputOutputStream();
@@ -67,6 +70,12 @@ public:
      @param str a string
      */
     virtual void setDate(string str);
+    
+    /**
+     set the content of the outgroup stream
+     @param str a string
+     */
+    virtual void setPartition(string str);
 };
 
 /**
