@@ -15,7 +15,7 @@
 //    along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #include "readData.h"
 
-Node** tree2data(ifstream& tree,Pr* pr,int & s){
+Node** tree2data(istream& tree,Pr* pr,int & s){
     //checkRooted(pr);
     int inode = 1;//id of internal nodes;
     int countleaf=1;//n;
@@ -117,10 +117,8 @@ Node** tree2data(ifstream& tree,Pr* pr,int & s){
     }
     return nodes;
 }
-void readDateFile(Pr* pr,Node** &nodes,bool& constraintConsistent){
-    int lineNb=getLineNumber(pr->inDateFile);
-    ifstream dateFile;
-    dateFile.open(pr->inDateFile.c_str());
+void readDateFile(istream &dateFile, Pr* pr,Node** &nodes,bool& constraintConsistent){
+    int lineNb=getLineNumber(dateFile);
     int ino=readInt(dateFile,"Error in the date file, the file should begin with an integer (the number of temporal constrains)");
     if (lineNb-1<ino) {
         cerr<<"The number of given constraints is small than the number of constraints to read. Please change the number of constraints to read at the first line of the input date file."<<endl;
@@ -236,7 +234,6 @@ void readDateFile(Pr* pr,Node** &nodes,bool& constraintConsistent){
         pr->warningMessage.push_back(oss.str());
     }
     if (pr->inDateFormat==2 && pr->outDateFormat==0) pr->outDateFormat=2;
-    dateFile.close();
 }
 
 
@@ -371,19 +368,13 @@ int getBranchOut(Pr* pr,Node** nodes,list<string> &outgroups,bool &keepBelow){
     }
 }
 
-void extrait_outgroup(Pr* pr,list<string> &outgroups){
-    ifstream tree;
-    tree.open(pr->inFile.c_str());
+void extrait_outgroup(InputOutputStream *io, Pr* pr,list<string> &outgroups){
     int s =0;
-    if (!tree.is_open()) cout<<"Can not open the tree file"<<endl;
-    else{
-        string newFile = pr->inFile;
-        if (pr->keepOutgroup) newFile+=".reroot";
-        else newFile+=".ingroup";
-        FILE* w=fopen(newFile.c_str(),"wt");
+    {
+        ostringstream w;
         for (int y=0;y<pr->nbData;y++){
             cout<<"Removing outgroups of tree "<<y+1<<" ...\n";
-            Node** nodes = tree2data(tree,pr,s);
+            Node** nodes = tree2data(*(io->inTree),pr,s);
             if (!pr->rooted) {
                 nodes=unrooted2rootedS(pr, nodes, s);
             } else{
@@ -396,14 +387,14 @@ void extrait_outgroup(Pr* pr,list<string> &outgroups){
                 int p_r=reroot_rootedtree(r, pr, nodes, nodes_new);
                 computeSuc_polytomy(pr, nodes_new);
                 if (pr->keepOutgroup) {
-                    fprintf(w,"%s",newick(0,0,pr,nodes_new).c_str());
+                    w << newick(0,0,pr,nodes_new);
                 }
                 else{
                     if (keepBelow) {
-                        fprintf(w,"%s",newick(r, r, pr, nodes_new).c_str());
+                        w << newick(r, r, pr, nodes_new);
                     }
                     else{
-                        fprintf(w,"%s",newick(p_r, p_r,pr, nodes_new).c_str());
+                        w << newick(p_r, p_r,pr, nodes_new).c_str();
                     }
                 }
                 for (int i=0;i<=pr->nbBranches;i++) delete nodes_new[i];
@@ -411,15 +402,12 @@ void extrait_outgroup(Pr* pr,list<string> &outgroups){
             }
             else{
                 cout<<"The outgroups are not in the tree "<<y+1<<endl;
-                fprintf(w,"%s",newick(0,0,pr,nodes).c_str());
+                w << newick(0,0,pr,nodes);
             }
             for (int i=0;i<=pr->nbBranches;i++) delete nodes[i];
             delete[] nodes;
         }
-        cout<<"The new input trees are writen to the file "<<newFile<<endl;
-        fclose(w);
-        pr->inFile=newFile;
+        io->setTree(w.str());
     }
-    tree.close();
 }
 

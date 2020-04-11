@@ -14,8 +14,179 @@
 //    You should have received a copy of the GNU General Public License
 //    along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #include "utils.h"
+#include "lsd.h"
+using namespace lsd;
 
-string readWord(ifstream& f,string fn){
+InputOutputStream::InputOutputStream () {
+    inTree = nullptr;
+    inOutgroup = nullptr;
+    inDate = nullptr;
+    outResult = nullptr;
+    outTree1 = nullptr;
+    outTree2 = nullptr;
+    outTree3 = nullptr;
+}
+
+InputOutputStream::InputOutputStream(string tree, string outgroup, string date) {
+    setTree(tree);
+    setOutgroup(outgroup);
+    setDate(date);
+    outResult = new ostringstream;
+    outTree1 = new ostringstream;
+    outTree2 = new ostringstream;
+    outTree3 = new ostringstream;
+}
+
+InputOutputStream::~InputOutputStream() {
+    if (inTree) {
+        delete inTree;
+        inTree = nullptr;
+    }
+    if (inOutgroup) {
+        delete inOutgroup;
+        inOutgroup = nullptr;
+    }
+    if (inDate) {
+        delete inDate;
+        inDate = nullptr;
+    }
+    if (outResult) {
+        delete outResult;
+        outResult = nullptr;
+    }
+    if (outTree1) {
+        delete outTree1;
+        outTree1 = nullptr;
+    }
+    if (outTree2) {
+        delete outTree2;
+        outTree2 = nullptr;
+    }
+    if (outTree3) {
+        delete outTree3;
+        outTree3 = nullptr;
+    }
+}
+
+void InputOutputStream::setTree(string str) {
+    if (inTree)
+        delete inTree;
+    inTree = new istringstream(str);
+}
+
+void InputOutputStream::setOutgroup(string str) {
+    if (str.empty())
+        return;
+    if (inOutgroup)
+        delete inOutgroup;
+    inOutgroup = new istringstream(str);
+}
+
+void InputOutputStream::setDate(string str) {
+    if (str.empty())
+        return;
+    if (inDate)
+        delete inDate;
+    inDate = new istringstream(str);
+}
+
+InputOutputFile::InputOutputFile(Pr *opt) : InputOutputStream() {
+    treeIsFile = true;
+    // open the tree file
+    ifstream *tree_file = new ifstream(opt->inFile);
+    inTree = tree_file;
+    if (!tree_file->is_open()){
+        cerr << "Error: cannot open the input tree file " << opt->inFile << endl;
+        exit(EXIT_FAILURE);
+    }
+    
+    // open outgroup file
+    if (opt->fnOutgroup!=""){
+        ifstream *outgroup_file = new ifstream(opt->fnOutgroup);
+        inOutgroup = outgroup_file;
+        if (!outgroup_file->is_open()) {
+            cerr << "Error: cannot open outgroup file " << opt->fnOutgroup << endl;
+            exit(EXIT_FAILURE);
+        }
+    }
+    
+    // open date file
+    if (opt->inDateFile != "") {
+        ifstream *date_file = new ifstream(opt->inDateFile);
+        inDate = date_file;
+        if (!date_file->is_open()) {
+            cerr << "Error: cannot open date file " << opt->inDateFile << endl;
+            exit(EXIT_FAILURE);
+        }
+    }
+
+    // open the result file
+    ofstream *result_file = new ofstream(opt->outFile);
+    outResult = result_file;
+    if (!result_file->is_open()) {
+        cerr << "Error: cannot create the output file "<< opt->outFile << endl;
+        exit(EXIT_FAILURE);
+    }
+
+    ofstream *tree1_file = new ofstream(opt->treeFile1);
+    outTree1 = tree1_file;
+    if (!tree1_file->is_open()) {
+        cerr << "Error: can not create the output tree file " << opt->treeFile1 << endl;
+        exit(EXIT_FAILURE);
+    }
+
+    ofstream *tree2_file = new ofstream(opt->treeFile2);
+    outTree2 = tree2_file;
+    if (!tree2_file->is_open()) {
+        cerr << "Error: can not create the output tree file " << opt->treeFile2 << endl;
+        exit(EXIT_FAILURE);
+    }
+
+    ofstream *tree3_file = new ofstream(opt->treeFile3);
+    outTree3 = tree3_file;
+    if (!tree3_file->is_open()) {
+        cerr << "Error: can not create the output tree file " << opt->treeFile3 << endl;
+        exit(EXIT_FAILURE);
+    }
+}
+
+InputOutputFile::~InputOutputFile() {
+    if (inTree && treeIsFile) {
+        ((ifstream*)inTree)->close();
+    }
+    if (inOutgroup) {
+        ((ifstream*)inOutgroup)->close();
+    }
+    if (inDate) {
+        ((ifstream*)inDate)->close();
+    }
+    if (outResult) {
+        ((ofstream*)outResult)->close();
+    }
+    if (outTree1) {
+        ((ofstream*)outTree1)->close();
+    }
+    if (outTree2) {
+        ((ofstream*)outTree2)->close();
+    }
+    if (outTree3) {
+        ((ofstream*)outTree3)->close();
+    }
+}
+
+void InputOutputFile::setTree(string str) {
+    if (inTree) {
+        if (treeIsFile) {
+            ((ifstream*)inTree)->close();
+        }
+        delete inTree;
+    }
+    // change tree to stringstream
+    treeIsFile = false;
+    inTree = new istringstream(str);
+}
+
+string readWord(istream& f,string fn){
     string s;
     char c=readChar(f,fn);
     int i=0;
@@ -40,18 +211,20 @@ string readWord(string line,int& pos){
     return s;
 }
 
-int getLineNumber(string fn){
-    ifstream myfile(fn.c_str());
+int getLineNumber(istream &myfile){
+    streampos pos = myfile.tellg();
     string line;
     int nb=0;
     while (getline(myfile, line)){
         nb++;
     }
-    myfile.close();
+    // go back to the current position in file
+    myfile.clear();
+    myfile.seekg(pos);
     return nb;
 }
 
-char readChar(ifstream& f,string fn){
+char readChar(istream& f,string fn){
     char r;
     if (f.get(r)) return r;
     else {
@@ -60,7 +233,7 @@ char readChar(ifstream& f,string fn){
     }
 }
 
-double readdouble(ifstream& f,string fn){
+double readdouble(istream& f,string fn){
     double r;
     if (f >>r) return r;
     else {
@@ -116,7 +289,7 @@ string realToYearMonthDay(double year){
     if (d>=335){
         oss<<y<<"-12-"<<(d-334);
     }
-    return oss.str();
+    return '"' + oss.str() + '"';
 }
 
 double monthDayToReal(int m,int d){
@@ -163,7 +336,7 @@ double monthDayToReal(int m,int d){
     exit(EXIT_FAILURE);
 }
 
-double readDate(ifstream& f,string fn,Pr* pr){
+double readDate(istream& f,string fn,Pr* pr){
     double y;
     if (f >> y) {
         char c = readChar(f,fn);
@@ -195,7 +368,7 @@ double readDate(ifstream& f,string fn,Pr* pr){
     exit(EXIT_FAILURE);
 }
 
-double readDate1(ifstream& f,string fn,char c,Pr* pr){
+double readDate1(istream& f,string fn,char c,Pr* pr){
     string wd="";
     wd+=c;
     double y;
@@ -257,7 +430,7 @@ double readDouble(string line,int& pos){
     return result;
 }
 
-int readInt(ifstream& f,string msg){
+int readInt(istream& f,string msg){
     int c;
     if (f >> c) {
         return (int)(c);
@@ -267,7 +440,7 @@ int readInt(ifstream& f,string msg){
     }
 }
 
-string readSupport(ifstream& f,string fn){
+string readSupport(istream& f,string fn){
     string s="";
     char c=readChar(f,fn);
     while (c!=':' && c!=';') {
@@ -389,7 +562,7 @@ list<int> intersect(list<int> l1,list<int> l2){
     return common;
 }
 
-string readLabel(char ch,ifstream& f,int& a){
+string readLabel(char ch,istream& f,int& a){
     string s="";
     s=s+ch;
     char c=readChar(f,"input tree");
@@ -407,7 +580,7 @@ string readLabel(char ch,ifstream& f,int& a){
 }
 
 
-char readBracket(ifstream& f,string fn){
+char readBracket(istream& f,string fn){
     char c=readChar(f,fn);
     while (c!='('){
         c=readChar(f,fn);
@@ -415,7 +588,7 @@ char readBracket(ifstream& f,string fn){
     return c;
 }
 
-char readCommaBracket(ifstream& f,string fn,string& s){
+char readCommaBracket(istream& f,string fn,string& s){
     char c=readChar(f,fn);
     s="";
     while (c==' ' || c=='	'){ c=readChar(f,fn);}
@@ -425,7 +598,7 @@ char readCommaBracket(ifstream& f,string fn,string& s){
     }
     return c;
 }
-char read2P(ifstream f,string fn){
+char read2P(istream f,string fn){
     char c= readChar(f,fn);
     if (c==';') return c;
     while (c!=':' && c!=';') c=readChar(f,fn);
@@ -1514,20 +1687,15 @@ double* newvariance(int m,double rho,int* P,double* T,int c,int s){
     return V;
 }
 
-list<string> getOutgroup(string fn){
+list<string> getOutgroup(istream &o, string fn){
     list<string> result;
-    int lineNb=getLineNumber(fn);
-    ifstream o;
-    o.open(fn.c_str());
-    if (!o.is_open()) cout<<"Impossible to open outgroup file"<<endl;
-    else{
-        int ino=readInt(o,"Error in the outgroup file, the file should begin with an integer (the number of outgroups)");
-        if (lineNb-1<ino) {
-            cerr<<"The number of given outgroups is small than the number of outgroups to read. Please change the number of outgroups to read at the first line of the outgroup file."<<endl;
-            exit(EXIT_FAILURE);
-        }
-        for (int i=0;i<ino;i++) result.push_back(readWord(o,fn));
+    int lineNb=getLineNumber(o);
+    int ino=readInt(o,"Error in the outgroup file, the file should begin with an integer (the number of outgroups)");
+    if (lineNb-1<ino) {
+        cout<<"The number of given outgroups is small than the number of outgroups to read. Please change the number of outgroups to read at the first line of the outgroup file."<<endl;
+        exit(EXIT_FAILURE);
     }
+    for (int i=0;i<ino;i++) result.push_back(readWord(o,fn));
     return result;
 }
 
