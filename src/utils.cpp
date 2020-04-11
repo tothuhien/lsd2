@@ -116,7 +116,7 @@ string realToYearMonthDay(double year){
     if (d>=335){
         oss<<y<<"-12-"<<(d-334);
     }
-    return oss.str();
+    return '"' + oss.str() + '"';
 }
 
 double monthDayToReal(int m,int d){
