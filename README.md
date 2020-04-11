@@ -15,8 +15,8 @@ Mac/Linux users can install lsd2 via Homebrew as follows:
      
 ## Run LSD2:
 
-If you want to use the interface, type __./lsd2__ without parameters in the terminal from the folder containing the executable file.
-Otherwise, type __./lsd2 options__  where the list of options can be obtained by __./lsd2 -h__.
+If you want to use the interface, type *./lsd2* without parameters in the terminal from the folder containing the executable file.
+Otherwise, type *./lsd2 parameters*  where the list of parameters can be obtained by *./lsd2 -h*.
 
 The input tree file is required and should be specified by option __-i__. 
 	
@@ -25,17 +25,17 @@ The input date file should contain the date of most of the tips and possiblly so
 If some tip dates are missing, the program just uses the subtree containing all defined date tips & nodes for estimating the rate. 
 The missing tip dates would be inferred at the end using the estimated rate & dates.
 In order to avoid undetermined problem, sufficient dates should be given.
-A tree where all tips having the same date with no further date information on internal nodes will not be able to infer absolute dates. 
-In this case, you can still estimate relative dates using options -a and -z to specify the root date and tip date. 
+A tree where all tips having the same date and no further date information on internal nodes will not be able to infer absolute dates. 
+In this case, you can estimate relative dates using options -a and -z to specify the root date and tip date. 
 	
 Option __-c is recommended__ to take into account the temporal constraints (date of a node >= date of its ancestors). 
 It should be noticed that LSD2 always assumes an increasing-time order from root to tips, i.e the date of a node is smaller than that of its children. If your data has the reverse order, the simplest way is to take the negation of the
 input date, and take the negation again of the output date to obtain your expected results.
 
-The program first __collapses__ all internal branches that are considered uninformative (<= 0.5/seqlength by default, and low support value if specified) and impose a constraint of __minimum branches lengths__ for the time scaled tree. 
-These values could be manually specified via option -l (for uninformative branch length threshold), -S (support value threshold), and options -u, -U (for minimum internal/external branches lengths of time scaled tree).
+The program first __collapses__ all internal branches that are considered uninformative (<= 0.5/seqlength by default) and impose a constraint of __minimum branches lengths__ for the time scaled tree. 
+These values could be manually specified via option -l (for uninformative branch length threshold), and options -u, -U (for minimum internal/external branches lengths of time scaled tree).
 
-Further options can be specified, see __./lsd2 -h__ for more details.
+Further options can be specified, see *./lsd2 -h* for more details.
 
 ## Input files format
 
@@ -128,33 +128,33 @@ Variance is used to penalize long branch lengths. The variance formula of each b
 
     `./lsd2 -i rootedtree_file -d date_file -c -v 1`
 
-	  - You want to remove outlier nodes with Zscore threshold 3:
+	- You want to remove outlier nodes with Zscore threshold 3:
 
     `./lsd2 -i rootedtree_file -d date_file -c -v 1 -e 3`
   
-    - You just want to collapse null branches in the input tree (by default all branches <= 0.5/seqlength are collapsed), and impose a minimum of 0.1 (estimated by default) for the branches of the time scaled tree:
+  - You just want to collapse null branches in the input tree (by default all branches <= 0.5/seqlength are collapsed), and impose a minimum of 0.1 (estimated by default) for the branches of the time scaled tree:
   
     `./lsd2 -i rootedtree_file -d date_file -c -v 1 -e 3 -u 0.1 -l 0`
   
-    - Similar as above, but you allow nullability for external branches of output tree:
+  - Similar as above, but you allow nullability for external branches of output tree:
 
     `./lsd2 -i rootedtree_file -d date_file -c -v 1 -e 3 -u 0.1 -U 0 -l 0`
     
-	  - You know the tree partition where each part should have a different rate:
+	- You know the tree partition where each part should have a different rate:
 
     `./lsd2 -i rootedtree_file -d date_file -c -v 1 -p parition_file`
 
-	  - You want to re-estimate the root position locally around the given root
+	- You want to re-estimate the root position locally around the given root
 
     `./lsd2 -i rootedtree_file -d date_file -c -r l`
 
-	  - You want to calculate confidence intervals from 100 simulated trees. The sequence length used to build your tree was 1000, and you'd like to apply a lognormal relaxed clock of standard deviation 0.4 to the simulated branch lengths.
+	- You want to calculate confidence intervals from 100 simulated trees. The sequence length used to build your tree was 1000, and you'd like to apply a lognormal relaxed clock of standard deviation 0.4 to the simulated branch lengths.
 
     `./lsd2 -i rootedtree_file -d date_file -c -r l -f 100 -s 1000 -q 0.4`
     
     (To calculate confidence intervals, the sequence length is required via option -s. The program generates simulated branch lengths using Poisson distributions whose mean equal to the estimated ones multiplied with sequence length. In addition, a lognormal relaxed clock is also applied to the branch lengths. This ditribution has mean 1 and standard deviation settable by users with option -q, by default is 0.2; 0 means strict clock. The bigger q is, the more your tree is relaxed and the bigger confidence intervals you should get).
 
-	  - If all tips are supposed to have the same date, you can still estimate the rate but only relative dates.
+	- If all tips are supposed to have the same date, you can still estimate the rate but only relative dates.
 	
 	`./lsd2 -i tree_file -c`
 

@@ -216,8 +216,7 @@ void output(double br,int y, Pr* pr,Node** nodes,ostream& f,ostream& tree1,ostre
     
     //variance = 2
     if (pr->variance==2){
-        cout<<"Re-estimating using variances based on the branch lengths of the first run ...\n";
-        if (pr->minblen < 0) imposeMinBlen2(f,pr,nodes);
+       cout<<"Re-estimating using variances based on the branch lengths of the first run ...\n";
         if (pr->estimate_root=="") {
             computeNewVariance(pr,nodes);
             if (pr->constraint) {
