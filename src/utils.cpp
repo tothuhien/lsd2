@@ -14,6 +14,8 @@
 //    You should have received a copy of the GNU General Public License
 //    along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #include "utils.h"
+#include "lsd.h"
+using namespace lsd;
 
 InputOutputStream::InputOutputStream () {
     inTree = nullptr;
@@ -23,6 +25,16 @@ InputOutputStream::InputOutputStream () {
     outTree1 = nullptr;
     outTree2 = nullptr;
     outTree3 = nullptr;
+}
+
+InputOutputStream::InputOutputStream(string tree, string outgroup, string date) {
+    setTree(tree);
+    setOutgroup(outgroup);
+    setDate(date);
+    outResult = new ostringstream;
+    outTree1 = new ostringstream;
+    outTree2 = new ostringstream;
+    outTree3 = new ostringstream;
 }
 
 InputOutputStream::~InputOutputStream() {
@@ -42,12 +54,40 @@ InputOutputStream::~InputOutputStream() {
         delete outResult;
         outResult = nullptr;
     }
+    if (outTree1) {
+        delete outTree1;
+        outTree1 = nullptr;
+    }
+    if (outTree2) {
+        delete outTree2;
+        outTree2 = nullptr;
+    }
+    if (outTree3) {
+        delete outTree3;
+        outTree3 = nullptr;
+    }
 }
 
 void InputOutputStream::setTree(string str) {
     if (inTree)
         delete inTree;
     inTree = new istringstream(str);
+}
+
+void InputOutputStream::setOutgroup(string str) {
+    if (str.empty())
+        return;
+    if (inOutgroup)
+        delete inOutgroup;
+    inOutgroup = new istringstream(str);
+}
+
+void InputOutputStream::setDate(string str) {
+    if (str.empty())
+        return;
+    if (inDate)
+        delete inDate;
+    inDate = new istringstream(str);
 }
 
 InputOutputFile::InputOutputFile(Pr *opt) : InputOutputStream() {

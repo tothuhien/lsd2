@@ -1,6 +1,7 @@
 #include "stdarg.h"
 #include "utils.h"
 #include "date.h"
+#include "lsd.h"
 
 using namespace std;
 

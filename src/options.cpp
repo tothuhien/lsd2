@@ -43,14 +43,18 @@ Pr* getCommandLine( int argc, char** argv)
         switch (c)
         {
             case 'i':
+#ifndef USE_LSD2
                 if( access( optarg, R_OK )!=0 )
                     myExit( "Cannot read the file named \"%s\"\n", optarg );
+#endif
                 opt->inFile = optarg;
                 iflag = true;
                 break;
             case 'd':
+#ifndef USE_LSD2
                 if( access( optarg, R_OK )!=0 )
                     myExit( "Cannot read the file named \"%s\"\n", optarg );
+#endif
                 opt->inDateFile = optarg;
                 dflag = true;
                 break;
@@ -86,8 +90,10 @@ Pr* getCommandLine( int argc, char** argv)
                     myExit("Argument of option -n must be strictly positive.\n");
                 break;
             case 'g':
+#ifndef USE_LSD2
                 if( access( optarg, R_OK )!=0 )
                     myExit( "Cannot read the file named \"%s\"\n", optarg );
+#endif
                 opt->fnOutgroup = optarg;
                 break;
             case 'k':

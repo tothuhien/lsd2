@@ -28,16 +28,17 @@
 
 
 using namespace std;
+using namespace lsd;
 
-#ifdef USE_LSD2
-int lsd_main( int argc, char** argv )
-#else
-int main( int argc, char** argv )
-#endif
+int lsd::buildTimeTree( int argc, char** argv, InputOutputStream *inputOutput)
 {
     Pr* opt = getOptions( argc, argv);
     // initialise input and output streams
-    InputOutputStream *io = new InputOutputFile(opt);
+    InputOutputStream *io;
+    if (inputOutput)
+        io = inputOutput;
+    else
+        io = new InputOutputFile(opt);
     printInterface(*(io->outResult), opt);
     clock_t start = clock();
     double elapsed_time;
@@ -251,6 +252,13 @@ int main( int argc, char** argv )
     *(io->outTree2)<<"End;";
     cout<<"\nTOTAL ELAPSED TIME: "<<elapsed_time<<" seconds"<<endl;
     gr.close();
-    delete io;
+    if (!inputOutput)
+        delete io;
     return EXIT_SUCCESS;
 }
+
+#ifndef USE_LSD2
+int main( int argc, char** argv ) {
+    return buildTimeTree(argc, argv);
+}
+#endif

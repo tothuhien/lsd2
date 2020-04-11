@@ -16,49 +16,10 @@
 #include "pair.h"
 #include "subtree.h"
 #include "part.h"
-
+#include "lsd.h"
 
 using namespace std;
-
-/**
- input/output stream for interface as a library
- added by BQM 2020-04-09
- */
-class InputOutputStream {
-public:
-    /** input tree stream */
-    istream *inTree;
-    
-    /** input outgroup stream */
-    istream *inOutgroup;
-    
-    /** input date stream */
-    istream *inDate;
-
-    /** output result stream */
-    ostream *outResult;
-    
-    /** output tree 1 stream */
-    ostream *outTree1;
-
-    /** output tree 2 stream */
-    ostream *outTree2;
-
-    /** output tree 3 stream */
-    ostream *outTree3;
-    
-    /** constructor */
-    InputOutputStream();
-
-    /** destructor */
-    virtual ~InputOutputStream();
-
-    /**
-     set the content of the tree stream
-     @param str a tree string
-     */
-    virtual void setTree(string str);
-};
+using namespace lsd;
 
 /**
  input/output files for stand-alone program
