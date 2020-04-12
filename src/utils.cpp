@@ -28,6 +28,9 @@ InputOutputStream::InputOutputStream () {
 }
 
 InputOutputStream::InputOutputStream(string tree, string outgroup, string date) {
+    inTree = nullptr;
+    inOutgroup = nullptr;
+    inDate = nullptr;
     setTree(tree);
     setOutgroup(outgroup);
     setDate(date);
