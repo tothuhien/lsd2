@@ -70,8 +70,10 @@ int lsd::buildTimeTree( int argc, char** argv, InputOutputStream *inputOutput)
         //read the same date file for each tree in the tree set
         // BQM: inDate can be a stringstream, so opening a file break the library,
         // you just need to set the stream position to 0 if you want to read again
-        io->inDate->seekg(0);
-        if (!opt->relative) readDateFile(*io->inDate, opt,nodes,constraintConsistent);
+        if (io->inDate) {
+            io->inDate->seekg(0);
+            if (!opt->relative) readDateFile(*io->inDate, opt,nodes,constraintConsistent);
+        }
         //((ifstream*)io->inDate)->close();
         computeSuc_polytomy(opt,nodes);
         collapseUnInformativeBranches(opt,nodes);
