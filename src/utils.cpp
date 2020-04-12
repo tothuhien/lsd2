@@ -2394,7 +2394,7 @@ void imposeMinBlen(ostream& file,Pr* pr, Node** nodes, double median_rate,bool m
     }
 }
 
-void imposeMinBlen2(ostream& file,Pr* pr, Node** nodes){
+/*void imposeMinBlen2(ostream& file,Pr* pr, Node** nodes){
     double round_time = pr->round_time;
     double m = 1./(pr->seqLength*pr->rho);
     if (round_time <0){
@@ -2448,7 +2448,7 @@ void imposeMinBlen2(ostream& file,Pr* pr, Node** nodes){
             nodes[i]->minblen = minblenL;
         }
     }
-}
+}*/
 
 double median_branch_lengths(Pr* pr,Node** nodes){
     vector<double> bl;
@@ -2581,8 +2581,13 @@ void collapseUnInformativeBranches(Pr* &pr,Node** &nodes){
     int* tab = new int[pr->nbBranches+1];
     bool useSupport = (pr->support>=0);
     int nbC = collapseTree(pr, nodes, nodes_new,tab, pr->nullblen,useSupport);//nbC is the number of internal nodes reduced
-    if (!useSupport) cout<<"Collapse "<<(pr->nbINodes - nbC)<<" internal branches having branch length <= "<<pr->nullblen<<" (settable via option -l)"<<endl;
+    if (!useSupport) cout<<"Collapse "<<(pr->nbINodes - (!pr->rooted) - nbC)<<" internal branches having branch length <= "<<pr->nullblen<<" (settable via option -l)"<<endl;
     else cout<<"Collapse "<<(pr->nbINodes - nbC)<<" internal branches having branch length <= "<<pr->nullblen<<" (settable via option -l) or support value <= "<<pr->support<<" (settable via option -S)"<<endl;
+    if (  (double)(pr->nbINodes - nbC)/pr->nbINodes > 0.1){
+        ostringstream oss;
+        oss<<" - More then 10% internal branches were collapsed.\n";
+        pr->warningMessage.push_back(oss.str());
+    }
     Node** nodesReduced = new Node*[nbC+pr->nbBranches-pr->nbINodes+1];
     Pr* prReduced = new Pr(nbC,nbC+pr->nbBranches-pr->nbINodes);
     prReduced->copy(pr);
