@@ -25,6 +25,7 @@
 #include "confidence_interval.h"
 #include "outliers.h"
 #include "lsd.h"
+#include <ctime>
 
 
 using namespace std;
