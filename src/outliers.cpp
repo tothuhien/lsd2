@@ -9,7 +9,7 @@ bool calculateOutliers(Pr* & pr,Node** & nodes,double & median_rate){
         oss<<"- Rate partition can not be included in estimating outliers.\n";
         pr->warningMessage.push_back(oss.str());
     }
-    cout<<"Calculating the outlier nodes with Zscore threshold 3 (setable via option -e) ..."<<endl;
+    cout<<"Calculating the outlier nodes with Zscore threshold "<<pr->e<<" (setable via option -e) ..."<<endl;
     if (pr->estimate_root=="" || pr->estimate_root=="k"){
         bool givenRate = pr->givenRate[0];
         vector<double> dates_min;
