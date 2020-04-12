@@ -70,8 +70,8 @@ Pr* getCommandLine( int argc, char** argv)
 #ifndef USE_LSD2
                 if( access( optarg, R_OK )!=0 )
                     myExit( "Cannot read the file named \"%s\"\n", optarg );
-                opt->partitionFile = optarg;
 #endif
+                opt->partitionFile = optarg;
                 break;
             case 'o':
                 opt->outFile = optarg;
@@ -95,8 +95,8 @@ Pr* getCommandLine( int argc, char** argv)
 #ifndef USE_LSD2
                 if( access( optarg, R_OK )!=0 )
                     myExit( "Cannot read the file named \"%s\"\n", optarg );
-                opt->fnOutgroup = optarg;
 #endif
+                opt->fnOutgroup = optarg;
                 break;
             case 'k':
                 if (opt->fnOutgroup!=""){
