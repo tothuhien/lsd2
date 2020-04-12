@@ -237,9 +237,8 @@ void readDateFile(istream &dateFile, Pr* pr,Node** &nodes,bool& constraintConsis
 }
 
 
-void readPartitionFile(Pr* pr){
+void readPartitionFile(istream &partFile, Pr* pr){
     //Read partition file
-    ifstream partFile(pr->partitionFile.c_str());
     string line;
     pr->multiplierRate.push_back(1);
     while (getline(partFile,line)) {

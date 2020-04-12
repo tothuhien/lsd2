@@ -21,19 +21,22 @@ InputOutputStream::InputOutputStream () {
     inTree = nullptr;
     inOutgroup = nullptr;
     inDate = nullptr;
+    inPartition = nullptr;
     outResult = nullptr;
     outTree1 = nullptr;
     outTree2 = nullptr;
     outTree3 = nullptr;
 }
 
-InputOutputStream::InputOutputStream(string tree, string outgroup, string date) {
+InputOutputStream::InputOutputStream(string tree, string outgroup, string date, string partition) {
     inTree = nullptr;
     inOutgroup = nullptr;
     inDate = nullptr;
+    inPartition = nullptr;
     setTree(tree);
     setOutgroup(outgroup);
     setDate(date);
+    setPartition(partition);
     outResult = new ostringstream;
     outTree1 = new ostringstream;
     outTree2 = new ostringstream;
@@ -52,6 +55,10 @@ InputOutputStream::~InputOutputStream() {
     if (inDate) {
         delete inDate;
         inDate = nullptr;
+    }
+    if (inPartition) {
+        delete inPartition;
+        inPartition = nullptr;
     }
     if (outResult) {
         delete outResult;
@@ -93,6 +100,14 @@ void InputOutputStream::setDate(string str) {
     inDate = new istringstream(str);
 }
 
+void InputOutputStream::setPartition(string str) {
+    if (str.empty())
+        return;
+    if (inPartition)
+        delete inPartition;
+    inPartition = new istringstream(str);
+}
+
 InputOutputFile::InputOutputFile(Pr *opt) : InputOutputStream() {
     treeIsFile = true;
     // open the tree file
@@ -123,6 +138,16 @@ InputOutputFile::InputOutputFile(Pr *opt) : InputOutputStream() {
         }
     }
 
+    // open date file
+    if (opt->partitionFile != "") {
+        ifstream *part_file = new ifstream(opt->partitionFile);
+        inPartition = part_file;
+        if (!part_file->is_open()) {
+            cerr << "Error: cannot open date file " << opt->partitionFile << endl;
+            exit(EXIT_FAILURE);
+        }
+    }
+    
     // open the result file
     ofstream *result_file = new ofstream(opt->outFile);
     outResult = result_file;
@@ -162,6 +187,9 @@ InputOutputFile::~InputOutputFile() {
     }
     if (inDate) {
         ((ifstream*)inDate)->close();
+    }
+    if (inPartition) {
+        ((ifstream*)inPartition)->close();
     }
     if (outResult) {
         ((ofstream*)outResult)->close();
@@ -255,44 +283,62 @@ string realToYearMonthDay(double year){
         y = ceil(year);
     }
     int d = round(365*days);
-    if (d==0) oss<<y;
+    int m = 0;
     if (d>=1 && d<=31){
-        oss<<y<<"-01-"<<d;
+        m = 1;
     }
     if (d>=32 && d<=59){
-        oss<<y<<"-02-"<<(d-31);
+        m = 2;
+        d = d -31;
     }
     if (d>=60 && d<=90){
-        oss<<y<<"-03-"<<(d-59);
+        m = 3;
+        d = d - 59;
     }
     if (d>=91 && d<=120){
-        oss<<y<<"-04-"<<(d-90);
+        m = 4;
+        d = d - 90;
     }
     if (d>=121 && d<=151){
-        oss<<y<<"-05-"<<(d-120);
+        m = 5;
+        d = d - 120;
     }
     if (d>=152 && d<=181){
-        oss<<y<<"-06-"<<(d-151);
+        m = 6;
+        d = d - 151;
     }
     if (d>=182 && d<=212){
-        oss<<y<<"-07-"<<(d-181);
+        m = 7;
+        d = d - 181;
     }
     if (d>=213 && d<=243){
-        oss<<y<<"-08-"<<(d-212);
+        m = 8;
+        d = d -212;
     }
     if (d>=244 && d<=273){
-        oss<<y<<"-09-"<<(d-243);
+        m = 9;
+        d = d - 243;
     }
     if (d>=274 && d<=304){
-        oss<<y<<"-10-"<<(d-273);
+        m = 10;
+        d = d - 273;
     }
     if (d>=305 && d<=334){
-        oss<<y<<"-11-"<<(d-304);
+        m = 11;
+        d = d - 304;
     }
     if (d>=335){
-        oss<<y<<"-12-"<<(d-334);
+        m = 12;
+        d = d - 334;
     }
-    return '"' + oss.str() + '"';
+    oss<<y;
+    if (d!=0 && m!=0) {
+        if (m<=9) oss<<"-0"<<m;
+        else oss<<"-"<<m;
+        if (d<=9) oss<<"-0"<<d;
+        else oss<<"-"<<d;
+    }
+    return oss.str();
 }
 
 double monthDayToReal(int m,int d){
@@ -1527,7 +1573,7 @@ string nexus(int i,Pr* pr,Node** nodes){
     } else{
         date<<nodes[i]->D;
     }
-    if (i>=pr->nbINodes) return nodes[i]->L+"[&date="+date.str()+"]:"+b.str();
+    if (i>=pr->nbINodes) return nodes[i]->L+"[&date=\""+date.str()+"\"]:"+b.str();
     else{
         string newLabel="(";
         for (vector<int>::iterator iter=nodes[i]->suc.begin(); iter!=nodes[i]->suc.end(); iter++) {
@@ -1537,11 +1583,11 @@ string nexus(int i,Pr* pr,Node** nodes){
             else newLabel+=","+l;
         }
         if (i>0) {
-            if (abs(nodes[i]->B)>0) return newLabel+")"+nodes[i]->L+"[&date="+date.str()+"]:"+b.str();
+            if (abs(nodes[i]->B)>0) return newLabel+")"+nodes[i]->L+"[&date=\""+date.str()+"\"]:"+b.str();
             else return newLabel+")"+nodes[i]->L+":"+b.str();
         }
         else{
-            return newLabel+")"+nodes[i]->L+"[&date="+date.str()+"];\n";
+            return newLabel+")"+nodes[i]->L+"[&date=\""+date.str()+"\"];\n";
         }
     }
 }
@@ -1556,7 +1602,7 @@ string nexusDate(int i,Pr* pr,Node** nodes){
     } else{
         date<<nodes[i]->D;
     }
-    if (i>=pr->nbINodes) return nodes[i]->L+"[&date="+date.str()+"]:"+b.str();
+    if (i>=pr->nbINodes) return nodes[i]->L+"[&date=\""+date.str()+"\"]:"+b.str();
     else{
         string newLabel="(";
         for (vector<int>::iterator iter=nodes[i]->suc.begin(); iter!=nodes[i]->suc.end(); iter++) {
@@ -1566,11 +1612,11 @@ string nexusDate(int i,Pr* pr,Node** nodes){
             else newLabel+=","+l;
         }
         if (i>0) {
-            if (abs(nodes[i]->B)>0) return newLabel+")"+nodes[i]->L+"[&date="+date.str()+"]:"+b.str();
+            if (abs(nodes[i]->B)>0) return newLabel+")"+nodes[i]->L+"[&date=\""+date.str()+"\"]:"+b.str();
             else return newLabel+")"+nodes[i]->L+":"+b.str();
         }
         else{
-            return newLabel+")"+nodes[i]->L+"[&date="+date.str()+"];\n";
+            return newLabel+")"+nodes[i]->L+"[&date=\""+date.str()+"\"];\n";
         }
     }
 }
@@ -1598,7 +1644,7 @@ string nexusIC(int i,Pr* pr,Node** nodes,double* D_min,double* D_max,double* H_m
         hmin<< H_min[i];
         hmax<< H_max[i];
         if (i>=pr->nbINodes) {
-            return nodes[i]->L+"[&date="+date.str()+",CI_height={"+hmin.str()+","+hmax.str()+"}][&CI_date=\""+date.str()+"("+dmin.str()+","+dmax.str()+")\"]:"+b.str();
+            return nodes[i]->L+"[&date=\""+date.str()+"\",CI_height={"+hmin.str()+","+hmax.str()+"}][&CI_date=\""+date.str()+"("+dmin.str()+","+dmax.str()+")\"]:"+b.str();
         }
         else{
             string newLabel="(";
@@ -1609,11 +1655,11 @@ string nexusIC(int i,Pr* pr,Node** nodes,double* D_min,double* D_max,double* H_m
                 else newLabel+=","+l;
             }
             if (i>0) {
-                if (abs(nodes[i]->B)>0) return newLabel+")"+nodes[i]->L+"[&date="+date.str()+",CI_height={"+hmin.str()+","+hmax.str()+"}][&CI_date=\""+date.str()+"("+dmin.str()+","+dmax.str()+")\"]:"+b.str();
+                if (abs(nodes[i]->B)>0) return newLabel+")"+nodes[i]->L+"[&date=\""+date.str()+"\",CI_height={"+hmin.str()+","+hmax.str()+"}][&CI_date=\""+date.str()+"("+dmin.str()+","+dmax.str()+")\"]:"+b.str();
                 else return newLabel+")"+nodes[i]->L+":"+b.str();
             }
             else{
-                return newLabel+")"+nodes[i]->L+"[&date="+date.str()+",CI_height={"+hmin.str()+","+hmax.str()+"}][&CI_date=\""+date.str()+"("+dmin.str()+","+dmax.str()+")\"];\n";
+                return newLabel+")"+nodes[i]->L+"[&date=\""+date.str()+"\",CI_height={"+hmin.str()+","+hmax.str()+"}][&CI_date=\""+date.str()+"("+dmin.str()+","+dmax.str()+")\"];\n";
             }
             
         }
@@ -1643,7 +1689,7 @@ string nexusICDate(int i,Pr* pr,Node** nodes,double* D_min,double* D_max,double*
         hmin<< H_min[i];
         hmax<< H_max[i];
         if (i>=pr->nbINodes) {
-            return nodes[i]->L+"[&date="+date.str()+",CI_height={"+hmin.str()+","+hmax.str()+"}][&CI_date=\""+date.str()+"("+dmin.str()+","+dmax.str()+")\"]:"+b.str();
+            return nodes[i]->L+"[&date=\""+date.str()+"\",CI_height={"+hmin.str()+","+hmax.str()+"}][&CI_date=\""+date.str()+"("+dmin.str()+","+dmax.str()+")\"]:"+b.str();
         }
         else{
             string newLabel="(";
@@ -1654,11 +1700,11 @@ string nexusICDate(int i,Pr* pr,Node** nodes,double* D_min,double* D_max,double*
                 else newLabel+=","+l;
             }
             if (i>0) {
-                if (abs(nodes[i]->B)>0) return newLabel+")"+nodes[i]->L+"[&date="+date.str()+",CI_height={"+hmin.str()+","+hmax.str()+"}][&CI_date=\""+date.str()+"("+dmin.str()+","+dmax.str()+")\"]:"+b.str();
+                if (abs(nodes[i]->B)>0) return newLabel+")"+nodes[i]->L+"[&date=\""+date.str()+"\",CI_height={"+hmin.str()+","+hmax.str()+"}][&CI_date=\""+date.str()+"("+dmin.str()+","+dmax.str()+")\"]:"+b.str();
                 else return newLabel+")"+nodes[i]->L+":"+b.str();
             }
             else{
-                return newLabel+")"+nodes[i]->L+"[&date="+date.str()+",CI_height={"+hmin.str()+","+hmax.str()+"}][&CI_date=\""+date.str()+"("+dmin.str()+","+dmax.str()+")\"];\n";
+                return newLabel+")"+nodes[i]->L+"[&date=\""+date.str()+"\",CI_height={"+hmin.str()+","+hmax.str()+"}][&CI_date=\""+date.str()+"("+dmin.str()+","+dmax.str()+")\"];\n";
             }
             
         }
@@ -2334,6 +2380,62 @@ void imposeMinBlen(ostream& file,Pr* pr, Node** nodes, double median_rate,bool m
         } else {
             cout<<"Minimum internal branches lengths of time scaled tree was set to "<<minblen<<" (settable via option -u)"<<endl;
             cout<<"Minimum external branches lengths of time scaled tree was set to "<<pr->minblenL<<" (settable via option -U)"<<endl;
+        }
+    }
+    nodes[0]->minblen = minblen;
+    double minblenL = minblen;
+    if (pr->minblenL >= 0) minblenL = pr->minblenL;
+    for (int i=1;i<=pr->nbBranches;i++){
+        if (i<pr->nbINodes) {
+            nodes[i]->minblen = minblen;
+        } else{
+            nodes[i]->minblen = minblenL;
+        }
+    }
+}
+
+void imposeMinBlen2(ostream& file,Pr* pr, Node** nodes){
+    double round_time = pr->round_time;
+    double m = 1./(pr->seqLength*pr->rho);
+    if (round_time <0){
+        if (pr->inDateFormat == 2 || pr->inDateFormat == 1){
+            round_time = 365;
+        } else {
+            if (m>=1) round_time = 100;
+            else {
+                round_time = 10;
+                double mm = m;
+                while (mm<1){
+                    mm = mm*10;
+                    round_time = round_time*10;
+                }
+            }
+        }
+    }
+    string unit="";
+    if (round_time==365) unit=" days";
+    if (round_time==52) unit=" weeks";
+    double minblen = round(round_time*m)/(double)round_time;
+    if (!pr->relative){
+        if (pr->minblenL < 0){
+            cout<<"Minimum branch length of time scaled tree (settable via option -u and -U): "<<m<<", rounded to "<<minblen<<" ("<<round(round_time*m)<<unit<<"/"<<round_time<<") using factor "<<round_time<<" (settable via option -R)"<<endl;
+            file<<"Minimum branch length of time scaled tree (settable via option -u and -U): "<<m<<", rounded to "<<minblen<<" ("<<round(round_time*m)<<"/"<<round_time<<") using factor "<<round_time<<" (settable via option -R)\n";
+        } else {
+            cout<<"Minimum internal branches lengths of time scaled tree (settable via option -u): "<<m<<", rounded to "<<minblen<<" ("<<round(round_time*m)<<"/"<<round_time<<") using factor "<<round_time<<" (settable via option -R)"<<endl;
+            cout<<"Minimum external branches lengths of time scaled tree was set to "<<pr->minblenL<<" (settable via option -U)"<<endl;
+            file<<"Minimum internal branches lengths of time scaled tree (settable via option -u): "<<m<<", rounded to "<<minblen<<" ("<<round(round_time*m)<<"/"<<round_time<<") using factor "<<round_time<<" (settable via option -R)\n";
+            file<<"Minimum external branches lengths of time scaled tree was set to "<<pr->minblenL<<" (settable via option -U)"<<endl;
+        }
+    }
+    else {
+        if (pr->minblenL < 0){
+            cout<<"Minimum branch length of time scaled tree (settable via option -u and -U): "<<m<<endl;
+            file<<"Minimum branch length of time scaled tree (settable via option -u and -U): "<<m<<"\n";
+        } else {
+            cout<<"Minimum internal branches lengths of time scaled tree (settable via option -u): "<<m<<endl;
+            cout<<"Minimum external branches lengths of time scaled tree was set to "<<pr->minblenL<<" (settable via option -U)"<<endl;
+            file<<"Minimum internal branches lengths of time scaled tree (settable via option -u): "<<m<<"\n";
+            file<<"Minimum external branches lengths of time scaled tree was set to "<<pr->minblenL<<" (settable via option -U)"<<endl;
         }
     }
     nodes[0]->minblen = minblen;
