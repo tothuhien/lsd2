@@ -25,6 +25,7 @@
 #include "confidence_interval.h"
 #include "outliers.h"
 #include "lsd.h"
+#include <ctime>
 
 
 using namespace std;
@@ -65,8 +66,10 @@ int lsd::buildTimeTree( int argc, char** argv, InputOutputStream *inputOutput)
         cout<<"Reading the tree ... "<<endl;
         opt->init();
         Node** nodes=tree2data(*(io->inTree),opt,s);
-        io->inDate->seekg(0);//BQM: set the stream position to 0 to read the same date file for each tree in the tree set
-        if (!opt->relative) readDateFile(*io->inDate, opt,nodes,constraintConsistent);
+        if (!opt->relative) {
+            io->inDate->seekg(0);//BQM: set the stream position to 0 to read the same date file for each tree in the tree set
+            readDateFile(*io->inDate, opt,nodes,constraintConsistent);
+        }
         computeSuc_polytomy(opt,nodes);
         collapseUnInformativeBranches(opt,nodes);
         if (!opt->rooted){
