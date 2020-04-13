@@ -78,6 +78,7 @@ bool calculateOutliers(Pr* & pr,Node** & nodes,double & median_rate){
         if (pr->estimate_root==""){
             bool consistent;
             pr->outlier = outliers_rooted(pr,nodes,samples,dates_min,dates_max,false,both,median_rate,consistent);
+            cout<<"median rate "<<median_rate<<endl;
             pr->givenRate[0] = givenRate;
             delete[] samples;
             if (!consistent){
@@ -503,14 +504,13 @@ bool median_rate(Pr* pr,Node** nodes, vector<double> dates, vector<int>* samples
             }
             if (!slopes.empty()){
                 double m = median(slopes);
-                rates.push_back(m);
+                if (m>0) rates.push_back(m);
             }
         }
         if (rates.size()==0) return false;
         else {
             rate = median(rates);
-            if (rate>0) return true;
-            else return false;
+            return true;
         }
     }
 }
@@ -542,45 +542,26 @@ bool median_rate(Pr* pr,Node** nodes, vector<double> dates_min,vector<double> da
                 }
             }
             if (!slopeMin.empty()){
-                rates_min.push_back(median(slopeMin));
+                double m = median(slopeMin);
+                if (m>0) rates_min.push_back(m);
             }
             if (!slopeMax.empty()){
-                rates_max.push_back(median(slopeMax));
+                double m = median(slopeMax);
+                if (m>0) rates_max.push_back(median(slopeMax));
             }
         }
         if (rates_min.size()>0 && rates_max.size()>0){
             rate1 = median(rates_min);
             rate2 = median(rates_max);
-            if (rate1>0 && rate2>0) return true;
-            else if (rate1>0){
-                rate2=rate1;
-                return true;
-            }
-            else if (rate2>0){
-                rate1=rate2;
-                return true;
-            }
-            else{
-                return false;
-            }
+            return true;
         } else {
             if (rates_max.size()>0){
                 rate2 = median(rates_max);
-                if (rate2>0){
-                    rate1 = rate2;
-                    return true;
-                } else{
-                    return false;
-                }
+                return true;
             }
             else if (rates_min.size()>0){
                 rate1 = median(rates_min);
-                if (rate1>0){
-                    rate2 = rate1;
-                    return true;
-                } else{
-                    return false;
-                }
+                return true;
             }
             else return false;
         }
@@ -604,7 +585,9 @@ vector<int> outliers_rooted(Pr* pr,Node** nodes,vector<int>* samples, vector<dou
     double mean_res = 0;
     double var_res = 0;
     vector<double> res = residus_lsd(pr,nodes,mean_res,var_res);
-    for (int i=0;i<res.size();i++) res[i] = (res[i]-mean_res)/sqrt(var_res);
+    for (int i=0;i<res.size();i++){
+        res[i] = (res[i]-mean_res)/sqrt(var_res);
+    }
     for (int i=pr->nbINodes;i<=pr->nbBranches;i++){
         if (abs(res[i-1])>pr->e){
             if (nodes[i]->type == 'p' || nodes[i]->type == 'b'){
@@ -636,7 +619,9 @@ vector<int> outliers_rooted(Pr* pr,Node** nodes,vector<int>* samples, vector<dou
         mean_res = 0;
         var_res = 0;
         res = residus_lsd(pr,nodes,mean_res,var_res);
-        for (int i=0;i<res.size();i++) res[i] = (res[i]-mean_res)/sqrt(var_res);
+        for (int i=0;i<res.size();i++) {
+            res[i] = (res[i]-mean_res)/sqrt(var_res);
+        }
         vector<int> outliers_max;
         for (int i=pr->nbINodes;i<=pr->nbBranches;i++){
             if (abs(res[i-1])>pr->e){

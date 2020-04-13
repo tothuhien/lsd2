@@ -2394,62 +2394,6 @@ void imposeMinBlen(ostream& file,Pr* pr, Node** nodes, double median_rate,bool m
     }
 }
 
-/*void imposeMinBlen2(ostream& file,Pr* pr, Node** nodes){
-    double round_time = pr->round_time;
-    double m = 1./(pr->seqLength*pr->rho);
-    if (round_time <0){
-        if (pr->inDateFormat == 2 || pr->inDateFormat == 1){
-            round_time = 365;
-        } else {
-            if (m>=1) round_time = 100;
-            else {
-                round_time = 10;
-                double mm = m;
-                while (mm<1){
-                    mm = mm*10;
-                    round_time = round_time*10;
-                }
-            }
-        }
-    }
-    string unit="";
-    if (round_time==365) unit=" days";
-    if (round_time==52) unit=" weeks";
-    double minblen = round(round_time*m)/(double)round_time;
-    if (!pr->relative){
-        if (pr->minblenL < 0){
-            cout<<"Minimum branch length of time scaled tree (settable via option -u and -U): "<<m<<", rounded to "<<minblen<<" ("<<round(round_time*m)<<unit<<"/"<<round_time<<") using factor "<<round_time<<" (settable via option -R)"<<endl;
-            file<<"Minimum branch length of time scaled tree (settable via option -u and -U): "<<m<<", rounded to "<<minblen<<" ("<<round(round_time*m)<<"/"<<round_time<<") using factor "<<round_time<<" (settable via option -R)\n";
-        } else {
-            cout<<"Minimum internal branches lengths of time scaled tree (settable via option -u): "<<m<<", rounded to "<<minblen<<" ("<<round(round_time*m)<<"/"<<round_time<<") using factor "<<round_time<<" (settable via option -R)"<<endl;
-            cout<<"Minimum external branches lengths of time scaled tree was set to "<<pr->minblenL<<" (settable via option -U)"<<endl;
-            file<<"Minimum internal branches lengths of time scaled tree (settable via option -u): "<<m<<", rounded to "<<minblen<<" ("<<round(round_time*m)<<"/"<<round_time<<") using factor "<<round_time<<" (settable via option -R)\n";
-            file<<"Minimum external branches lengths of time scaled tree was set to "<<pr->minblenL<<" (settable via option -U)"<<endl;
-        }
-    }
-    else {
-        if (pr->minblenL < 0){
-            cout<<"Minimum branch length of time scaled tree (settable via option -u and -U): "<<m<<endl;
-            file<<"Minimum branch length of time scaled tree (settable via option -u and -U): "<<m<<"\n";
-        } else {
-            cout<<"Minimum internal branches lengths of time scaled tree (settable via option -u): "<<m<<endl;
-            cout<<"Minimum external branches lengths of time scaled tree was set to "<<pr->minblenL<<" (settable via option -U)"<<endl;
-            file<<"Minimum internal branches lengths of time scaled tree (settable via option -u): "<<m<<"\n";
-            file<<"Minimum external branches lengths of time scaled tree was set to "<<pr->minblenL<<" (settable via option -U)"<<endl;
-        }
-    }
-    nodes[0]->minblen = minblen;
-    double minblenL = minblen;
-    if (pr->minblenL >= 0) minblenL = pr->minblenL;
-    for (int i=1;i<=pr->nbBranches;i++){
-        if (i<pr->nbINodes) {
-            nodes[i]->minblen = minblen;
-        } else{
-            nodes[i]->minblen = minblenL;
-        }
-    }
-}*/
-
 double median_branch_lengths(Pr* pr,Node** nodes){
     vector<double> bl;
     for (int i=1;i<=pr->nbBranches;i++){
@@ -2581,11 +2525,11 @@ void collapseUnInformativeBranches(Pr* &pr,Node** &nodes){
     int* tab = new int[pr->nbBranches+1];
     bool useSupport = (pr->support>=0);
     int nbC = collapseTree(pr, nodes, nodes_new,tab, pr->nullblen,useSupport);//nbC is the number of internal nodes reduced
-    if (!useSupport) cout<<"Collapse "<<(pr->nbINodes - (!pr->rooted) - nbC)<<" internal branches having branch length <= "<<pr->nullblen<<" (settable via option -l)"<<endl;
+    if (!useSupport) cout<<"Collapse "<<(pr->nbINodes - (!pr->rooted) - nbC)<<" (over "<<(pr->nbINodes - (!pr->rooted))<<") internal branches having branch length <= "<<pr->nullblen<<" (settable via option -l)"<<endl;
     else cout<<"Collapse "<<(pr->nbINodes - nbC)<<" internal branches having branch length <= "<<pr->nullblen<<" (settable via option -l) or support value <= "<<pr->support<<" (settable via option -S)"<<endl;
     if (  (double)(pr->nbINodes - nbC)/pr->nbINodes > 0.1){
         ostringstream oss;
-        oss<<" - More then 10% internal branches were collapsed.\n";
+        oss<<"- "<<(pr->nbINodes - (!pr->rooted) - nbC)*100/(double)pr->nbINodes<<"% internal branches were collapsed.\n";
         pr->warningMessage.push_back(oss.str());
     }
     Node** nodesReduced = new Node*[nbC+pr->nbBranches-pr->nbINodes+1];
