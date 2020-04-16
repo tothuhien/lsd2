@@ -10,6 +10,7 @@ string    getOutgroupFileName( string );
 void     printInterface(ostream& result, Pr*);
 void     setOptionsWithLetter( Pr* , char);
 double   getInputReal( string );
+double getInputDate( string msg, int& type );
 double   getInputPositiveReal( string );
 int      getInputInteger( string );
 int      getPositiveInputInteger( string );

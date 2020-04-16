@@ -454,6 +454,33 @@ double readDate1(istream& f,string fn,char c,Pr* pr){
     exit(EXIT_FAILURE);
 }
 
+bool readDateFromString(const char* str,double& f){
+    string y;
+    while( *str!='\0' && *str>='0' && *str<='9'){
+        y = y+(*str);
+        str++;
+    }
+    if (*str=='-'){
+        str++;
+        string m;
+        while( *str!='\0' && *str>='0' && *str<='9'){
+            m = m+(*str);
+            str++;
+        }
+        if(*str=='-'){
+            str++;
+            string d;
+            while( *str!='\0' && *str>='0' && *str<='9'){
+                d = d+(*str);
+                str++;
+            }
+            f = (atoi(y.c_str())+monthDayToReal(atoi(m.c_str()),atoi(d.c_str())));
+            return true;
+        }
+    }
+    return false;
+}
+
 vector<double> read_double_from_line(string line){
     stringstream ss(line);
     vector<double> results;
@@ -822,11 +849,46 @@ void myErrorMsg( string msg, ... )
 
 bool isReal( const char* str )
 {
-    while( *str!='\0' )
+    if( *str=='-' )
+        str++;
+    while( *str!='\0' && *str!='e' && *str!= 'E' && *str!='.')
     {
-        if( !( ('0'<=*str && *str<='9') || *str=='e' || *str=='E' || *str=='.' || *str=='-' ) )
+        if( !( ('0'<=*str && *str<='9')))
             return false;
         str++;
+    }
+    if (*str=='.'){
+        str++;
+        while( *str!='\0' && *str!='e' && *str!= 'E'){
+            if( !( ('0'<=*str && *str<='9')))
+               return false;
+            str++;
+        }
+        if (*str=='e' || *str=='E'){
+            str++;
+            if (*str=='-' || *str=='+'){
+                str++;
+                while( *str!='\0'){
+                    if( !( ('0'<=*str && *str<='9'))) return false;
+                    str++;
+                }
+            } else {
+                return false;
+            }
+        } else {
+            return true;
+        }
+    } else if (*str=='e' || *str=='E'){
+        str++;
+        if (*str=='-' || *str=='+'){
+            str++;
+            while( *str!='\0'){
+                if( !( ('0'<=*str && *str<='9'))) return false;
+                str++;
+            }
+        } else {
+            return false;
+        }
     }
     return true;
 }
@@ -2342,7 +2404,7 @@ void imposeMinBlen(ostream& file,Pr* pr, Node** nodes, double median_rate,bool m
     if (round_time==365) unit=" days";
     if (round_time==52) unit=" weeks";
     if (medianRateOK && pr->minblen<0){
-        if (!pr->relative){
+        if (!pr->relative || pr->inDateFormat==2 || pr->round_time!=-1){
             minblen = round(round_time*m)/(double)round_time;
             if (pr->minblenL < 0){
                 cout<<"Minimum branch length of time scaled tree (settable via option -u and -U): "<<m<<", rounded to "<<minblen<<" ("<<round(round_time*m)<<unit<<"/"<<round_time<<") using factor "<<round_time<<" (settable via option -R)"<<endl;

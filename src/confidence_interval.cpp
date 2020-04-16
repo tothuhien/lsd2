@@ -185,7 +185,15 @@ void output(double br,int y, Pr* pr,Node** nodes,ostream& f,ostream& tree1,ostre
     }
     if (pr->relative) {
         std::ostringstream oss;
-        oss<<"- The results correspond to the estimation of relative dates when T[mrca]="<<pr->mrca<<" and T[tips]="<<pr->leaves<<"\n";
+        ostringstream tMRCA,tLeaves;
+        if (pr->outDateFormat==2){
+            tMRCA<<realToYearMonthDay(pr->mrca);
+            tLeaves<<realToYearMonthDay(pr->leaves);
+        } else {
+            tMRCA<<pr->mrca;
+            tLeaves<<pr->leaves;
+        }
+        oss<<"- The results correspond to the estimation of relative dates when T[mrca]="<<tMRCA.str()<<" and T[tips]="<<tLeaves.str()<<"\n";
         pr->warningMessage.push_back(oss.str());
     }
     ostringstream tMRCA;

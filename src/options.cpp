@@ -25,7 +25,7 @@ Pr* getOptions( int argc, char** argv )
 
 Pr* getCommandLine( int argc, char** argv)
 {
-    const string VERSION="v1.6.4";
+    const string VERSION="v1.6.5";
     Pr* opt = new Pr();
     int c;
     string s;
@@ -37,7 +37,8 @@ Pr* getCommandLine( int argc, char** argv)
     fflag=false,
     lflag=false,
     uflag=false,
-    vflag=false;
+    vflag=false,
+    validDate = true;
     while ( (c = getopt(argc, argv, ":i:d:D:o:s:n:g:r:v:ct:w:b:ha:z:f:kje:m:p:q:u:l:U:R:S:V")) != -1 )
     {
         switch (c)
@@ -165,15 +166,29 @@ Pr* getCommandLine( int argc, char** argv)
                 opt->givenRate[0] = true;
                 break;
             case 'a':
-                if( !isInteger(optarg) )
-                    myExit("Argument of option -a must be an integer.\n");
-                opt->mrca=atof(optarg);
+                if( isReal(optarg) ){
+                    opt->mrca=atof(optarg);
+                    validDate=true;
+                }
+                else{
+                    validDate=readDateFromString(optarg,opt->mrca);
+                    opt->inDateFormat=2;
+                }
+                if (!validDate)
+                    myExit("Argument of option -a must be a real or a date format year-month-day.\n");
                 flagA=true;
                 break;
             case 'z':
-                if( !isInteger(optarg) )
-                    myExit("Argument of option -z must be an integer.\n");
-                opt->leaves=atof(optarg);
+                if( isReal(optarg) ){
+                    opt->leaves=atof(optarg);
+                    validDate=true;
+                }
+                else{
+                    validDate=readDateFromString(optarg,opt->leaves);
+                    opt->inDateFormat=2;
+                }
+                if (!validDate)
+                    myExit("Argument of option -z must be a real or a date format year-month-day.\n");
                 flagZ=true;
                 break;
             case 'h':
@@ -258,6 +273,7 @@ Pr* getCommandLine( int argc, char** argv)
         opt->leaves=1;
     }
     if (!dflag && (flagA && flagZ)){
+        if (opt->inDateFormat==2 && opt->outDateFormat==0) opt->outDateFormat=2;
         if (opt->mrca >= opt->leaves)
             myExit("The root date must be strictly smaller than the tips date.\n");
         opt->relative=true;
@@ -291,14 +307,17 @@ Pr* getInterface()
     do{
         fgets(letter,3,stdin);
         if (*letter=='n' || *letter=='N') {
-            cout<<"There is no date file, so the program will estimate relative dates with root date = 0 and tips date = 1. Type 'y' to continue or 'n' to modify the root date and the tips date"<<endl;
+            cout<<"There is no date file, so the program will estimate relative dates with root date = 0 and tips date = 1.\n Type 'y' to continue or 'n' to modify the root date and the tips date"<<endl;
             char letter1[3];
             do {
                 fgets( letter1, 3, stdin );
                 if (*letter1=='n' || *letter1=='N'){
                     do {
-                        opt->mrca = getInputReal("Enter the root date (default=0)> ");
-                        opt->leaves = getInputReal("Enter the tips date (default=1)> ");
+                        int dateTypeA, dateTypeZ;
+                        opt->mrca = getInputDate("Enter the root date (default=0)> ",dateTypeA);
+                        opt->leaves = getInputDate("Enter the tips date (default=1)> ",dateTypeZ);
+                        if (dateTypeA == 2 || dateTypeZ==2) opt->inDateFormat=2;
+                        else opt->inDateFormat=1;
                         if (opt->leaves <= opt->mrca) cout<<"Root date must be smaller than the tips date."<<endl;
                     } while (opt->leaves <= opt->mrca);
                 }
@@ -338,19 +357,29 @@ Pr* getInterface()
     if (opt->nullblen<0){
         opt->nullblen = 0.5/opt->seqLength;
     }
+    if (opt->inDateFormat==2 && opt->outDateFormat==0) opt->outDateFormat=2;
     return opt;
 }
 
 
 void printInterface(ostream& in, Pr* opt)
 {
-    const string VERSION = "v1.6.4";
+    const string VERSION = "v1.6.5";
 
     in<<"\nLEAST-SQUARE METHODS TO ESTIMATE RATES AND DATES - "<<VERSION<<" \n\n";
     in<<"\nInput files:\n";
     in<<"  i                                               Input tree file : "<<opt->inFile.c_str()<<"\n";
-    if (opt->relative==true)
-        in<<"  d                                       Estimate relative dates : mrca date = "<<opt->mrca<<", tips date ="<<opt->leaves<<"\n";
+    if (opt->relative==true){
+        ostringstream tMRCA,tLeaves;
+        if (opt->inDateFormat==2){
+            tMRCA<<realToYearMonthDay(opt->mrca);
+            tLeaves<<realToYearMonthDay(opt->leaves);
+        } else {
+            tMRCA<<opt->mrca;
+            tLeaves<<opt->leaves;
+        }
+        in<<"  d                                       Estimate relative dates : mrca date = "<<tMRCA.str()<<", tips date = "<<tLeaves.str()<<"\n";
+    }
     else
         in<<"  d                                               Input date file : "<<opt->inDateFile.c_str()<<"\n";
     in<<"  p                                                Partition file : ";
@@ -475,7 +504,7 @@ void printHelp( void )
     const string BOLD = "\033[00;01m";
     const string LINE = "\033[00;04m";
     const string FLAT = "\033[00;00m";
-    const string VERSION = "v1.6.4";
+    const string VERSION = "v1.6.5";
     
     cout<<BOLD<<"LSD: LEAST-SQUARES METHODS TO ESTIMATE RATES AND DATES - "<<VERSION<<"\n\n";
     cout<<BOLD<<"DESCRIPTION\n"
@@ -693,6 +722,23 @@ double getInputReal( string msg )
     return atof( word.c_str() );
 }
 
+double getInputDate( string msg ,int& type)
+{
+    string word = getInputString( msg );
+    double date;
+    bool validDate = true;
+    if( isReal(word.c_str()) ){
+        date = atof( word.c_str() );
+        type = 1;
+        validDate = true;
+    } else{
+        validDate = readDateFromString(word.c_str(), date);
+        type = 2;
+    }
+    if (!validDate) myErrorMsg("Your word is not recognized as a real or a valid date format year-month-day.\n");
+    return date;
+}
+
 double getInputPositiveReal( string msg )
 {
     string word;
@@ -799,14 +845,17 @@ void setOptionsWithLetter( Pr* opt, char letter)
             do{
                 fgets(letter,3,stdin);
                 if (*letter=='n' || *letter=='N') {
-                    cout<<"There is no date file, so the program will estimate relative dates with root date = 0 and tips date = 1. Type 'y' to continue or 'n' to modify the root date and the tips date"<<endl;
+                    cout<<"There is no date file, so the program will estimate relative dates with root date = 0 and tips date = 1.\n Type 'y' to continue or 'n' to modify the root date and the tips date"<<endl;
                     char letter1[3];
                     do {
                         fgets( letter1, 3, stdin );
                         if (*letter1=='n' || *letter1=='N'){
                             do {
-                                opt->mrca = getInputReal("Enter the root date (default=0)> ");
-                                opt->leaves = getInputReal("Enter the tips date (default=1)> ");
+                                int dateTypeA, dateTypeZ;
+                                opt->mrca = getInputDate("Enter the root date (default=0)> ",dateTypeA);
+                                opt->leaves = getInputDate("Enter the tips date (default=1)> ",dateTypeZ);
+                                if (dateTypeA == 2 || dateTypeZ==2) opt->inDateFormat=2;
+                                else opt->inDateFormat=1;
                                 if (opt->leaves <= opt->mrca) cout<<"Root date must be smaller than the tips date."<<endl;
                             } while (opt->leaves <= opt->mrca);
                         }
@@ -828,8 +877,8 @@ void setOptionsWithLetter( Pr* opt, char letter)
             break;
         case 'D':
             if (opt->outDateFormat==0) opt->outDateFormat=1;
-            if (opt->outDateFormat==1) opt->outDateFormat=2;
-            if (opt->outDateFormat==2) opt->outDateFormat=0;
+            else if (opt->outDateFormat==1) opt->outDateFormat=2;
+            else if (opt->outDateFormat==2) opt->outDateFormat=0;
             break;
         case 'p':
             opt->partitionFile = getInputFileName("Enter your Partition File name> ");

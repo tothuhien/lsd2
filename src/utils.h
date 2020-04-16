@@ -65,6 +65,8 @@ double readDate(istream& f,string fn,Pr* pr);
 
 double readDate1(istream& f,string fn,char c,Pr* pr);
 
+bool readDateFromString(const char* st,double& f);
+
 vector<double> read_double_from_line(string line);
 
 int readInt(istream& f,string msg);
