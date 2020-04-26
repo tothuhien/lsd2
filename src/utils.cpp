@@ -222,10 +222,10 @@ string readWord(istream& f,string fn){
     char c=readChar(f,fn);
     int i=0;
     while (c<33 || c>126) c=readChar(f,fn);
-    while (c>=33 && c<=126 && c!='(' && c!=')' && c!=','){
+    s=c;
+    while (f.get(c) && c>=33 && c<=126 && c!='(' && c!=')' && c!=','){
         s=s+c;
         i++;
-        f.get(c);
     }
     return s;
 }
@@ -1602,17 +1602,20 @@ void computeObjectiveEstimateRoot(int r,int p_r,double br,Pr* pr,Node** nodes){
 }
 
 
-string newick(int i,int terminate,Pr* pr,Node** nodes){;
+string newick(int i,int terminate,Pr* pr,Node** nodes,int& nbTips){;
     ostringstream b;
     if (i>0){
         b<<nodes[i]->B;
     }
-    if (i>=pr->nbINodes) return nodes[i]->L+":"+b.str();
+    if (i>=pr->nbINodes){
+        nbTips++;
+        return nodes[i]->L+":"+b.str();
+    }
     else{
         string newLabel="(";
         for (vector<int>::iterator iter=nodes[i]->suc.begin(); iter!=nodes[i]->suc.end(); iter++) {
             int s = *iter;
-            string l=newick(s,terminate,pr,nodes);
+            string l=newick(s,terminate,pr,nodes,nbTips);
             if (iter==nodes[i]->suc.begin()) newLabel+=l;
             else newLabel+=","+l;
         }

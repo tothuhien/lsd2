@@ -65,7 +65,6 @@ Node** tree2data(istream& tree,Pr* pr,int & s){
             c=readChar(tree,"input tree");
         }
     }  while (a>0);
-    
     //Re-organize internal & leaves indices
     Node** nodes;
     if (nbChild==2) {
@@ -367,46 +366,50 @@ int getBranchOut(Pr* pr,Node** nodes,list<string> &outgroups,bool &keepBelow){
     }
 }
 
-void extrait_outgroup(InputOutputStream *io, Pr* pr,list<string> &outgroups){
+void extrait_outgroup(InputOutputStream *io, Pr* pr){
     int s =0;
-    {
-        ostringstream w;
-        for (int y=0;y<pr->nbData;y++){
-            cout<<"Removing outgroups of tree "<<y+1<<" ...\n";
-            Node** nodes = tree2data(*(io->inTree),pr,s);
-            if (!pr->rooted) {
-                nodes=unrooted2rootedS(pr, nodes, s);
-            } else{
-                computeSuc_polytomy(pr, nodes);
-            }
-            bool keepBelow;
-            int r=getBranchOut(pr, nodes, outgroups,keepBelow);
-            if (r!=-1) {
-                Node** nodes_new = cloneLeaves(pr,nodes,0);
-                int p_r=reroot_rootedtree(r, pr, nodes, nodes_new);
-                computeSuc_polytomy(pr, nodes_new);
-                if (pr->keepOutgroup) {
-                    w << newick(0,0,pr,nodes_new);
-                }
-                else{
-                    if (keepBelow) {
-                        w << newick(r, r, pr, nodes_new);
-                    }
-                    else{
-                        w << newick(p_r, p_r,pr, nodes_new).c_str();
-                    }
-                }
-                for (int i=0;i<=pr->nbBranches;i++) delete nodes_new[i];
-                delete[] nodes_new;
+    list<string> outgroups = getOutgroup(*(io->inOutgroup), pr->fnOutgroup);
+    ostringstream w;
+    for (int y=0;y<pr->nbData;y++){
+        cout<<"Removing outgroups of tree "<<y+1<<" ...\n";
+        Node** nodes = tree2data(*(io->inTree),pr,s);
+        if (!pr->rooted) {
+            nodes=unrooted2rootedS(pr, nodes, s);
+        } else{
+            computeSuc_polytomy(pr, nodes);
+        }
+        bool keepBelow;
+        int r=getBranchOut(pr, nodes, outgroups,keepBelow);
+        int nbTips = 0;
+        if (r!=-1) {
+            Node** nodes_new = cloneLeaves(pr,nodes,0);
+            int p_r=reroot_rootedtree(r, pr, nodes, nodes_new);
+            computeSuc_polytomy(pr, nodes_new);
+            if (pr->keepOutgroup) {
+                w << newick(0,0,pr,nodes_new,nbTips);
             }
             else{
-                cout<<"The outgroups are not in the tree "<<y+1<<endl;
-                w << newick(0,0,pr,nodes);
+                if (keepBelow) {
+                    w << newick(r, r, pr, nodes_new,nbTips);
+                }
+                else{
+                    w << newick(p_r, p_r,pr, nodes_new,nbTips).c_str();
+                }
             }
-            for (int i=0;i<=pr->nbBranches;i++) delete nodes[i];
-            delete[] nodes;
+            for (int i=0;i<=pr->nbBranches;i++) delete nodes_new[i];
+            delete[] nodes_new;
+            if ((nbTips+outgroups.size()) != (pr->nbBranches+1 - pr->nbINodes)){
+                cerr<<"Error: The outgroups do not form a monophyletic in the input tree."<<endl;
+                exit(EXIT_FAILURE);
+            }
         }
-        io->setTree(w.str());
+        else{
+            cout<<"The outgroups are not in the tree "<<y+1<<endl;
+            w << newick(0,0,pr,nodes,nbTips);
+        }
+        for (int i=0;i<=pr->nbBranches;i++) delete nodes[i];
+        delete[] nodes;
     }
+    io->setTree(w.str());
 }
 

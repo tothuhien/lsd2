@@ -309,8 +309,8 @@ void output(double br,int y, Pr* pr,Node** nodes,ostream& f,ostream& tree1,ostre
         tree1<<"tree "<<y<<" = ";
         tree1<<nexus(0,pr,nodes).c_str();
         tree2<<"tree "<<y<<" = ";
-        tree2<<nexusDate(0,pr,nodes).c_str();
-        tree3<<newick(0,0,pr,nodes).c_str();
+        tree2<<nexusDate(0,pr,nodes).c_str();int n=0;
+        tree3<<newick(0,0,pr,nodes,n).c_str();
     }
     else{
         double* T_min = new double[pr->nbBranches+1];
@@ -361,8 +361,8 @@ void output(double br,int y, Pr* pr,Node** nodes,ostream& f,ostream& tree1,ostre
         tree1<<"tree "<<y<<" = ";
         tree2<<"tree "<<y<<" = ";
         tree1<<nexusIC(0,pr,nodes,T_min,T_max,H_min,H_max).c_str();
-        tree2<<nexusICDate(0,pr,nodes,T_min,T_max,HD_min,HD_max).c_str();
-        tree3<<newick(0,0,pr,nodes).c_str();
+        tree2<<nexusICDate(0,pr,nodes,T_min,T_max,HD_min,HD_max).c_str();int n=0;
+        tree3<<newick(0,0,pr,nodes,n).c_str();
         
         delete[] T_min;
         delete[] T_max;

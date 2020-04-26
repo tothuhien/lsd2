@@ -191,7 +191,7 @@ void computeObjectiveMultiRates(Pr* pr,Node** nodes,double* B, double* V);
 
 void computeObjectiveEstimateRoot(int r,int p_r,double br,Pr* pr,Node** nodes);
 
-string newick(int i,int terminate,Pr* pr,Node** nodes);
+string newick(int i,int terminate,Pr* pr,Node** nodes,int& nbTips);
 
 string nexus(int i,Pr* pr,Node** nodes);
 

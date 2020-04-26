@@ -44,8 +44,7 @@ int lsd::buildTimeTree( int argc, char** argv, InputOutputStream *inputOutput)
     clock_t start = clock();
     double elapsed_time;
     if (io->inOutgroup){
-        list<string> outgroup = getOutgroup(*(io->inOutgroup), opt->fnOutgroup);
-        extrait_outgroup(io, opt,outgroup);
+        extrait_outgroup(io, opt);
     }
     ifstream gr(opt->rate.c_str());
     *(io->outTree1)<<"#NEXUS\n";
