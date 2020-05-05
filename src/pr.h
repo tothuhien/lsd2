@@ -5,6 +5,7 @@
 #include "date.h"
 #include "pair.h"
 #include "part.h"
+#include <cmath>
 #include "subtree.h"
 
 using namespace std;
@@ -134,7 +135,7 @@ typedef struct Pr
         variance = 0;
         minblen = -1;
         minblenL = -1;
-        nullblen = -1;
+        nullblen = NAN;
         support = -1;
         c = -1;
         b = -1;

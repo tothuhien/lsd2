@@ -25,7 +25,7 @@ Pr* getOptions( int argc, char** argv )
 
 Pr* getCommandLine( int argc, char** argv)
 {
-    const string VERSION="v1.6.6";
+    const string VERSION="v1.6.7";
     Pr* opt = new Pr();
     int c;
     string s;
@@ -227,8 +227,6 @@ Pr* getCommandLine( int argc, char** argv)
                 if ( !isReal(optarg))
                     myExit("Argument of option -l must be a real\n");
                 opt->nullblen = atof(optarg);
-                if (opt->nullblen<0)
-                    myExit("Argument of option -l must be >= 0\n");
                 lflag = true;
                 break;
             case 'R':
@@ -290,7 +288,7 @@ Pr* getCommandLine( int argc, char** argv)
     opt->treeFile1=opt->outFile+".nexus";
     opt->treeFile2=opt->outFile+".date.nexus";
     opt->treeFile3=opt->outFile+".nwk";
-    if (opt->nullblen<0){
+    if (std::isnan(opt->nullblen)){
         opt->nullblen = 0.5/opt->seqLength;
     }
     
@@ -364,7 +362,7 @@ Pr* getInterface()
 
 void printInterface(ostream& in, Pr* opt)
 {
-    const string VERSION = "v1.6.6";
+    const string VERSION = "v1.6.7";
 
     in<<"\nLEAST-SQUARE METHODS TO ESTIMATE RATES AND DATES - "<<VERSION<<" \n\n";
     in<<"\nInput files:\n";
@@ -504,7 +502,7 @@ void printHelp( void )
     const string BOLD = "\033[00;01m";
     const string LINE = "\033[00;04m";
     const string FLAT = "\033[00;00m";
-    const string VERSION = "v1.6.6";
+    const string VERSION = "v1.6.7";
     
     cout<<BOLD<<"LSD: LEAST-SQUARES METHODS TO ESTIMATE RATES AND DATES - "<<VERSION<<"\n\n";
     cout<<BOLD<<"DESCRIPTION\n"

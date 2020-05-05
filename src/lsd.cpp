@@ -251,8 +251,8 @@ int lsd::buildTimeTree( int argc, char** argv, InputOutputStream *inputOutput)
     elapsed_time = (double)(clock()-start)/CLOCKS_PER_SEC;
     *(io->outResult)<<"\n*********************************************************\n";
     *(io->outResult)<<"\nTOTAL ELAPSED TIME: "<<elapsed_time<<" seconds\n";
-    *(io->outTree1)<<"End;";
-    *(io->outTree2)<<"End;";
+    *(io->outTree1)<<"End;\n";
+    *(io->outTree2)<<"End;\n";
     cout<<"\nTOTAL ELAPSED TIME: "<<elapsed_time<<" seconds"<<endl;
     gr.close();
     if (!inputOutput)
