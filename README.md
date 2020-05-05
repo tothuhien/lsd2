@@ -1,5 +1,7 @@
 # LSD2: LEAST-SQUARES METHODS TO ESTIMATE RATES AND DATES FROM PHYLOGENIES
 
+__For people who prefer R, an R-wrapper of lsd2 is developping here: https://github.com/tothuhien/Rlsd2, but still under testing.__
+
 ## Compile/install LSD2:
 
 ### Compile from source:
