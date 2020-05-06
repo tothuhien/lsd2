@@ -25,7 +25,7 @@ Pr* getOptions( int argc, char** argv )
 
 Pr* getCommandLine( int argc, char** argv)
 {
-    const string VERSION="v1.6.7";
+    const string VERSION="v1.6.8";
     Pr* opt = new Pr();
     int c;
     string s;
@@ -63,8 +63,8 @@ Pr* getCommandLine( int argc, char** argv)
                 if( !isInteger(optarg) )
                     myExit("Argument of option -D must be an integer.\n");
                 opt->outDateFormat = atoi(optarg);
-                if (opt->outDateFormat !=1 && opt->outDateFormat != 2){
-                    myExit("Argument of option -D must be either 1 (date as real) or 2 (date as YY-MM-DD).\n");
+                if (opt->outDateFormat !=1 && opt->outDateFormat != 2 && opt->outDateFormat != 3){
+                    myExit("Argument of option -D must be either 1 (date as real) or 2 (date as YY-MM-DD) or 3 (date as YY-MM).\n");
                 }
                 break;
             case 'p':
@@ -362,7 +362,7 @@ Pr* getInterface()
 
 void printInterface(ostream& in, Pr* opt)
 {
-    const string VERSION = "v1.6.7";
+    const string VERSION = "v1.6.8";
 
     in<<"\nLEAST-SQUARE METHODS TO ESTIMATE RATES AND DATES - "<<VERSION<<" \n\n";
     in<<"\nInput files:\n";
@@ -502,7 +502,7 @@ void printHelp( void )
     const string BOLD = "\033[00;01m";
     const string LINE = "\033[00;04m";
     const string FLAT = "\033[00;00m";
-    const string VERSION = "v1.6.7";
+    const string VERSION = "v1.6.8";
     
     cout<<BOLD<<"LSD: LEAST-SQUARES METHODS TO ESTIMATE RATES AND DATES - "<<VERSION<<"\n\n";
     cout<<BOLD<<"DESCRIPTION\n"

@@ -44,8 +44,8 @@ typedef struct Pr
     double minblenL;
     double rho;
     double round_time;
-    int inDateFormat;//2 for year-month-day; 1 for real from 9-9999; 0 for everything else
-    int outDateFormat;//2 for year-month-day; 1 for real
+    int inDateFormat;//3 for year-month; 2 for year-month-day; 1 for real from 9-9999; 0 for everything else
+    int outDateFormat;//3 for year-month; 2 for year-month-day; 1 for real
     vector<double> multiplierRate;
     vector<bool> givenRate;
     double objective;

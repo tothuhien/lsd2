@@ -189,6 +189,9 @@ void output(double br,int y, Pr* pr,Node** nodes,ostream& f,ostream& tree1,ostre
         if (pr->outDateFormat==2){
             tMRCA<<realToYearMonthDay(pr->mrca);
             tLeaves<<realToYearMonthDay(pr->leaves);
+        } else if (pr->outDateFormat==3){
+            tMRCA<<realToYearMonth(pr->mrca);
+            tLeaves<<realToYearMonth(pr->leaves);
         } else {
             tMRCA<<pr->mrca;
             tLeaves<<pr->leaves;
@@ -199,6 +202,8 @@ void output(double br,int y, Pr* pr,Node** nodes,ostream& f,ostream& tree1,ostre
     ostringstream tMRCA;
     if (pr->outDateFormat==2){
         tMRCA<<realToYearMonthDay(nodes[0]->D);
+    } else if (pr->outDateFormat==3){
+        tMRCA<<realToYearMonth(nodes[0]->D);
     } else {
         tMRCA<<nodes[0]->D;
     }
@@ -249,6 +254,8 @@ void output(double br,int y, Pr* pr,Node** nodes,ostream& f,ostream& tree1,ostre
         ostringstream tMRCA;
         if (pr->outDateFormat==2){
             tMRCA<<realToYearMonthDay(nodes[0]->D);
+        } else if (pr->outDateFormat==3){
+            tMRCA<<realToYearMonth(nodes[0]->D);
         } else {
             tMRCA<<nodes[0]->D;
         }
@@ -333,6 +340,10 @@ void output(double br,int y, Pr* pr,Node** nodes,ostream& f,ostream& tree1,ostre
             tMRCA<<realToYearMonthDay(nodes[0]->D);
             tmin<<realToYearMonthDay(T_min[0]);
             tmax<<realToYearMonthDay(T_max[0]);
+        } else if (pr->outDateFormat==3){
+            tMRCA<<realToYearMonth(nodes[0]->D);
+            tmin<<realToYearMonth(T_min[0]);
+            tmax<<realToYearMonth(T_max[0]);
         } else {
             tMRCA<<nodes[0]->D;
             tmin<<T_min[0];

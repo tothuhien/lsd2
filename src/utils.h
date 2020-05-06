@@ -57,13 +57,17 @@ double readDouble(string line,int& pos);
 
 double readdouble(istream& f,string fn);
 
+string realToYearMonth(double y);
+
 string realToYearMonthDay(double y);
+
+double monthToReal(int m);
 
 double monthDayToReal(int m,int d);
 
-double readDate(istream& f,string fn,Pr* pr);
+double readDate(istream& f,string fn,Pr* pr,double& month, double& day);
 
-double readDate1(istream& f,string fn,char c,Pr* pr);
+double readDate1(istream& f,string fn,char c,Pr* pr,double& month, double& day);
 
 bool readDateFromString(const char* st,double& f);
 
@@ -266,6 +270,8 @@ double* calculateRtt(Pr* pr,Node** nodes);
 
 double* sortTab(double* tab,int size);
 
+int maxDate(int month);
+
 bool outlierCheck(Pr* pr,Node** nodes);
 
 void calculate_tree_height(Pr* pr,Node** & nodes);
@@ -293,5 +299,13 @@ void collapse(int i,int j,Pr* pr,Node** nodes,Node** nodes_new,int &cc,int* &tab
 void collapseTreeReOrder(Pr* pr,Node** nodes,Pr* prReduced,Node** nodesReduced,int* &tab);
 
 void collapseUnInformativeBranches(Pr* &pr,Node** &nodes);
+
+void adjustNodeDateToYMD(Node*& node,int m1,int d1,int m2,int d2);
+
+void adjustNodeDateToYM(Node*& node,int m1,int d1,int m2,int d2);
+
+void adjustDateToYMD(Date*& date,int m1,int d1,int m2,int d2);
+
+void adjustDateToYM(Date*& date,int m1,int d1,int m2,int d2);
 
 #endif

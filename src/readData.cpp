@@ -125,15 +125,24 @@ void readDateFile(istream &dateFile, Pr* pr,Node** &nodes,bool& constraintConsis
     }
     string w1="";//store temporal constraints that are not in the tree;
     string w2="";//store nodes that have more than 1 temporal constraints.
+    vector<double> kSave;
+    vector<double> m1Save;
+    vector<double> m2Save;
+    vector<double> d1Save;
+    vector<double> d2Save;
+    int dateFormat = 2;
     for (int i=0;i<ino;i++){
         string s=readWord(dateFile,pr->inDateFile);
         int type='n';
         double v1=0;
         double v2=0;
+        double m1=-1;
+        double m2=-1;
+        double d1=-1;
+        double d2=-1;
         int k = getPosition(nodes,s,0,pr->nbBranches+1);
         vector<int> mr;
         string ld=s;
-        int dateFormat=0;
         if (k==-1 && (s.compare("mrca")==0)){
             char c='(';
             ld="";
@@ -163,16 +172,22 @@ void readDateFile(istream &dateFile, Pr* pr,Node** &nodes,bool& constraintConsis
                 if (p=='('){
                     if (c=='l' || c=='L'){
                         type='l';
-                        v1=readDate(dateFile,pr->inDateFile,pr);
+                        v1=readDate(dateFile,pr->inDateFile,pr,m1,d1);
+                        if (std::isnan(m1)) dateFormat = 1;
+                        else if (std::isnan(d1)) dateFormat = 3;
                     }
                     else if (c=='u' || c=='U'){
                         type='u';
-                        v1=readDate(dateFile,pr->inDateFile,pr);
+                        v1=readDate(dateFile,pr->inDateFile,pr,m1,d1);
+                        if (std::isnan(m1)) dateFormat = 1;
+                        else if (std::isnan(d1)) dateFormat = 3;
                     }
                     else if (c=='b' || c=='B'){
                         type='b';
-                        v1=readDate(dateFile,pr->inDateFile,pr);
-                        v2=readDate(dateFile,pr->inDateFile,pr);
+                        v1=readDate(dateFile,pr->inDateFile,pr,m1,d1);
+                        v2=readDate(dateFile,pr->inDateFile,pr,m2,d2);
+                        if (std::isnan(m1) || std::isnan(m2)) dateFormat = 1;
+                        else if (std::isnan(d1) || std::isnan(d2)) dateFormat = 3;
                         if (v1>v2) {
                             double t=v1;
                             v1=v2;
@@ -193,9 +208,16 @@ void readDateFile(istream &dateFile, Pr* pr,Node** &nodes,bool& constraintConsis
                 }
             }
             else {
-                v1 = readDate1(dateFile,pr->inDateFile,c,pr);
+                v1 = readDate1(dateFile,pr->inDateFile,c,pr,m1,d1);
+                if (std::isnan(m1)) dateFormat = 1;
+                else if (std::isnan(d1)) dateFormat = 3;
                 type='p';
             }
+            kSave.push_back(k);
+            m1Save.push_back(m1);
+            m2Save.push_back(m2);
+            d1Save.push_back(d1);
+            d2Save.push_back(d2);
             Date* newdate;
             if (mr.size()>0){
                 newdate = new Date(ld,type,v1,v2,mr);
@@ -220,6 +242,30 @@ void readDateFile(istream &dateFile, Pr* pr,Node** &nodes,bool& constraintConsis
             }
         }
     }
+    if (pr->inDateFormat == 2 && dateFormat != 2){//the general day format is year-month-day but there're some only year or year-month
+        int ii = 0;
+        for (int i=0; i<kSave.size();i++){
+            int k = kSave[i];
+            if (k>=pr->nbINodes){
+                adjustNodeDateToYMD(nodes[k],m1Save[i],d1Save[i],m2Save[i],d2Save[i]);
+            } else {
+                adjustDateToYMD(pr->internalConstraints[ii],m1Save[i],d1Save[i],m2Save[i],d2Save[i]);
+                ii++;
+            }
+        }
+    }
+    if (pr->inDateFormat == 3 && dateFormat == 1){//the general day format is year-month but there're some only year
+        int ii = 0;
+        for (int i=0; i<kSave.size();i++){
+            int k = kSave[i];
+            if (k>=pr->nbINodes){
+                adjustNodeDateToYM(nodes[k],m1Save[i],d1Save[i],m2Save[i],d2Save[i]);
+            } else {
+                adjustDateToYM(pr->internalConstraints[ii],m1Save[i],d1Save[i],m2Save[i],d2Save[i]);
+                ii++;
+            }
+        }
+    }
     if (w1!=""){
         std::ostringstream oss;
         if (pr->verbose) oss<<"- The nodes"+w1+" in the input date file are not present in the input tree.\n";
@@ -233,6 +279,7 @@ void readDateFile(istream &dateFile, Pr* pr,Node** &nodes,bool& constraintConsis
         pr->warningMessage.push_back(oss.str());
     }
     if (pr->inDateFormat==2 && pr->outDateFormat==0) pr->outDateFormat=2;
+    if (pr->inDateFormat==3 && pr->outDateFormat==0) pr->outDateFormat=3;
 }
 
 
