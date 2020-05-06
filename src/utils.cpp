@@ -1565,7 +1565,6 @@ bool initConstraintReRooted(Pr* pr,Node** nodes,int r,int p_r){
     for (int i=0;i<pr->nbINodes;i++){
         nodes[i]->type = 'n';
         nodes[i]->status = 0;
-        nodes[i]->L = "";
     }
     for (vector<Date*>::iterator iter=pr->internalConstraints.begin();iter!=pr->internalConstraints.end();iter++){
         Date* no = (*iter);
