@@ -1135,6 +1135,7 @@ Node** unrooted2rootedS(Pr* &pr,Node** nodes,int s){//simplier version, use only
         nodes_new[i] = new Node();
         nodes_new[i]->P=nodes[i]->P;
         nodes_new[i]->B=nodes[i]->B;
+        nodes_new[i]->L=nodes[i]->L;
     }
     nodes_new[0]=new Node();
     nodes_new[0]->P=-1;
