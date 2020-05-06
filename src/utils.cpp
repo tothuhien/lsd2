@@ -487,8 +487,6 @@ double monthDayToReal(int m,int d){
 
 double readDate(istream& f,string fn,Pr* pr,double& month,double& day){
     double y;
-    month = NAN;
-    day = NAN;
     int sign = 1;
     if (f >> y) {
         if (y<0) {
@@ -533,8 +531,6 @@ double readDate1(istream& f,string fn,char c,Pr* pr,double& month,double& day){
     string wd="";
     wd+=c;
     double y;
-    month = NAN;
-    day = NAN;
     int sign = 1;
     while (f.get(c) && c>=33 && c<=126 && c!='-') {
         wd+=c;
