@@ -1,6 +1,6 @@
 # LSD2: LEAST-SQUARES METHODS TO ESTIMATE RATES AND DATES FROM PHYLOGENIES
 
-__For people who prefer R, an R-wrapper of lsd2 is developping here: https://github.com/tothuhien/Rlsd2, but still under testing.__
+__For people who prefer R, an R-wrapper of lsd2 is developping here: https://github.com/tothuhien/Rlsd2 __
 
 ## Compile/install LSD2:
 
@@ -11,7 +11,7 @@ Note that C++ compiler and library support for the ISO C++ 2011 is required to c
      
 ### Install via Homebrew:
 
-Mac/Linux users can install lsd2 via Homebrew as follows:
+Mac/Linux users can install lsd2 via Homebrew as follows (the Homebrew version is not yet updated with the current one on github):
 
 `brew install brewsci/bio/lsd2`
      
@@ -54,7 +54,7 @@ Input tree(s) in __newick__ format are compulsory. A tree can be either binary o
 An input date file is optional. If it's not provided then the program estimates the relative dates by
 assuming all tips have the same date (1 by default), and the root has date 0 by default.
 
-A correct date can be a __real__ or a string of format __year-month-date__. Suppose that we have an input ((A:0.12,D:0.12):0.3,(B:0.3,C:0.5):0.4); then an example of
+A correct date can be a __real__ or a string of format __year-month-day__. Suppose that we have an input ((A:0.12,D:0.12):0.3,(B:0.3,C:0.5):0.4); then an example of
 input date file can be as follows:
 
     5			# number of temporal constraints
@@ -74,6 +74,8 @@ then an input date file can be as follows:
     C b(2001-04-11,2004-01-15)
     n2 u(2003-02-12)
     root b(1998-10-11,1999-11-12)
+
+If the date format is detected as year-month-day and there're some imprecise date (missing month, or missing day) then lsd2 automatically turns it into the corresponding interval.
 
 ### Given rate file
 
