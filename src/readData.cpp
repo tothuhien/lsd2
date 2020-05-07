@@ -173,13 +173,13 @@ void readDateFile(istream &dateFile, Pr* pr,Node** &nodes,bool& constraintConsis
                     if (c=='l' || c=='L'){
                         type='l';
                         v1=readDate(dateFile,pr->inDateFile,pr,m1,d1);
-                        if (m1<0) dateFormat = 1;
+                        if (m1<0 && dateFormat!=3) dateFormat = 1;
                         else if (d1<0) dateFormat = 3;
                     }
                     else if (c=='u' || c=='U'){
                         type='u';
                         v1=readDate(dateFile,pr->inDateFile,pr,m1,d1);
-                        if (m1<0) dateFormat = 1;
+                        if (m1<0 && dateFormat!=3) dateFormat = 1;
                         else if (d1<0) dateFormat = 3;
                     }
                     else if (c=='b' || c=='B'){
@@ -187,7 +187,7 @@ void readDateFile(istream &dateFile, Pr* pr,Node** &nodes,bool& constraintConsis
                         v1=readDate(dateFile,pr->inDateFile,pr,m1,d1);
                         v2=readDate(dateFile,pr->inDateFile,pr,m2,d2);
                         if (m1<0 || m2<0) dateFormat = 1;
-                        else if (d1<0 || d2<0) dateFormat = 3;
+                        else if ((d1<0 || d2<0) && dateFormat!=3) dateFormat = 3;
                         if (v1>v2) {
                             double t=v1;
                             v1=v2;
@@ -209,7 +209,7 @@ void readDateFile(istream &dateFile, Pr* pr,Node** &nodes,bool& constraintConsis
             }
             else {
                 v1 = readDate1(dateFile,pr->inDateFile,c,pr,m1,d1);
-                if (m1<0) dateFormat = 1;
+                if (m1<0 && dateFormat!=3) dateFormat = 1;
                 else if (d1<0) dateFormat = 3;
                 type='p';
             }
