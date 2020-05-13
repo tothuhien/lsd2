@@ -46,7 +46,6 @@ int lsd::buildTimeTree( int argc, char** argv, InputOutputStream *inputOutput)
     if (io->inOutgroup){
         extrait_outgroup(io, opt);
     }
-    ifstream gr(opt->rate.c_str());
     *(io->outTree1)<<"#NEXUS\n";
     *(io->outTree2)<<"#NEXUS\n";
     bool constraintConsistent=true;
@@ -100,7 +99,7 @@ int lsd::buildTimeTree( int argc, char** argv, InputOutputStream *inputOutput)
         double br=0;
         if (opt->givenRate[0]){
             string line;
-            if( getline(gr, line)) {
+            if( getline(*(io->inRate), line)) {
                 vector<double> all_rates = read_double_from_line(line);
                 opt->rho = all_rates[0];
                 if (all_rates.size() > 1){
@@ -254,7 +253,6 @@ int lsd::buildTimeTree( int argc, char** argv, InputOutputStream *inputOutput)
     *(io->outTree1)<<"End;\n";
     *(io->outTree2)<<"End;\n";
     cout<<"\nTOTAL ELAPSED TIME: "<<elapsed_time<<" seconds"<<endl;
-    gr.close();
     if (!inputOutput)
         delete io;
     return EXIT_SUCCESS;

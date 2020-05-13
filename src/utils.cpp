@@ -21,6 +21,7 @@ InputOutputStream::InputOutputStream () {
     inTree = nullptr;
     inOutgroup = nullptr;
     inDate = nullptr;
+    inRate = nullptr;
     inPartition = nullptr;
     outResult = nullptr;
     outTree1 = nullptr;
@@ -28,14 +29,16 @@ InputOutputStream::InputOutputStream () {
     outTree3 = nullptr;
 }
 
-InputOutputStream::InputOutputStream(string tree, string outgroup, string date, string partition) {
+InputOutputStream::InputOutputStream(string tree, string outgroup, string date, string rate, string partition) {
     inTree = nullptr;
     inOutgroup = nullptr;
     inDate = nullptr;
+    inRate = nullptr;
     inPartition = nullptr;
     setTree(tree);
     setOutgroup(outgroup);
     setDate(date);
+    setRate(rate);
     setPartition(partition);
     outResult = new ostringstream;
     outTree1 = new ostringstream;
@@ -59,6 +62,10 @@ InputOutputStream::~InputOutputStream() {
     if (inPartition) {
         delete inPartition;
         inPartition = nullptr;
+    }
+    if (inRate) {
+        delete inRate;
+        inRate = nullptr;
     }
     if (outResult) {
         delete outResult;
@@ -108,6 +115,14 @@ void InputOutputStream::setPartition(string str) {
     inPartition = new istringstream(str);
 }
 
+void InputOutputStream::setRate(string str) {
+    if (str.empty())
+        return;
+    if (inRate)
+        delete inRate;
+    inRate = new istringstream(str);
+}
+
 InputOutputFile::InputOutputFile(Pr *opt) : InputOutputStream() {
     treeIsFile = true;
     // open the tree file
@@ -138,7 +153,7 @@ InputOutputFile::InputOutputFile(Pr *opt) : InputOutputStream() {
         }
     }
 
-    // open date file
+    // open partition file
     if (opt->partitionFile != "") {
         ifstream *part_file = new ifstream(opt->partitionFile);
         inPartition = part_file;
@@ -147,6 +162,17 @@ InputOutputFile::InputOutputFile(Pr *opt) : InputOutputStream() {
             exit(EXIT_FAILURE);
         }
     }
+    
+    // open given rate file
+    if (opt->rate != "") {
+        ifstream *rate_file = new ifstream(opt->rate);
+        inRate = rate_file;
+        if (!rate_file->is_open()) {
+            cerr << "Error: cannot open rate file " << opt->rate << endl;
+            exit(EXIT_FAILURE);
+        }
+    }
+
     
     // open the result file
     ofstream *result_file = new ofstream(opt->outFile);
@@ -190,6 +216,9 @@ InputOutputFile::~InputOutputFile() {
     }
     if (inPartition) {
         ((ifstream*)inPartition)->close();
+    }
+    if (inRate) {
+        ((ifstream*)inRate)->close();
     }
     if (outResult) {
         ((ofstream*)outResult)->close();
@@ -2835,6 +2864,7 @@ void imposeMinBlen(ostream& file,Pr* pr, Node** nodes, double median_rate,bool m
             }
         }
         else {
+            minblen = m;
             if (pr->minblenL < 0){
                 cout<<"Minimum branch length of time scaled tree (settable via option -u and -U): "<<m<<endl;
                 file<<"Minimum branch length of time scaled tree (settable via option -u and -U): "<<m<<"\n";
