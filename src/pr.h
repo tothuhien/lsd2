@@ -131,8 +131,8 @@ typedef struct Pr
         mrca=0;
         leaves=1;
         estimate_root = "";
-        constraint = false;
-        variance = 0;
+        constraint = true;
+        variance = 1;
         minblen = -1;
         minblenL = -1;
         nullblen = NAN;

@@ -120,8 +120,7 @@ int lsd::buildTimeTree( int argc, char** argv, InputOutputStream *inputOutput)
         constraintConsistent = initConstraint(opt, nodes);
         bool medianRateOK = true;
         if (opt->e>0) medianRateOK = calculateOutliers(opt,nodes,median_rate);
-        else if (opt->minblen<0) medianRateOK = calculateMedianRate(opt,nodes,median_rate);
-        imposeMinBlen(*(io->outResult),opt,nodes,median_rate,medianRateOK);
+        else if (opt->minblen<0 && opt->constraint) medianRateOK = calculateMedianRate(opt,nodes,median_rate);
         if (!opt->constraint){//LD without constraints
             if (!constraintConsistent){
                 ostringstream oss;
@@ -174,6 +173,7 @@ int lsd::buildTimeTree( int argc, char** argv, InputOutputStream *inputOutput)
             }
         }
         else {//QPD with temporal constrains
+            imposeMinBlen(*(io->outResult),opt,nodes,median_rate,medianRateOK);
             if (constraintConsistent || (opt->estimate_root!="" && opt->estimate_root!="k")){
                 if (constraintConsistent){
                     if (opt->estimate_root==""){//keep the given root

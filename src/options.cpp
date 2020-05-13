@@ -39,7 +39,7 @@ Pr* getCommandLine( int argc, char** argv)
     uflag=false,
     vflag=false,
     validDate = true;
-    while ( (c = getopt(argc, argv, ":i:d:D:o:s:n:g:r:v:ct:w:b:ha:z:f:kje:m:p:q:u:l:U:R:S:V")) != -1 )
+    while ( (c = getopt(argc, argv, ":i:d:D:o:s:n:g:r:v:Ft:w:b:ha:z:f:kje:m:p:q:u:l:U:R:S:V")) != -1 )
     {
         switch (c)
         {
@@ -112,15 +112,15 @@ Pr* getCommandLine( int argc, char** argv)
                 break;
             case 'v':
                 if( !isInteger(optarg) )
-                    myExit("Argument of option -v must be either 1 or 2.\n");
+                    myExit("Argument of option -v must be an integer either 0, 1, or 2.\n");
                 opt->variance = atoi(optarg);
-                if (opt->variance!=1 && opt->variance!=2){
-                    myExit("Argument of option -v must be either 1 (for using orginal branches to compute variance) or 2 (LSD will be run twice, the second time uses the variances based on the estimated branch lengths of the first time).\n");
+                if (opt->variance!=0 && opt->variance!=1 && opt->variance!=2){
+                    myExit("Argument of option -v must be either 0 (do not use variance) 1 (default value, to using orginal branches to compute variance) or 2 (LSD will be run twice, the second time uses the variances based on the estimated branch lengths of the first time).\n");
                 }
                 vflag = true;
                 break;
-            case 'c':
-                opt->constraint = true;
+            case 'F':
+                opt->constraint = false;
                 break;
             case 'b':
                 if( !isReal(optarg) )
@@ -247,7 +247,8 @@ Pr* getCommandLine( int argc, char** argv)
                 cout<<"lsd2 "<<VERSION<<endl;
                 exit( EXIT_SUCCESS );
             case '?':
-                myExit("Unrecognized option: -%c\n", optopt);
+                if (optopt == 'c') myExit("Unrecognized option -c, temporal constraint now becomes by default without this option.\n");
+                else myExit("Unrecognized option: -%c\n", optopt);
             case ':':
                 if (optopt=='v') myExit("Argument of option -v must be either 1 (for using orginal branches to compute variance) or 2 (for using branches estimated by LSD to compute variance, i.e LSD will be run 2 times: the first time is just used to compute the variance).\n");
                 else myExit("Option -%c requires an operand\n", optopt );
@@ -534,10 +535,6 @@ void printHelp( void )
            <<FLAT<<"\t   and 10/seqlength; but it should be adjusted  based on how/whether the input tree is relaxed or strict. The smaller it is the more variances\n"
            <<FLAT<<"\t   would be linear to branch lengths, which is relevant for strict clock. The bigger it is the less effect of branch lengths on variances, \n"
            <<FLAT<<"\t   which might be better for relaxed clock.\n"
-           <<FLAT<<"\t" <<BOLD<<"-c \n"
-           <<FLAT<<"\t   By using this option, we impose the constraints that the date of every node is equal or smaller then\n"
-           <<FLAT<<"\t   the dates of its descendants. Without constraints, the runtime is linear (LD). With constraints, the\n"
-           <<FLAT<<"\t   problem is a quadratic programming and is solved efficiently (quasi-linear) by the active-set method.\n"
            <<FLAT<<"\t" <<BOLD<<"-d " <<LINE<<"inputDateFile\n"
            <<FLAT<<"\t   This options is used to read the name of the input date file which contains temporal constraints of internal nodes\n"
            <<FLAT<<"\t   or tips. An internal node can be defined either by its label (given in the input tree) or by a subset of tips that have it as \n"
@@ -579,6 +576,10 @@ void printHelp( void )
            <<FLAT<<"\t        OUTGROUP2\n"
            <<FLAT<<"\t        ...\n"
            <<FLAT<<"\t        OUTGROUPn\n"
+           <<FLAT<<"\t" <<BOLD<<"-F \n"
+           <<FLAT<<"\t   By default without this option, we impose the constraints that the date of every node is equal or smaller then the\n"
+           <<FLAT<<"\t   dates of its descendants, so the running time is quasi-linear. Using this option we ignore this temporal constraints, and\n"
+           <<FLAT<<"\t   the the running time becomes linear, much faster.\n"
            <<FLAT<<"\t" <<BOLD<<"-h " <<LINE<<"help\n"
            <<FLAT<<"\t   Print this message.\n"
            <<FLAT<<"\t" <<BOLD<<"-i " <<LINE<<"inputTreesFile\n"

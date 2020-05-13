@@ -1,6 +1,14 @@
 # LSD2: LEAST-SQUARES METHODS TO ESTIMATE RATES AND DATES FROM PHYLOGENIES
 
-__For people who prefer R, an R-wrapper of lsd2 is developping here: https://github.com/tothuhien/Rlsd2 .__
+##News
+
+- lsd2 is now integrated in IQ-tree
+
+- For people who prefer R, an R-wrapper of lsd2 is developping here: https://github.com/tothuhien/Rlsd2 .
+
+- Temporal constraint is now imposed by default without option -c
+
+- Variance is also used by default without applying -v 1
 
 ## Compile/install LSD2:
 
@@ -8,9 +16,7 @@ Type __make__ from the folder __src__, you will have the executable file __lsd2_
 Note that C++ compiler and library support for the ISO C++ 2011 is required to compile the program from sources. 
 
 
-Mac/Linux users can install lsd2 via Homebrew as follows (the Homebrew version is not yet updated with the current one on github):
-
-`brew install brewsci/bio/lsd2`
+Mac/Linux users can install lsd2 via Homebrew as follows (the Homebrew version is not yet updated with the current one on github): `brew install brewsci/bio/lsd2`
      
 ## Run LSD2:
 
@@ -27,9 +33,8 @@ In order to avoid undetermined problem, sufficient dates should be given.
 A tree where all tips having the same date with no further date information on internal nodes will not be able to infer absolute dates. 
 In this case, you can still estimate relative dates using options -a and -z to specify the root date and tip date. 
 	
-Option __-c is recommended__ to take into account the temporal constraints (date of a node >= date of its ancestors). 
-It should be noticed that LSD2 always assumes an increasing-time order from root to tips, i.e the date of a node is smaller than that of its children. If your data has the reverse order, the simplest way is to take the negation of the
-input date, and take the negation again of the output date to obtain your expected results.
+By default, lsd2 imppose the __temporal constraints__ (date of a node >= date of its ancestors) on every node. 
+It should be noticed that LSD2 always assumes an increasing-time order from root to tips, i.e the date of a node is smaller than that of its children. If your data has the reverse order, the simplest way is to take the negation of the input date, and take the negation again of the output date to obtain your expected results.
 
 The program first __collapses__ all internal branches that are considered uninformative (<= 0.5/seqlength by default, and low support value if specified) and impose a constraint of __minimum branches lengths__ for the time scaled tree. 
 These values could be manually specified via option -l (for uninformative branch length threshold), -S (support value threshold), and options -u, -U (for minimum internal/external branches lengths of time scaled tree).
@@ -72,7 +77,7 @@ then an input date file can be as follows:
     n2 u(2003-02-12)
     root b(1998-10-11,1999-11-12)
 
-If the date format is detected as year-month-day and there're some imprecise date (missing month, or missing day) then lsd2 automatically turns it into the corresponding interval.
+If the date format is detected as year-month-day and there're some imprecise dates (missing month, or missing day) then lsd2 automatically turns it into the corresponding interval.
 
 ### Given rate file
 
@@ -90,7 +95,7 @@ to each tree in the Input_tree_file, for example:
 	outgroup1
 	outgroup2
 
-If there are more than 1 outgroups, than they must be monophyletic in the input trees.
+If there are more than 1 outgroups, than they must be monophyletic in the input trees. By default, the program uses outgroup to root the tree and removes them before dating process. To keep to root in the final tree, use option -k in addition.
 
 ### Partition file
 
@@ -106,72 +111,76 @@ then an example for partition file can be as follows:
     group1 1 {n1} {n5 n4}
     group2 1 {n3}
 
-Each line defines a list of subtrees whose branches are supposed to have the same substitution rate. It starts by the name of the group (`group1`), then the prior proportion (`1`) of the group rate compared to the main rate. This is just a starting value, and the proportion will be estimated; giving an appropriate value helps to converge faster.
+Each line defines a group rate, which contains a list of subtrees whose branches are supposed to have the same substitution rate. It starts by the name of the group (`group1`), then the prior proportion (`1`) of the group rate compared to the main rate. This is just a starting value, and the proportion will be estimated at the end; giving an appropriate value helps to converge faster.
 Each subtree is then defined between {}: the first node is the root of the subtree and the following nodes (if there any) define its tips. If the first node is a tip label then it takes the mrca of all tips as the root of the subtree.
 If there's only root and not any tip defined, then the subtree is extended down to the tips of the full tree. Hence, {n1} defines the subtree rooted at the node n1; and {n5 n4} defines the subtree rooted at n5 that has one tip as n4 and other tips as the ones of the full trees (here are B,C). 
 As a consequence, in this example, the branches will be partitioned into 3 groups such that each group has a different rate: 
 
 - group1: (n1,A), (n1,D), (n5,n4), (n5,n2), (n2,B), (n2,C); 
 - group2: (n3,F), (n3,G); 
-- group0: the remaining branches of the tree. 
+- group0: the remaining branches of the tree (main rate). 
     
 Note that if the internal nodes don't have labels, then they can be defined by mrca of at least two tips, for example n1 is mrca(A,D)
 
 ## Using variances
 
-Variance is used to penalize long branch lengths. The variance formula of each branch v_i is proprtion to (b_i + b), where b (specified by option __-b__) is the pseudo constant added to adjust the dependency of variances to branch lengths. This parameter is a positive number, and by defaul is maximum of median branch length and 10/seqlength. It could be adjusted based on how much your input tree is relaxed. The smaller it is, the more variances are linear to branch lengths, which is more appropriate for strict clock tree. The bigger it is the less dependent of branch lengths on variances, which may be better for relaxed tree. Set __-v 1__ to use variances, and __-v 2__ to run program twice where the second time calculates variances based of the estimated branch length of the first time. Simulation shows that -v 2 give slightly better result than -v 1 in average.
+Variance is used to penalize long branch lengths. The variance formula of each branch v_i is proprtion to (b_i + b), where b (specified by option __-b__) is the pseudo constant added to adjust the dependency of variances to branch lengths. This parameter is a positive number, and by defaul is maximum of median branch length and 10/seqlength. It could be adjusted based on how much your input tree is relaxed. The smaller it is, the more variances are linear to branch lengths, which is more appropriate for strict clock tree. The bigger it is the less dependent of branch lengths on variances, which may be better for relaxed tree. Option -v is used to set variance option. __-v 1__ is set by default to use variance. Set __-v 0__ if you don't want to use variance, and __-v 2__ to run program twice where the second time calculates variances based of the estimated branch length of the first time. Simulation shows that -v 2 give slightly better result than -v 1 in average.
 
 ## Some examples of command lines:
 
 * If the input tree is rooted:
 
-    - You want to estimate rate & dates under temporal constrained mode, using variances:
+    - You want to estimate rate & dates (by default under temporal constraints, and using variances):
 
-    `./lsd2 -i rootedtree_file -d date_file -c -v 1`
+    `./lsd2 -i rootedtree_file -d date_file`
 
 	  - You want to remove outlier nodes with Zscore threshold 3:
 
-    `./lsd2 -i rootedtree_file -d date_file -c -v 1 -e 3`
+    `./lsd2 -i rootedtree_file -d date_file -e 3`
   
-    - You just want to collapse null branches in the input tree (by default all branches <= 0.5/seqlength are collapsed), and impose a minimum of 0.1 (estimated by default) for the branches of the time scaled tree:
+    - You want to collapse only null branches in the input tree (by default all branches <= 0.5/seqlength are collapsed), and impose a minimum of 0.1 (estimated by default) for the branches of the time scaled tree:
   
-    `./lsd2 -i rootedtree_file -d date_file -c -v 1 -e 3 -u 0.1 -l 0`
+    `./lsd2 -i rootedtree_file -d date_file -e 3 -u 0.1 -l 0`
+    
+    - Similar as above, but you don't want to collapse any branch even null, then set a negative value for option -l:
+    
+    `./lsd2 -i rootedtree_file -d date_file -e 3 -u 0.1 -l -1`
   
     - Similar as above, but you allow nullability for external branches of output tree:
 
-    `./lsd2 -i rootedtree_file -d date_file -c -v 1 -e 3 -u 0.1 -U 0 -l 0`
+    `./lsd2 -i rootedtree_file -d date_file -e 3 -u 0.1 -U 0 -l 0`
     
 	  - You know the tree partition where each part should have a different rate:
 
-    `./lsd2 -i rootedtree_file -d date_file -c -v 1 -p parition_file`
+    `./lsd2 -i rootedtree_file -d date_file -p parition_file`
 
 	  - You want to re-estimate the root position locally around the given root
 
-    `./lsd2 -i rootedtree_file -d date_file -c -r l`
+    `./lsd2 -i rootedtree_file -d date_file -r l`
 
 	  - You want to calculate confidence intervals from 100 simulated trees. The sequence length used to build your tree was 1000, and you'd like to apply a lognormal relaxed clock of standard deviation 0.4 to the simulated branch lengths.
 
-    `./lsd2 -i rootedtree_file -d date_file -c -r l -f 100 -s 1000 -q 0.4`
+    `./lsd2 -i rootedtree_file -d date_file -r l -f 100 -s 1000 -q 0.4`
     
     (To calculate confidence intervals, the sequence length is required via option -s. The program generates simulated branch lengths using Poisson distributions whose mean equal to the estimated ones multiplied with sequence length. In addition, a lognormal relaxed clock is also applied to the branch lengths. This ditribution has mean 1 and standard deviation settable by users with option -q, by default is 0.2; 0 means strict clock. The bigger q is, the more your tree is relaxed and the bigger confidence intervals you should get).
 
-	  - If all tips are supposed to have the same date, you can still estimate the rate but only relative dates.
+	  - If all tips are supposed to have the same date, you can still estimate the rate but only relative dates when specifying the root date (for example 0) and the tip date (for example 1)
 	
-	`./lsd2 -i tree_file -c`
+	`./lsd2 -i tree_file -a 0 -z 1`
 
 * If the input tree is unrooted, you should either specify outgroups or use option -r to estimate the root position.
 	
 	- If you don't have any outgroup and you want to estimate the root position:
 
-    `./lsd2 -i unrootedtree_file -d date_file -c -r a -v 1`
+    `./lsd2 -i unrootedtree_file -d date_file -r a`
 
 	- If you have a list of outgroups and want to use them for rooting (also remove them):
 
-    `./lsd2 -i unrootedtree_file -d date_file -g outgroup_file -c -v 1`
+    `./lsd2 -i unrootedtree_file -d date_file -g outgroup_file`
     
     - If you want to keep the outgroups in the tree, just estimate the root position on the branch that defined by the outgroups:
     
-    `./lsd2 -i unrootedtree_file -d date_file -g outgroup_file -k -c -v 1`
+    `./lsd2 -i unrootedtree_file -d date_file -g outgroup_file -k`
     
 ## Output files: 
 
