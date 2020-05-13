@@ -1,10 +1,10 @@
 # LSD2: LEAST-SQUARES METHODS TO ESTIMATE RATES AND DATES FROM PHYLOGENIES
 
-##News
+## News
 
-- lsd2 is now integrated in IQ-tree
+- lsd2 is now integrated in [IQ-tree](http://www.iqtree.org)
 
-- For people who prefer R, an R-wrapper of lsd2 is developping here: https://github.com/tothuhien/Rlsd2 .
+- For people who prefer R, an R-wrapper of lsd2 is developping here: https://github.com/tothuhien/Rlsd2
 
 - Temporal constraint is now imposed by default without option -c
 
