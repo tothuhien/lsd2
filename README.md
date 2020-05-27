@@ -6,9 +6,7 @@
 
 - For people who prefer R, an R-wrapper of lsd2 is developping here: https://github.com/tothuhien/Rlsd2
 
-- Temporal constraint is now imposed by default without option -c
-
-- Variance is also used by default without applying -v 1
+- Changing some default setting: Temporal constraint is now imposed by default without option -c. Variance is also used by default without applying -v 1. Outgroups are now by default kept in the tree, to remove them use option -G together with -g
 
 ## Compile/install LSD2:
 
@@ -36,8 +34,9 @@ In this case, you can still estimate relative dates using options -a and -z to s
 By default, lsd2 imppose the __temporal constraints__ (date of a node >= date of its ancestors) on every node. 
 It should be noticed that LSD2 always assumes an increasing-time order from root to tips, i.e the date of a node is smaller than that of its children. If your data has the reverse order, the simplest way is to take the negation of the input date, and take the negation again of the output date to obtain your expected results.
 
-The program first __collapses__ all internal branches that are considered uninformative (<= 0.5/seqlength by default, and low support value if specified) and impose a constraint of __minimum branches lengths__ for the time scaled tree. 
-These values could be manually specified via option -l (for uninformative branch length threshold), -S (support value threshold), and options -u, -U (for minimum internal/external branches lengths of time scaled tree).
+The program first __collapses__ all internal branches that are considered uninformative (<= 0.5/seqlength by default, and low support value if specified) and impose a constraint of __minimum branch length__ for the time scaled tree. This value is rounded to a time unit (day, week, year, My etc ...) based on the __rounding factor__ of option -R. Users should be aware of this to select the right date units for their data if the default one does not fit. These values could be manually specified via option -l (for uninformative branch length threshold), -S (support value threshold), and options -u, -U (for minimum internal/external branches lengths of time scaled tree).
+
+*Note that if the input tree contains lots of null branches, then applying a positive minimum branch length on the time scaled tree could produce biais. In this case, it's suggested to use -u 0 to allow null branches in the out tree. On the other hands, if the input branch lengths are significantly high then you could increase the minimum branch length. Users are encouraged to try different variants to select a good one that fits with their data.*
 
 Further options can be specified, see __./lsd2 -h__ for more details.
 
@@ -67,7 +66,7 @@ input date file can be as follows:
     mrca(A,B,C) u(2000.12)	# the date of the most recent ancestor of A,B, and C is at most 2000.12
     
 You can also define the labels for internal nodes and use them to define their dates. 
-For example you have an input tree: ((A:0.12,D:0.12)n1:0.3,(B:0.3,C:0.5)n2:0.4)root; 
+For example you have an input tree: ((A:0.12,D:0.12)n1:0.3,(B:0.3,C:0.5)n2:0.4); 
 then an input date file can be as follows:
 
     5
@@ -75,7 +74,6 @@ then an input date file can be as follows:
     n1 l(2001-05-11)
     C b(2001-04-11,2004-01-15)
     n2 u(2003-02-12)
-    root b(1998-10-11,1999-11-12)
 
 If the date format is detected as year-month-day and there're some imprecise dates (missing month, or missing day) then lsd2 automatically turns it into the corresponding interval.
 
@@ -133,6 +131,10 @@ Variance is used to penalize long branch lengths. The variance formula of each b
     - You want to estimate rate & dates (by default under temporal constraints, and using variances):
 
     `./lsd2 -i rootedtree_file -d date_file`
+    
+    - Similar as above, but you want to force the root date to 0:
+    
+    `./lsd2 -i rootedtree_file -d date_file -a 0`
 
 	  - You want to remove outlier nodes with Zscore threshold 3:
 
@@ -164,9 +166,9 @@ Variance is used to penalize long branch lengths. The variance formula of each b
     
     (To calculate confidence intervals, the sequence length is required via option -s. The program generates simulated branch lengths using Poisson distributions whose mean equal to the estimated ones multiplied with sequence length. In addition, a lognormal relaxed clock is also applied to the branch lengths. This ditribution has mean 1 and standard deviation settable by users with option -q, by default is 0.2; 0 means strict clock. The bigger q is, the more your tree is relaxed and the bigger confidence intervals you should get).
 
-	  - If all tips are supposed to have the same date, you can still estimate the rate but only relative dates when specifying the root date (for example 0) and the tip date (for example 1)
+	  - If all tips are supposed to have the same date (for example 0), and you know the root date (for example -10)
 	
-	`./lsd2 -i tree_file -a 0 -z 1`
+	`./lsd2 -i tree_file -a -10 -z 0`
 
 * If the input tree is unrooted, you should either specify outgroups or use option -r to estimate the root position.
 	
@@ -174,13 +176,13 @@ Variance is used to penalize long branch lengths. The variance formula of each b
 
     `./lsd2 -i unrootedtree_file -d date_file -r a`
 
-	- If you have a list of outgroups and want to use them for rooting (also remove them):
+	- If you have a list of outgroups and want to use them for rooting:
 
     `./lsd2 -i unrootedtree_file -d date_file -g outgroup_file`
     
-    - If you want to keep the outgroups in the tree, just estimate the root position on the branch that defined by the outgroups:
+    - If you want to remove the outgroups from the tree:
     
-    `./lsd2 -i unrootedtree_file -d date_file -g outgroup_file -k`
+    `./lsd2 -i unrootedtree_file -d date_file -g outgroup_file -G`
     
 ## Output files: 
 

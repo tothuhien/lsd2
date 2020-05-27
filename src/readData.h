@@ -6,7 +6,7 @@
 using namespace std;
 
 Node** tree2data(istream& tree,Pr* pr,int & s);
-void readDateFile(istream &dateFile, Pr* pr,Node** & nodes,bool& constraintConsistent);
+void readInputDate(InputOutputStream* io, Pr* pr,Node** &nodes,bool& constraintConsistent);
 void readPartitionFile(istream &partFile, Pr* pr);
 int tree2dataS(FILE *,Pr*,Node**);
 void extrait_outgroup(InputOutputStream *io, Pr* pr);

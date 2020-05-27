@@ -25,7 +25,7 @@ Pr* getOptions( int argc, char** argv )
 
 Pr* getCommandLine( int argc, char** argv)
 {
-    const string VERSION="v1.7.1";
+    const string VERSION="v.1.8";
     Pr* opt = new Pr();
     int c;
     string s;
@@ -35,11 +35,11 @@ Pr* getCommandLine( int argc, char** argv)
     flagZ=false,
     sflag=false,
     fflag=false,
-    lflag=false,
     uflag=false,
     vflag=false,
+    lflag=false,
     validDate = true;
-    while ( (c = getopt(argc, argv, ":i:d:D:o:s:n:g:r:v:Ft:w:b:ha:z:f:kje:m:p:q:u:l:U:R:S:V")) != -1 )
+    while ( (c = getopt(argc, argv, ":i:d:D:o:s:n:g:r:v:Ft:w:b:ha:z:f:Gje:m:p:q:u:l:U:R:S:V")) != -1 )
     {
         switch (c)
         {
@@ -64,7 +64,7 @@ Pr* getCommandLine( int argc, char** argv)
                     myExit("Argument of option -D must be an integer.\n");
                 opt->outDateFormat = atoi(optarg);
                 if (opt->outDateFormat !=1 && opt->outDateFormat != 2 && opt->outDateFormat != 3){
-                    myExit("Argument of option -D must be either 1 (date as real) or 2 (date as YY-MM-DD) or 3 (date as YY-MM).\n");
+                    myExit("Argument of option -D must be either 1 (date as real) or 2 (date as YY-MM-DD)\n or 3 (date as YY-MM).\n");
                 }
                 break;
             case 'p':
@@ -99,11 +99,8 @@ Pr* getCommandLine( int argc, char** argv)
 #endif
                 opt->fnOutgroup = optarg;
                 break;
-            case 'k':
-                if (opt->fnOutgroup!=""){
-                	opt->keepOutgroup=true;
-                	opt->estimate_root="k";
-                }
+            case 'G':
+                opt->removeOutgroup=true;
                 break;
             case 'r':
                 opt->estimate_root = optarg;
@@ -115,7 +112,7 @@ Pr* getCommandLine( int argc, char** argv)
                     myExit("Argument of option -v must be an integer either 0, 1, or 2.\n");
                 opt->variance = atoi(optarg);
                 if (opt->variance!=0 && opt->variance!=1 && opt->variance!=2){
-                    myExit("Argument of option -v must be either 0 (do not use variance) 1 (default value, to using orginal branches to compute variance) or 2 (LSD will be run twice, the second time uses the variances based on the estimated branch lengths of the first time).\n");
+                    myExit("Argument of option -v must be either 0 (do not use variance) 1 (default value,\n to using orginal branches to compute variance) or 2 (LSD will be run twice, the\n second time uses the variances based on the estimated branch lengths of the\n first time).\n");
                 }
                 vflag = true;
                 break;
@@ -127,7 +124,7 @@ Pr* getCommandLine( int argc, char** argv)
                     myExit("Argument of option -b must be a real.\n");
                 opt->c = atof( optarg );
                 if (opt->c<=0 || opt->c>1)
-                    myExit("Argument of option -b must be a positive number samller than 1, see the help page of lsd2 -h for more information.\n");
+                    myExit("Argument of option -b must be a positive number samller than 1, see the help\n page of lsd2 -h for more information.\n");
                 break;
             case 'e':
                 if( !isReal(optarg) )
@@ -135,7 +132,7 @@ Pr* getCommandLine( int argc, char** argv)
                 opt->e = atof(optarg);
                 if (opt->e<0){
                     std::ostringstream oss;
-                    oss<<"- The specified argument of option e was negative, so outliers detection option was not processed\n";
+                    oss<<"- The specified argument of option e was negative, so\n outliers detection option was not processed\n";
                     opt->warningMessage.push_back(oss.str());
                 }
                 break;
@@ -166,29 +163,11 @@ Pr* getCommandLine( int argc, char** argv)
                 opt->givenRate[0] = true;
                 break;
             case 'a':
-                if( isReal(optarg) ){
-                    opt->mrca=atof(optarg);
-                    validDate=true;
-                }
-                else{
-                    validDate=readDateFromString(optarg,opt->mrca);
-                    opt->inDateFormat=2;
-                }
-                if (!validDate)
-                    myExit("Argument of option -a must be a real or a date format year-month-day.\n");
+                opt->MRCA = optarg;
                 flagA=true;
                 break;
             case 'z':
-                if( isReal(optarg) ){
-                    opt->leaves=atof(optarg);
-                    validDate=true;
-                }
-                else{
-                    validDate=readDateFromString(optarg,opt->leaves);
-                    opt->inDateFormat=2;
-                }
-                if (!validDate)
-                    myExit("Argument of option -z must be a real or a date format year-month-day.\n");
+                opt->LEAVES = optarg;
                 flagZ=true;
                 break;
             case 'h':
@@ -200,7 +179,7 @@ Pr* getCommandLine( int argc, char** argv)
                 break;
             case 'f':
                 if( !isInteger(optarg) )
-                    myExit("Argument of option -f must be the number of samplings to compute confidence intervals, e.g. 100 ...\n");
+                    myExit("Argument of option -f must be the number of samplings to compute confidence\n intervals, e.g. 100 ...\n");
                 opt->nbSampling = atoi( optarg );
                 if (opt->nbSampling<0)
                     myExit("Argument of option -f must be a positive integer.\n");
@@ -247,10 +226,10 @@ Pr* getCommandLine( int argc, char** argv)
                 cout<<"lsd2 "<<VERSION<<endl;
                 exit( EXIT_SUCCESS );
             case '?':
-                if (optopt == 'c') myExit("Unrecognized option -c, temporal constraint now becomes by default without this option.\n");
+                if (optopt == 'c') myExit("Unrecognized option -c, temporal constraint now becomes by default without this\n option.\n");
                 else myExit("Unrecognized option: -%c\n", optopt);
             case ':':
-                if (optopt=='v') myExit("Argument of option -v must be either 1 (for using orginal branches to compute variance) or 2 (for using branches estimated by LSD to compute variance, i.e LSD will be run 2 times: the first time is just used to compute the variance).\n");
+                if (optopt=='v') myExit("Argument of option -v must be either 1 (for using orginal branches to compute\n variance) or 2 (for using branches estimated by LSD to compute variance, i.e LSD\n will be run 2 times: the first time is just used to compute the variance).\n");
                 else myExit("Option -%c requires an operand\n", optopt );
             default:
                 myExit("?? getopt returned character code 0%o ??\n", c );
@@ -258,41 +237,34 @@ Pr* getCommandLine( int argc, char** argv)
     }
     if( !(iflag) )
         myExit("Argument -i is necessary to continue.\n");
-    if (!dflag && (flagA && !flagZ)){
-        myExit("The input date file is not provided, so option -z is required together with option -a to estimate relative dates.\n");
-    }
-    if (!dflag && (!flagA && flagZ)){
-        myExit("The input date file is not provided, so option -a is required together with option -z to estimate relative dates.\n");
-    }
     if ( !(sflag) && (fflag || !uflag || !lflag || vflag))
         myExit("Argument -s is necessary to continue.\n");
-    if (!dflag && (!flagA && !flagZ)){
-        opt->relative=true;
-        opt->mrca=0;
-        opt->leaves=1;
+    if (!dflag && !flagA && !flagZ){
+        //opt->relative=true;
+        opt->MRCA="0";
+        opt->LEAVES="1";
+        cout<<"Not any input date provided. The results correspond to the estimation of\n relative dates when T[mrca]=0 and T[tips]=1"<<endl;
     }
-    if (!dflag && (flagA && flagZ)){
-        if (opt->inDateFormat==2 && opt->outDateFormat==0) opt->outDateFormat=2;
-        if (opt->mrca >= opt->leaves)
-            myExit("The root date must be strictly smaller than the tips date.\n");
-        opt->relative=true;
+    if (!dflag && flagA && !flagZ){
+        myExit("Tips date are required via option -z\n");
     }
-    
-    if (dflag)
-        opt->relative=false;
-    
+    if (!dflag && !flagA && flagZ){
+        myExit("Root date is required via option -a\n");
+    }
+    if (!lflag){
+        opt->nullblen = 0.5/opt->seqLength;
+    }
     if (!opt->constraint && opt->estimate_root.compare("as")==0){
-        cout<<"The non constrained mode is chosen, so the \"as\" method for rooting function is the same as the \"a\" method."<<endl;
+        cout<<"The non constrained mode is chosen, so the \"as\" method for rooting function\n is the same as the \"a\" method."<<endl;
         opt->estimate_root="a";
+    }
+    if (opt->estimate_root.compare("")==0 && !opt->removeOutgroup && opt->fnOutgroup != ""){
+        opt->estimate_root="k";
     }
     if( opt->outFile=="") opt->outFile = opt->inFile + ".result";
     opt->treeFile1=opt->outFile+".nexus";
     opt->treeFile2=opt->outFile+".date.nexus";
     opt->treeFile3=opt->outFile+".nwk";
-    if (std::isnan(opt->nullblen)){
-        opt->nullblen = 0.5/opt->seqLength;
-    }
-    
     return opt;
 }
 
@@ -306,33 +278,27 @@ Pr* getInterface()
     do{
         fgets(letter,3,stdin);
         if (*letter=='n' || *letter=='N') {
-            cout<<"There is no date file, so the program will estimate relative dates with root date = 0 and tips date = 1.\n Type 'y' to continue or 'n' to modify the root date and the tips date"<<endl;
+            cout<<"There is no date file, so the program will estimate relative dates with root\n date = 0 and tips date = 1.\n Type 'y' to continue or 'n' to modify the root\n date and the tips date"<<endl;
             char letter1[3];
             do {
                 fgets( letter1, 3, stdin );
                 if (*letter1=='n' || *letter1=='N'){
-                    do {
-                        int dateTypeA, dateTypeZ;
-                        opt->mrca = getInputDate("Enter the root date (default=0)> ",dateTypeA);
-                        opt->leaves = getInputDate("Enter the tips date (default=1)> ",dateTypeZ);
-                        if (dateTypeA == 2 || dateTypeZ==2) opt->inDateFormat=2;
-                        else opt->inDateFormat=1;
-                        if (opt->leaves <= opt->mrca) cout<<"Root date must be smaller than the tips date."<<endl;
-                    } while (opt->leaves <= opt->mrca);
+                    opt->MRCA = getInputString("Enter the root date (default=0)> ");
+                    opt->LEAVES = getInputString("Enter the tips date (default=1)> ");
                 }
                 else if (*letter1=='y' || *letter1=='Y'){
+                    opt->MRCA = "0";
+                    opt->LEAVES = "1";
                     opt->mrca=0;
                     opt->leaves=1;
                 }
                 else {
                     cout<<"Type 'y' to continue or 'n' to modify the root date and tips date"<<endl;
                 }
-                opt->relative=true;
             } while (*letter1!='n' && *letter1!='N' && *letter1!='y' && *letter1!='Y');
         }
         else if (*letter=='y' || *letter=='Y'){
             opt->inDateFile = getInputFileName("Enter you input date file name>");
-            opt->relative=false;
         }
     } while (*letter!='n' && *letter!='N' && *letter!='y' && *letter!='Y');
     opt->outFile = opt->inFile+".result";
@@ -344,7 +310,6 @@ Pr* getInterface()
     }
     opt->seqLength = getPositiveInputInteger("Enter the length of sequences that were used to build your tree>");
     fgets( letter, 3, stdin );
-    //printInterface( stdout, opt);
     printInterface(std::cout, opt);
     do
     {
@@ -363,27 +328,20 @@ Pr* getInterface()
 
 void printInterface(ostream& in, Pr* opt)
 {
-    const string VERSION = "v1.7.1";
+    const string VERSION = "v.1.8";
 
     in<<"\nLEAST-SQUARE METHODS TO ESTIMATE RATES AND DATES - "<<VERSION<<" \n\n";
     in<<"\nInput files:\n";
-    in<<"  i                                               Input tree file : "<<opt->inFile.c_str()<<"\n";
-    if (opt->relative==true){
-        ostringstream tMRCA,tLeaves;
-        if (opt->inDateFormat==2){
-            tMRCA<<realToYearMonthDay(opt->mrca);
-            tLeaves<<realToYearMonthDay(opt->leaves);
-        } else if (opt->inDateFormat==3){
-            tMRCA<<realToYearMonth(opt->mrca);
-            tLeaves<<realToYearMonth(opt->leaves);
-        } else {
-            tMRCA<<opt->mrca;
-            tLeaves<<opt->leaves;
-        }
-        in<<"  d                                       Estimate relative dates : mrca date = "<<tMRCA.str()<<", tips date = "<<tLeaves.str()<<"\n";
+        in<<"  i                                               Input tree file : "<<opt->inFile.c_str()<<"\n";
+    if (opt->MRCA!=""){
+        in<<"  a                                                     Root date : "<<opt->MRCA.c_str()<<"\n";
     }
-    else
+    if (opt->LEAVES!=""){
+        in<<"  z                                                     Tips date : "<<opt->LEAVES.c_str()<<"\n";
+    }
+    if (opt->inDateFile!=""){
         in<<"  d                                               Input date file : "<<opt->inDateFile.c_str()<<"\n";
+    }
     in<<"  p                                                Partition file : ";
     if (opt->partitionFile=="")        in<<"No\n";
     else in<<opt->partitionFile.c_str()<<"\n";
@@ -409,8 +367,8 @@ void printInterface(ostream& in, Pr* opt)
         }
     }
     in<<"  r                                             Estimate the root : ";
-    if (opt->estimate_root==""){
-        in<<"No\n";
+    if (opt->estimate_root=="k"){
+        in<<"On the branch given by the outgroups\n";
     }
     else if (opt->estimate_root.compare("l")==0){
         in<<"Around the given root\n";
@@ -424,6 +382,9 @@ void printInterface(ostream& in, Pr* opt)
     else if (opt->estimate_root.compare("as")==0){
         in<<"Use constrained mode on all branches\n";
     }
+    else{
+        in<<"No\n";
+    }
     in<<"  w                                       Given substitution rate : ";
     if (opt->rate=="") in<<"No\n";
     else in<<opt->rate.c_str()<<"\n";
@@ -431,11 +392,11 @@ void printInterface(ostream& in, Pr* opt)
         in<<"  g                                               Given outgroups : No\n";
     else {
         in<<"  g                                       File contains outgroups : "<<opt->fnOutgroup.c_str()<<"\n";
-        if (opt->keepOutgroup) {
-            in<<"  k                         Keep outgroups in the estimating tree :  Yes\n";
+        if (opt->removeOutgroup) {
+            in<<"  G                       Remove outgroups in the estimating tree : Yes\n";
         }
         else{
-            in<<"  k                         Keep outgroups in the estimating tree : No\n";
+            in<<"  G                       Remove outgroups in the estimating tree : No\n";
         }
     }
     in<<"  n                                             Multiple data set : ";
@@ -506,7 +467,7 @@ void printHelp( void )
     const string BOLD = "\033[00;01m";
     const string LINE = "\033[00;04m";
     const string FLAT = "\033[00;00m";
-    const string VERSION = "v1.7.1";
+    const string VERSION = "v.1.8";
     
     cout<<BOLD<<"LSD: LEAST-SQUARES METHODS TO ESTIMATE RATES AND DATES - "<<VERSION<<"\n\n";
     cout<<BOLD<<"DESCRIPTION\n"
@@ -516,19 +477,15 @@ void printHelp( void )
            <<FLAT<<"\t" <<BOLD<<"./lsd " <<FLAT<<"[" <<BOLD<<"-i " <<LINE<<"inputFile" <<FLAT<<"] "
            <<FLAT<<"[" <<BOLD<<"-d " <<LINE<<"inputDateFile" <<FLAT<<"] "
            <<FLAT<<"[" <<BOLD<<"-o " <<LINE<<"outputFile" <<FLAT<<"] "
-           <<FLAT<<"[" <<BOLD<<"-c" <<FLAT<<"] "
-           <<FLAT<<"[" <<BOLD<<"-v " <<LINE<<"mode" <<FLAT<<"] "
            <<FLAT<<"[" <<BOLD<<"-s " <<LINE<<"sequenceLength" <<FLAT<<"] "
            <<FLAT<<"[" <<BOLD<<"-g " <<LINE<<"outgroupFile" <<FLAT<<"] "
            <<FLAT<<"[" <<BOLD<<"-f " <<LINE<<"nbSamplings" <<FLAT<<"] "
-           <<FLAT<<"[" <<BOLD<<"-e " <<LINE<<"Zscore" <<FLAT<<"]\n"
            <<FLAT<<"\n";
     
     cout<<BOLD<<"OPTIONS\n"
            <<FLAT<<"\t" <<BOLD<<"-a " <<LINE<<"rootDate\n"
-           <<FLAT<<"\t   If the dates of all tips are equal (which is given by option -z), you must use this option to provide the root date.\n"
-           <<FLAT<<"\t   In this case, the input date file can be omitted, and the program estimates only the relative dates based on the given\n"
-           <<FLAT<<"\t   root date and tips date. By default, T[root]=0 and T[tips]=1.\n"
+           <<FLAT<<"\t   To specify the root date if there's any. If the root date is not a number, but a string (ex: 2020-01-10, or b(2019,2020)) then it should\n"
+           <<FLAT<<"\t   be put between the quotes.\n"
            <<FLAT<<"\t" <<BOLD<<"-b " <<LINE<<"varianceParameter\n"
            <<FLAT<<"\t   The parameter (between 0 and 1) to compute the variances in option -v. It is the pseudo positive constant to add to the branch lengths\n"
            <<FLAT<<"\t   when calculating variances, to adjust the dependency of variances to branch lengths. By default b is the maximum between median branch length\n"
@@ -549,7 +506,7 @@ void printHelp( void )
            <<FLAT<<"\t    d b(2001.2,2007.11)\n"
            <<FLAT<<"\t    mrca(a,b,c,d) b(2000,2001)\n"
            <<FLAT<<"\t    n l(2004.3)\n"
-           <<FLAT<<"\t   If this option is omitted, the program will estimate relative dates by giving T[root]=0 and T[tips]=1.\n"
+           <<FLAT<<"\t   If this option is omitted, and option -a, -z are also omitted, the program will estimate relative dates by giving T[root]=0 and T[tips]=1.\n"
            <<FLAT<<"\t" <<BOLD<<"-D " <<LINE<<"outDateFormat\n"
            <<FLAT<<"\t    Specify output date format: 1 for real, 2 for year-month-day. By default the program will guess the format of input dates and uses it for\n"
            <<FLAT<<"\t    output dates.\n"
@@ -568,9 +525,8 @@ void printHelp( void )
            <<FLAT<<"\t   could use a smaller sequence length than the actual ones. Confidence intervals are written in the nexus tree with label CI_height,\n"
            <<FLAT<<"\t   and can be visualzed with Figtree under Node bar feature.\n"
            <<FLAT<<"\t" <<BOLD<<"-g " <<LINE<<"outgroupFile\n"
-           <<FLAT<<"\t   If your data contain outgroups, then specify the name of the outgroup file here.\n"
-           <<FLAT<<"\t   The program will use the outgroups to root the trees. It will keep the outgroup in the trees if option -k is used with, \n"
-           <<FLAT<<"\t   otherwise it will remove the outgroups. The format of this file should be:\n"
+           <<FLAT<<"\t   If your data contain outgroups, then specify the name of the outgroup file here. The program will use the outgroups to root the trees.\n"
+           <<FLAT<<"\t   If you use this combined with options -G, then the outgroups will be removed. The format of this file should be:\n"
            <<FLAT<<"\t        n\n"
            <<FLAT<<"\t        OUTGROUP1\n"
            <<FLAT<<"\t        OUTGROUP2\n"
@@ -587,9 +543,9 @@ void printHelp( void )
            <<FLAT<<"\t   trees must be the same.\n"
            <<FLAT<<"\t" <<BOLD<<"-j\n"
            <<FLAT<<"\t   Verbose mode for output messages.\n"
-           <<FLAT<<"\t" <<BOLD<<"-k\n"
-           <<FLAT<<"\t   Use this option to keep the outgroups (given in option -g) in the estimated tree. The root position is then estimated on the\n"
-           <<FLAT<<"\t   branch determined by the outgroups. If this option is not used, the outgroups will be removed.\n"
+           <<FLAT<<"\t" <<BOLD<<"-G\n"
+           <<FLAT<<"\t   Use this option to remove the outgroups (given in option -g) in the estimated tree. If this option is not used, the outgroups \n"
+           <<FLAT<<"\t   will be kept and the root position in estimated on the branch defined by the outgroups.\n"
            <<FLAT<<"\t" <<BOLD<<"-l " <<LINE<<"nullBlen\n"
            <<FLAT<<"\t   A branch in the input tree is considered informative if its length is greater this value. By default it is 0.5/seq_length. Only \n"
            <<FLAT<<"\t   informative branches are forced to be bigger than a minimum branch length (see option -u for more information about this).\n"
@@ -651,10 +607,11 @@ void printHelp( void )
            <<FLAT<<"\t   Similar to option -u but applies for external branches if specified. If it's not specified then the minimum branch length of external\n"
            <<FLAT<<"\t   branches is set the same as the one of internal branch.\n"
            <<FLAT<<"\t" <<BOLD<<"-v " <<LINE<<"variance\n"
-           <<FLAT<<"\t   Use this option if you want to apply variances for the branch lengths in order to recompense big errors on long estimated branch lengths. \n"
-           <<FLAT<<"\t   The variance of the branch Bi is Vi = (Bi+b) where b is specified by option -b.\n"
-           <<FLAT<<"\t   If " <<FLAT<<LINE<<"variance" <<FLAT<<"=1, then LSD uses the input branch lengths to calculate variances. If " <<FLAT<<LINE<<"variance" <<FLAT<<"=2, then LSD\n"
-           <<FLAT<<"\t   runs twice where the second time it calculates the variances based on the estimated branch lengths of the first run.\n"
+           <<FLAT<<"\t   Use this option to specify the way you want to apply variances for the branch lengths. Variances are used to recompense big errors on\n"
+           <<FLAT<<"\t   long estimated branch lengths. The variance of the branch Bi is Vi = (Bi+b) where b is specified by option -b.\n"
+           <<FLAT<<"\t   If " <<FLAT<<LINE<<"variance" <<FLAT<<"=0, then we don't use variance. If " <<FLAT<<LINE<<"variance" <<FLAT<<"=1, then LSD uses the input branch lengths to calculate variances.\n"
+           <<FLAT<<"\t   If " <<FLAT<<LINE<<"variance" <<FLAT<<"=2, then LSD runs twice where the second time it calculates the variances based on the estimated branch\n"
+           <<FLAT<<"\t   lengths of the first run. By default " <<FLAT<<LINE<<"variance" <<FLAT<<"=1.\n"
            <<FLAT<<"\t" <<BOLD<<"-V \n"
            <<FLAT<<"\t   Get the actual version.\n"
            <<FLAT<<"\t" <<BOLD<<"-w " <<LINE<<"givenRte\n"
@@ -666,9 +623,8 @@ void printHelp( void )
            <<FLAT<<"\t        ...\n"
            <<FLAT<<"\t  where RATEi is the rate of the tree i in the inputTreesFile.\n"
            <<FLAT<<"\t" <<BOLD<<"-z " <<LINE<<"tipsDate\n"
-           <<FLAT<<"\t   This option is used to give the date of the tips when they are all equal. It must be used with option -a to give the\n"
-           <<FLAT<<"\t   root date. In this case the input date file can be omitted, and the program estimates only the relative dates based on\n"
-           <<FLAT<<"\t   the given root date and tips date. By default, T[root]=0 and T[tips]=1.\n";
+           <<FLAT<<"\t   To specify the tips date if they are all equal. If the tips date is not a number, but a string (ex: 2020-01-10, or b(2019,2020))\n"
+           <<FLAT<<"\t   then it should be put between the quotes.\n";
 }
 string getInputString(string msg)
 {
@@ -808,7 +764,7 @@ bool isOptionActivate( Pr* opt, char l )
         case 'r':
         case 'R':
         case 'g':
-        case 'k':
+        case 'G':
         case 't':
         case 'w':
         case 'f':
@@ -824,6 +780,8 @@ bool isOptionActivate( Pr* opt, char l )
         case 'S':
         case 'D':
         case 'x':
+        case 'a':
+        case 'z':
         case 'h':
         return true;
     }
@@ -847,35 +805,35 @@ void setOptionsWithLetter( Pr* opt, char letter)
             do{
                 fgets(letter,3,stdin);
                 if (*letter=='n' || *letter=='N') {
-                    cout<<"There is no date file, so the program will estimate relative dates with root date = 0 and tips date = 1.\n Type 'y' to continue or 'n' to modify the root date and the tips date"<<endl;
+                    cout<<"There is no date file, so the program will estimate relative dates with root\n date = 0 and tips date = 1.\n Type 'y' to continue or 'n' to modify the root\n date and the tips date"<<endl;
                     char letter1[3];
                     do {
                         fgets( letter1, 3, stdin );
                         if (*letter1=='n' || *letter1=='N'){
-                            do {
-                                int dateTypeA, dateTypeZ;
-                                opt->mrca = getInputDate("Enter the root date (default=0)> ",dateTypeA);
-                                opt->leaves = getInputDate("Enter the tips date (default=1)> ",dateTypeZ);
-                                if (dateTypeA == 2 || dateTypeZ==2) opt->inDateFormat=2;
-                                else opt->inDateFormat=1;
-                                if (opt->leaves <= opt->mrca) cout<<"Root date must be smaller than the tips date."<<endl;
-                            } while (opt->leaves <= opt->mrca);
+                            opt->MRCA = getInputString("Enter the root date (default=0)> ");
+                            opt->LEAVES = getInputString("Enter the tips date (default=1)> ");
                         }
                         else if (*letter1=='y' || *letter1=='Y'){
+                            opt->MRCA="0";
+                            opt->LEAVES="1";
                             opt->mrca=0;
                             opt->leaves=1;
                         }
                         else {
                             cout<<"Type 'y' to continue or 'n' to modify the root date and tips date"<<endl;
                         }
-                        opt->relative=true;
                     } while (*letter1!='n' && *letter1!='N' && *letter1!='y' && *letter1!='Y');
                 }
                 else if (*letter=='y' || *letter=='Y'){
                     opt->inDateFile = getInputFileName("Enter you input date file name>");
-                    opt->relative=false;
                 }
             } while (*letter!='n' && *letter!='N' && *letter!='y' && *letter!='Y');
+            break;
+        case 'a':
+            opt->MRCA = getInputString("Enter the root date > ");
+            break;
+        case 'z':
+            opt->LEAVES = getInputString("Enter the tips date > ");
             break;
         case 'D':
             if (opt->outDateFormat==0) opt->outDateFormat=1;
@@ -937,7 +895,7 @@ void setOptionsWithLetter( Pr* opt, char letter)
                     opt->estimate_root="as";
                 }
                 else if (opt->estimate_root.compare("a")==0 && !opt->constraint){
-                    cout<<"The trees are not rooted, you must use either option -g to specify the outgroups file or -r to estimate the root"<<endl;
+                    cout<<"The trees are not rooted, you must use either option -g to specify the outgroups\n file or -r to estimate the root"<<endl;
                 }
                 else if (opt->estimate_root.compare("as")==0){
                     opt->estimate_root="a";
@@ -959,10 +917,10 @@ void setOptionsWithLetter( Pr* opt, char letter)
                 }
             }
             break;
-        case 'k':
+        case 'G':
             if (opt->fnOutgroup!=""){
-            	opt->keepOutgroup=!opt->keepOutgroup;
-            	if (opt->keepOutgroup) {
+            	opt->removeOutgroup=!opt->removeOutgroup;
+            	if (!opt->removeOutgroup) {
                 	opt->estimate_root="k";
             	}
 	    }

@@ -474,6 +474,10 @@ bool starting_pointQP(Pr* pr,Node** nodes,list<int> &active_set){
                 active_set.push_back(minI);
             }
             else{
+                if (lower(nodes[i]) || upper(nodes[i])){
+                    desactiveLimit(nodes[i]);
+                    active_set.remove(-i);
+                }
                 nodes[i]->D = nodes[i]->upper;
                 activeUpper(nodes[i]);
                 active_set.push_back(-i);
@@ -507,8 +511,7 @@ bool with_constraint(Pr* pr,Node** &nodes,list<int> active_set,list<double>& ld)
                 ls.push_back(i);
             }
         }
-        else if (!tc(nodes[-i]) && leaf(nodes[-i])) ls.push_back(-i);//only limit constraint
-        //else if ((!tc(nodes[-i]) || nodes[-i]->minblen>0) && leaf(nodes[-i])) ls.push_back(-i);
+        else if (!tc(nodes[-i]) && leaf(nodes[-i])) ls.push_back(-i);
     }
     stack<int>* feuilles = computeFeuilles_polytomy(ls,pr,nodes);
     list<int> top;
@@ -757,7 +760,7 @@ bool with_constraint(Pr* pr,Node** &nodes,list<int> active_set,list<double>& ld)
             }
         }
     }
-  /*
+/*
     double sr=0;
     for (int i=0; i<=pr->nbBranches; i++) {
         if (nodes[i]->type!='p') {
@@ -792,7 +795,6 @@ bool with_constraint(Pr* pr,Node** &nodes,list<int> active_set,list<double>& ld)
     if (abs(sr)>1e-6) {
         cout<<"TEST  PROBLEM rho "<<sr<<endl;
     }*/
-    
     for (int i=0;i<count;i++){
         if (abs(lambda[i])<(1e-10))
             lambda[i]=0;
@@ -821,7 +823,7 @@ bool with_constraint_active_set(Pr* pr,Node** &nodes){
         bool val = with_constraint(pr,nodes,active_set,lambda);
         int nb_iter=0;
         double alpha;
-        while (val && !conditionsQP(lambda,pr,nodes) && nb_iter <= 1000){ //{
+        while (val && !conditionsQP(lambda,pr,nodes) && nb_iter <= 1000){
             for (int i=0;i<=pr->nbBranches;i++)  {
                 dir[i] = nodes[i]->D - D_old[i];
             }
@@ -858,28 +860,13 @@ bool with_constraint_active_set(Pr* pr,Node** &nodes){
             if (remove_ne_lambda(lambda,active_set,asrm)){
                 active_set.remove(asrm);
                 if (asrm>0) {
-                    desactive(nodes[asrm]);
+                    desactiveTC(nodes[asrm]);
                 }
                 else {
-                    desactive(nodes[-asrm]);
+                    desactiveLimit(nodes[-asrm]);
                 }
             }
             for (int i=0;i<=pr->nbBranches;i++) D_old[i]=D_old[i]+alpha*dir[i];
-            /*for (int i=0;i<=pr->nbBranches;i++){
-             if (i>0 && D_old[i]-D_old[nodes[i]->P]<-1e-10) {
-             cout<<"PROBLEM "<<i<<" "<<nodes[i]->P<<" "<<D_old[i]<<" "<<D_old[nodes[i]->P]<<endl;
-             }
-             if (nodes[i]->type=='l'||nodes[i]->type=='b') {
-             if (D_old[i]-nodes[i]->lower<-1e-10) {
-             cout<<"PROBLEM lower "<<i<<" "<<D_old[i]<<" "<<nodes[i]->lower<<endl;
-             }
-             }
-             if (nodes[i]->type=='u'||nodes[i]->type=='b') {
-             if (D_old[i]-nodes[i]->upper>1e-10) {
-             cout<<"PROBLEM upper "<<i<<" "<<D_old[i]<<" "<<nodes[i]->upper<<endl;
-             }
-             }
-             }*/
             if (as<2*pr->nbBranches+2) {
                 if (as>pr->nbBranches) {
                     active_set.push_back(-(as-pr->nbBranches-1));
@@ -902,6 +889,7 @@ bool with_constraint_active_set(Pr* pr,Node** &nodes){
         }
         if (nb_iter>1000){
             for (int i=0;i<=pr->nbBranches;i++) nodes[i]->D=D_old[i];
+            
         }
         computeObjective(pr,nodes);
         
@@ -964,7 +952,6 @@ bool without_constraint_multirates(Pr* pr,Node** nodes,bool reassign){
         for (int i=1;i<pr->multiplierRate.size();i++) cout<<pr->multiplierRate[i]<<" ";
     }
     bool val = without_constraint_active_set(pr,nodes);
-    //if (pr->verbose) cout<<pr->rho<<endl;
     if (!val) return false;
     if (pr->ratePartition.size()>0) {
         double old_phi = 0;

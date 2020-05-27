@@ -19,9 +19,11 @@ typedef struct Pr
     string treeFile1;       //Nom du fichier d'abres sorties Nexus
     string treeFile2;       //Nom du fichier d'arbres sorties Nexus avec des longueurs de branches mesures par des temps ecoules
     string treeFile3;       //Nom du fichier d'arbres sorties Newick
-    bool relative;         //=true if all the leaves have the same date, the program estimate the relative dates
+    //bool relative;         //=true if all the leaves have the same date, the program estimate the relative dates
     double mrca;
+    string MRCA;
     double leaves;
+    string LEAVES;
     int    seqLength;      //Longueur des sequences dans l'alignement
     int    nbData;         //Nombre de cas a  traiter (dans le cas de bootstrap)
     string fnOutgroup;
@@ -50,7 +52,7 @@ typedef struct Pr
     vector<bool> givenRate;
     double objective;
     int nbSampling;
-    bool keepOutgroup;
+    bool removeOutgroup;
     int m;
     double e;
     vector<Part* > ratePartition;
@@ -64,6 +66,8 @@ typedef struct Pr
     }
     void init(){
         internalConstraints.clear();
+        rooted = false;
+        if (fnOutgroup != "" ) rooted = true;
         warningMessage.clear();
         resultMessage.clear();
     }
@@ -74,9 +78,11 @@ typedef struct Pr
         outFile = pr->outFile;
         treeFile1 = pr->treeFile1;
         treeFile2 = pr->treeFile2;
-        relative=pr->relative;
+        //relative=pr->relative;
         mrca=pr->mrca;
+        MRCA=pr->MRCA;
         leaves=pr->leaves;
+        LEAVES=pr->LEAVES;
         seqLength=pr->seqLength; 
         nbData=pr->nbData;
         rate=pr->rate;
@@ -110,7 +116,7 @@ typedef struct Pr
                 multiplierRate.push_back(pr->multiplierRate[i]);
             }
         }
-        keepOutgroup = pr->keepOutgroup;
+        removeOutgroup = pr->removeOutgroup;
         m = pr->m;
         warningMessage = pr->warningMessage;
         resultMessage = pr->resultMessage;
@@ -127,15 +133,17 @@ typedef struct Pr
         seqLength = 1000;
         nbData = 1;
         rate = "";
-        relative = false;
+        //relative = false;
         mrca=0;
         leaves=1;
+        MRCA="";
+        LEAVES="";
         estimate_root = "";
         constraint = true;
         variance = 1;
         minblen = -1;
         minblenL = -1;
-        nullblen = NAN;
+        nullblen = 0;
         support = -1;
         c = -1;
         b = -1;
@@ -146,8 +154,8 @@ typedef struct Pr
         round_time=-1;
         inDateFormat=0;
         outDateFormat=0;
-        rooted=true;
-        keepOutgroup=false;
+        rooted=false;
+        removeOutgroup=false;
         ratePartition = vector<Part* >();
         internalConstraints = vector<Date* >();
         outlier = vector<int>();

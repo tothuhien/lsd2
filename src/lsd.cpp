@@ -64,23 +64,16 @@ int lsd::buildTimeTree( int argc, char** argv, InputOutputStream *inputOutput)
         cout<<"Reading the tree ... "<<endl;
         opt->init();
         Node** nodes=tree2data(*(io->inTree),opt,s);
-        if (!opt->relative) {
-            io->inDate->seekg(0);//BQM: set the stream position to 0 to read the same date file for each tree in the tree set
-            readDateFile(*io->inDate, opt,nodes,constraintConsistent);
+        readInputDate(io, opt,nodes,constraintConsistent);
+        if (!constraintConsistent){
+            ostringstream oss;
+            oss<<"- There's conflict in the input temporal constraints.\n";
+            opt->warningMessage.push_back(oss.str());
         }
         computeSuc_polytomy(opt,nodes);
         collapseUnInformativeBranches(opt,nodes);
         if (!opt->rooted){
             nodes = unrooted2rooted(opt,nodes);
-        }
-        if (opt->relative){
-            for (int i=0;i<opt->nbINodes;i++) nodes[i]->removeConstraint();
-            for (int i=opt->nbINodes;i<=opt->nbBranches;i++){
-                nodes[i]->newPConstraint('p',opt->leaves);
-            }
-            Date* dateRoot = new Date("", 'p',opt->mrca,0,0);
-            opt->internalConstraints.clear();
-            opt->internalConstraints.push_back(dateRoot);
         }
         if (y==1){
             *(io->outTree1)<<"Begin trees;\n";
@@ -142,8 +135,13 @@ int lsd::buildTimeTree( int argc, char** argv, InputOutputStream *inputOutput)
                 br=nodes[s1]->B+nodes[s2]->B;
                 nodes[s1]->V=variance(opt,br);
                 nodes[s2]->V=nodes[s1]->V;
-                without_constraint_active_set_lambda_multirates(br,opt,nodes,true);
-                output(br,y,opt,nodes,*(io->outResult),*(io->outTree1),*(io->outTree2),*(io->outTree3));
+                constraintConsistent = without_constraint_active_set_lambda_multirates(br,opt,nodes,true);
+                if (constraintConsistent){
+                    output(br,y,opt,nodes,*(io->outResult),*(io->outTree1),*(io->outTree2),*(io->outTree3));
+                }
+                else{
+                    myExit("There's conflict or not enough signal in the input temporal constraints.\n");
+                }
             }
             else{//estimate the root
                 int r;
@@ -185,7 +183,7 @@ int lsd::buildTimeTree( int argc, char** argv, InputOutputStream *inputOutput)
                             output(br,y,opt,nodes,*(io->outResult),*(io->outTree1),*(io->outTree2),*(io->outTree3));
                         }
                         else{
-                            cout<<"*WARNING: There's conflict in the input temporal constraints."<<endl;
+                            myExit("There's conflict or not enough signal in the input temporal constraints.\n");
                         }
                     }
                     else if (opt->estimate_root=="k"){
@@ -204,7 +202,7 @@ int lsd::buildTimeTree( int argc, char** argv, InputOutputStream *inputOutput)
                         if (constraintConsistent) {
                             output(br,y,opt,nodes,*(io->outResult),*(io->outTree1),*(io->outTree2),*(io->outTree3));
                         } else {
-                            cout<<"*WARNING: There's conflict in the input temporal constraints."<<endl;
+                            myExit("There's conflict or not enough signal in the input temporal constraints.\n");
                         }
                     }
                     else{//estimate the root
@@ -237,10 +235,10 @@ int lsd::buildTimeTree( int argc, char** argv, InputOutputStream *inputOutput)
                         delete[] nodes_new;
                     }
                 } else {
-                    cout<<"*WARNING: There's conflict in the input temporal constraints."<<endl;
+                    myExit("There's conflict or not enough signal in the input temporal constraints.\n");
                 }
             } else {
-                cout<<"*WARNING: There's conflict in the input temporal constraints."<<endl;
+                myExit("There's conflict or not enough signal in the input temporal constraints.\n");
             }
         }
         for (int i=0;i<=opt->nbBranches;i++) delete nodes[i];

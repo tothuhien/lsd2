@@ -26,6 +26,8 @@ bool without_constraint_lambda(double br,Pr* &par,Node** &nodes,list<int> active
     int r=(*iter);//r=r1
     iter++;
     int pr=(*iter);//pr=r2
+    if (r >= par->nbINodes && nodes[r]->type == 'n') return false;
+    if (pr >= par->nbINodes && nodes[pr]->type == 'n') return false;
     int l=0;
     for (int i=par->nbINodes;i<=par->nbBranches;i++){
         if (leaf(nodes[i])) l++;
@@ -518,6 +520,8 @@ bool with_constraint_lambda(double br,Pr* &pr,Node** &nodes,list<int> active_set
     int r=(*iter);//r=r1
     iter++;
     int p_r=(*iter);//pr=r2
+    if (r >= pr->nbINodes && nodes[r]->type == 'n') return false;
+    if (p_r >= pr->nbINodes && nodes[p_r]->type == 'n') return false;
     if (br==0) {
         nodes[0]->B=0;
         nodes[p_r]->B=0;
@@ -580,12 +584,12 @@ bool with_constraint_lambda(double br,Pr* &pr,Node** &nodes,list<int> active_set
                         for (list<int>::iterator iter=Suc[i].begin(); iter!=Suc[i].end(); iter++) {
                             if (markLeaf(nodes[*iter])) {
                                 coefs+=1/nodes[*iter]->V;
-                                ctemp+=(nodes[*iter]->D)/nodes[*iter]->V;
+                                ctemp+=(nodes[*iter]->D-add[*iter])/nodes[*iter]->V;
                                 xtemp-=nodes[*iter]->B/nodes[*iter]->V;
                             }
                             else {
                                 coefs+=(1-W[*iter])/nodes[*iter]->V;
-                                ctemp+=(C[*iter])/nodes[*iter]->V;
+                                ctemp+=(C[*iter]-add[*iter])/nodes[*iter]->V;
                                 xtemp+=(X[*iter]-nodes[*iter]->B)/nodes[*iter]->V;
                             }
                         }
@@ -595,20 +599,20 @@ bool with_constraint_lambda(double br,Pr* &pr,Node** &nodes,list<int> active_set
                         C[i]=ctemp/coefs;
                         X[i]=xtemp/coefs;
                     }
-                    else if (tc(nodes[r]) || tc(nodes[p_r])){//(br+rho*T0-rho*Tr)-sum(Ts-rho*(Ts-T0))=0 ### to check
+                    else if (tc(nodes[r]) || tc(nodes[p_r])){
                         int nc=r;
                         if (tc(nodes[r])){
                             nc=p_r;
                         }
-                        double coefs=1/nodes[nc]->V;//(1-W[nc])/nodes[nc]->V;
-                        double ctemp=0;//C[nc]/nodes[nc]->V;
-                        double xtemp=-br/nodes[nc]->V;//(-br+X[nc])/nodes[nc]->V;
+                        double coefs=1/nodes[nc]->V;
+                        double ctemp=0;
+                        double xtemp=-br/nodes[nc]->V;
                         if (markLeaf(nodes[nc])){
-                            ctemp+=(nodes[nc]->D)/nodes[nc]->V;
+                            ctemp+=(nodes[nc]->D+nodes[r]->minblen)/nodes[nc]->V;
                         }
                         else if (nc<pr->nbINodes){
                             coefs-=W[nc]/nodes[nc]->V;
-                            ctemp+=(C[nc])/nodes[nc]->V;
+                            ctemp+=(C[nc]+nodes[r]->minblen)/nodes[nc]->V;
                             xtemp+=X[nc]/nodes[nc]->V;
                         }
                         else{
@@ -619,16 +623,16 @@ bool with_constraint_lambda(double br,Pr* &pr,Node** &nodes,list<int> active_set
                         for (list<int>::iterator iter=Suc[i].begin();iter!=Suc[i].end();iter++){
                             if (markLeaf(nodes[*iter])) {
                                 if (*iter!=nc){
-                                    coefs+=1/nodes[*iter]->V;
-                                    ctemp+=(nodes[*iter]->D)/nodes[*iter]->V;
-                                    xtemp-=nodes[*iter]->B/nodes[*iter]->V;
+                                    coefs+=2/nodes[*iter]->V;
+                                    ctemp+=2*(nodes[*iter]->D-add[*iter])/nodes[*iter]->V;
+                                    xtemp-=2*nodes[*iter]->B/nodes[*iter]->V;
                                 }
                             }
                             else{
                                 if (*iter!=nc){
-                                    coefs+=(1-W[*iter])/nodes[*iter]->V;
-                                    ctemp+=(C[*iter])/nodes[*iter]->V;
-                                    xtemp+=(X[*iter]-nodes[*iter]->B)/nodes[*iter]->V;
+                                    coefs+=2*(1-W[*iter])/nodes[*iter]->V;
+                                    ctemp+=2*(C[*iter]-add[*iter])/nodes[*iter]->V;
+                                    xtemp+=2*(X[*iter]-nodes[*iter]->B)/nodes[*iter]->V;
                                 }
                             }
                         }
@@ -678,20 +682,22 @@ bool with_constraint_lambda(double br,Pr* &pr,Node** &nodes,list<int> active_set
                 }
                 else if (i==r || i==p_r){
                     if (tc(nodes[r]) || tc(nodes[p_r])){
+                        int nc = p_r;
+                        if (i==p_r) nc = r;
                         double coefs=1./nodes[r]->V;
                         double wtemp=1./nodes[r]->V;
-                        double ctemp=0;
+                        double ctemp=-nodes[nc]->minblen/nodes[r]->V;
                         double xtemp=br/nodes[r]->V;
                         for (list<int>::iterator iter = Suc[i].begin();iter!=Suc[i].end();iter++){
                             if (markLeaf(nodes[*iter])) {
-                                coefs+=1/nodes[*iter]->V;
-                                ctemp+=nodes[*iter]->D/nodes[*iter]->V;
-                                xtemp-=nodes[*iter]->B/nodes[*iter]->V;
+                                coefs+=2/nodes[*iter]->V;
+                                ctemp+=2*(nodes[*iter]->D-add[*iter])/nodes[*iter]->V;
+                                xtemp-=2*nodes[*iter]->B/nodes[*iter]->V;
                             }
                             else{
-                                coefs+=(1-W[*iter])/nodes[*iter]->V;
-                                ctemp+=C[*iter]/nodes[*iter]->V;
-                                xtemp+=(X[*iter]-nodes[*iter]->B)/nodes[*iter]->V;
+                                coefs+=2*(1-W[*iter])/nodes[*iter]->V;
+                                ctemp+=2*(C[*iter]-add[*iter])/nodes[*iter]->V;
+                                xtemp+=2*(X[*iter]-nodes[*iter]->B)/nodes[*iter]->V;
                             }
                         }
                         W[i]=wtemp/coefs;
@@ -712,25 +718,25 @@ bool with_constraint_lambda(double br,Pr* &pr,Node** &nodes,list<int> active_set
                         double ctemp=0;
                         double wtemp=0;
                         if (markLeaf(nodes[0]) && markLeaf(nodes[nc])){
-                            coefs=1/nodes[r]->V;
-                            ctemp=(2*nodes[0]->D-nodes[nc]->D)/nodes[r]->V;
-                            xtemp=br/nodes[r]->V;
+                            coefs=1/nodes[r]->V/2;
+                            ctemp=(2*nodes[0]->D-nodes[nc]->D)/2/nodes[r]->V;
+                            xtemp=br/nodes[r]->V/2;
                         }
                         else if (markLeaf(nodes[0]) && nc<pr->nbINodes){
-                            coefs=1/nodes[r]->V;
-                            ctemp=2*nodes[0]->D/nodes[r]->V;
-                            xtemp=br/nodes[r]->V;
-                            wtemp=-1/nodes[r]->V;
+                            coefs=1/nodes[r]->V/2;
+                            ctemp=nodes[0]->D/nodes[r]->V;
+                            xtemp=br/nodes[r]->V/2;
+                            wtemp=-1/nodes[r]->V/2;
                         }
                         for (list<int>::iterator iter = Suc[i].begin();iter!=Suc[i].end();iter++){
                             if (markLeaf(nodes[*iter])) {
                                 coefs+=1/nodes[*iter]->V;
-                                ctemp+=nodes[*iter]->D/nodes[*iter]->V;
+                                ctemp+=(nodes[*iter]->D-add[*iter])/nodes[*iter]->V;
                                 xtemp-=nodes[*iter]->B/nodes[*iter]->V;
                             }
                             else{
                                 coefs+=(1-W[*iter])/nodes[*iter]->V;
-                                ctemp+=C[*iter]/nodes[*iter]->V;
+                                ctemp+=(C[*iter]-add[*iter])/nodes[*iter]->V;
                                 xtemp+=(X[*iter]-nodes[*iter]->B)/nodes[*iter]->V;
                             }
                         }
@@ -796,16 +802,24 @@ bool with_constraint_lambda(double br,Pr* &pr,Node** &nodes,list<int> active_set
                 X[i]=W[i]*X[Pre[i]]+X[i];
             }
         }
-        double *F= new double[pr->nbBranches+1];
-        double *G = new double[pr->nbBranches+1];
         if (!pr->givenRate[0]){
-            F[0]=-2*C[0];
-            G[0]=-2*X[0];
+            double *F= new double[pr->nbBranches+1];
+            double *G = new double[pr->nbBranches+1];
             for (vector<int>::iterator iter = pre.begin();iter!=pre.end();iter++){
                 int i = *iter;
                 if (i==r || i==p_r){
-                    F[0]+=C[i];
-                    G[0]+=X[i];
+                    int nc = p_r;
+                    if (i==p_r) nc = r;
+                    double c = 0;
+                    double x = 0;
+                    if (nc >= pr->nbINodes){
+                        c = nodes[nc]->D;
+                    } else {
+                        c = C[nc];
+                        x = X[nc];
+                    }
+                    F[i]=(C[i]+c)/2-C[0];
+                    G[i]=(X[i]+x)/2-X[0];
                 }
                 else if (i!=0){
                     F[i] = C[i]-C[nodes[i]->P];
@@ -814,28 +828,27 @@ bool with_constraint_lambda(double br,Pr* &pr,Node** &nodes,list<int> active_set
             }
             for (int i=pr->nbINodes;i<=pr->nbBranches;i++){
                 if (markLeaf(nodes[i])) {
-                    if (i==r || i==p_r){
-                        F[0]+=nodes[i]->D;
+                    if (i==r){
+                        F[i]=(nodes[r]->D+C[p_r])/2-C[0];
+                        G[i]=(X[p_r])/2-X[0];
+                    } else if (i==p_r){
+                        F[i]=(C[r]+nodes[p_r]->D)/2-C[0];
+                        G[i]=(X[r])/2-X[0];
                     }
                     else{
                         F[i]=nodes[i]->D-C[nodes[i]->P];
                         G[i]=-X[nodes[i]->P];
                     }
                 }
-                else if (i==r || i==p_r){
-                    F[0]=0;
-                    G[0]=0;
-                }
             }
             double a = 0;
-            double b = 0;
-            double c = 0;//Fi^2w^2 +2w*FiGi-wFibi-Gibi+Gi^2 =0// phi = a*rho^2+b*rho+c
-            for (int i=0;i<=pr->nbBranches;i++){
-                if (i==0){
+            double b = 0;//Fi^2w^2 +2w*FiGi-wFibi-Gibi+Gi^2 =0// phi = a*rho^2+b*rho+c
+            for (int i=1;i<=pr->nbBranches;i++){
+                if (i==r || i==p_r){
                     a += F[i]*F[i]/nodes[r]->V;
-                    b += 2*F[i]*(-br+G[i])/nodes[r]->V;
+                    b += 2*F[i]*(-br/2+G[i])/nodes[r]->V;
                 }
-                else if (i!=r && i!=p_r && (i<pr->nbINodes || markLeaf(nodes[i]))){
+                else if (i<pr->nbINodes || markLeaf(nodes[i])){
                     a += F[i]*F[i]/nodes[i]->V;
                     b += 2*F[i]*(-nodes[i]->B+G[i])/nodes[i]->V;
                 }
@@ -895,7 +908,7 @@ bool with_constraint_lambda(double br,Pr* &pr,Node** &nodes,list<int> active_set
                 if (tc(nodes[i])){//compute lambda of active tc
                     int p=nodes[i]->P;
                     if (i==r || i==p_r){
-                        lambda[as[i]]=-2*pr->rho*(br+2*pr->rho*nodes[0]->D-pr->rho*nodes[r]->D-pr->rho*nodes[p_r]->D)/nodes[r]->V;
+                        lambda[as[i]]=-pr->rho*(br+2*pr->rho*nodes[0]->D-pr->rho*nodes[r]->D-pr->rho*nodes[p_r]->D)/nodes[r]->V;
                     }
                     else{
                         lambda[as[i]]=-2*pr->rho*(nodes[i]->B-pr->rho*nodes[i]->D+pr->rho*nodes[p]->D)/nodes[i]->V;
@@ -919,7 +932,7 @@ bool with_constraint_lambda(double br,Pr* &pr,Node** &nodes,list<int> active_set
                     if (!bl[i]){//top-down order
                         lambda[as[i]]=0;
                         if (p==0){
-                            lambda[as[i]]=-4*pr->rho*(br+2*pr->rho*nodes[0]->D-pr->rho*nodes[r]->D-pr->rho*nodes[p_r]->D)/nodes[r]->V;
+                            lambda[as[i]]=-2*pr->rho*(br+2*pr->rho*nodes[0]->D-pr->rho*nodes[r]->D-pr->rho*nodes[p_r]->D)/nodes[r]->V;
                         }
                         else{
                             for (vector<int>::iterator iter=nodes[p]->suc.begin(); iter!=nodes[p]->suc.end(); iter++) {
@@ -931,10 +944,10 @@ bool with_constraint_lambda(double br,Pr* &pr,Node** &nodes,list<int> active_set
                             }
                             if (nodes[p]->P!=-1){
                                 if (p==r || p==p_r){
-                                    lambda[as[i]]+=2*pr->rho*(br+2*pr->rho*nodes[0]->D-pr->rho*nodes[r]->D-pr->rho*nodes[p_r]->D)/nodes[r]->V;
+                                    lambda[as[i]] += pr->rho*(br+2*pr->rho*nodes[0]->D-pr->rho*nodes[r]->D-pr->rho*nodes[p_r]->D)/nodes[r]->V;
                                 }
                                 else {
-                                    lambda[as[i]]+=2*pr->rho*(nodes[p]->B-pr->rho*nodes[p]->D+pr->rho*nodes[nodes[p]->P]->D)/nodes[p]->V;
+                                    lambda[as[i]] += 2*pr->rho*(nodes[p]->B-pr->rho*nodes[p]->D+pr->rho*nodes[nodes[p]->P]->D)/nodes[p]->V;
                                 }
                                 
                             }
@@ -949,7 +962,7 @@ bool with_constraint_lambda(double br,Pr* &pr,Node** &nodes,list<int> active_set
             if (limit(nodes[i])){//compute lambda of active limit constraints
                 double lambdaPC=0;
                 if (i==0){
-                    lambdaPC=4*pr->rho*(br-pr->rho*nodes[r]->D-pr->rho*nodes[p_r]->D+2*pr->rho*nodes[0]->D)/nodes[r]->V;
+                    lambdaPC=2*pr->rho*(br-pr->rho*nodes[r]->D-pr->rho*nodes[p_r]->D+2*pr->rho*nodes[0]->D)/nodes[r]->V;
                     if (tc(nodes[r])) lambdaPC+=lambda[as[r]];
                     if (tc(nodes[p_r])) lambdaPC+=lambda[as[p_r]];
                 }
@@ -962,9 +975,9 @@ bool with_constraint_lambda(double br,Pr* &pr,Node** &nodes,list<int> active_set
                         }
                     }
                     if (i!=r && i!=p_r)
-                        lambdaPC-=2*pr->rho*(nodes[i]->B-pr->rho*nodes[i]->D+pr->rho*nodes[nodes[i]->P]->D)/nodes[i]->V;
+                        lambdaPC -= 2*pr->rho*(nodes[i]->B-pr->rho*nodes[i]->D+pr->rho*nodes[nodes[i]->P]->D)/nodes[i]->V;
                     else
-                        lambdaPC-=2*pr->rho*(br-pr->rho*nodes[r]->D-pr->rho*nodes[p_r]->D+2*pr->rho*nodes[0]->D)/nodes[i]->V;
+                        lambdaPC -= pr->rho*(br-pr->rho*nodes[r]->D-pr->rho*nodes[p_r]->D+2*pr->rho*nodes[0]->D)/nodes[i]->V;
                 }
                 if (tc(nodes[i])) lambdaPC-=lambda[as[i]];
                 if (lower(nodes[i])){
@@ -980,15 +993,15 @@ bool with_constraint_lambda(double br,Pr* &pr,Node** &nodes,list<int> active_set
                 int i= *iter;
                 int p = nodes[i]->P;
                 if (i==r || i==p_r){
-                    lambda[as[i]]=-2*pr->rho*(br+2*pr->rho*nodes[0]->D-pr->rho*nodes[r]->D-pr->rho*nodes[p_r]->D)/nodes[r]->V;
+                    lambda[as[i]] = -pr->rho*(br + 2*pr->rho*nodes[0]->D - pr->rho*nodes[r]->D - pr->rho*nodes[p_r]->D)/nodes[r]->V;
                 }
                 else{
-                    lambda[as[i]]=-2*pr->rho*(nodes[i]->B-pr->rho*nodes[i]->D+pr->rho*nodes[p]->D)/nodes[i]->V;
+                    lambda[as[i]] = -2*pr->rho*(nodes[i]->B - pr->rho*nodes[i]->D + pr->rho*nodes[p]->D)/nodes[i]->V;
                 }
                 if (i>=pr->nbINodes) bl[i]=true;
                 for (vector<int>::iterator iter=nodes[i]->suc.begin(); iter!=nodes[i]->suc.end(); iter++) {
                     int s=*iter;
-                    lambda[as[i]]+=2*pr->rho*(nodes[s]->B-pr->rho*nodes[s]->D+pr->rho*nodes[i]->D)/nodes[s]->V;
+                    lambda[as[i]] += 2*pr->rho*(nodes[s]->B - pr->rho*nodes[s]->D + pr->rho*nodes[i]->D)/nodes[s]->V;
                     if (tc(nodes[s])) {
                         lambda[as[i]]+=lambda[as[s]];
                     }
@@ -1001,55 +1014,54 @@ bool with_constraint_lambda(double br,Pr* &pr,Node** &nodes,list<int> active_set
                 lambda[i]=0;
             ld.push_back(lambda[i]);
         }
-        /*       double sr=(2*nodes[0]->D-nodes[r]->D-nodes[p_r]->D)*(br-pr->rho*(nodes[r]->D+nodes[p_r]->D-2*nodes[0]->D))/nodes[r]->V;
-         for (int i=0; i<=pr->nbBranches; i++) {
-         if (i>0 && i!=r && i!=p_r){
-         sr+=(nodes[nodes[i]->P]->D-nodes[i]->D)*(nodes[i]->B-pr->rho*(nodes[i]->D-nodes[nodes[i]->P]->D))/nodes[i]->V;
-         }
-         if (nodes[i]->type!='p') {
-         double s=0;
-         if (tc(nodes[i])) {
-         s-=lambda[as[i]];
-         }
-         if (lower(nodes[i])){
-         s-=lambda[as[i+pr->nbBranches+1]];
-         }
-         if (upper(nodes[i])){
-         s+=lambda[as[i+pr->nbBranches+1]];
-         }
-         if (i==0){
-         s+=4*pr->rho*(br-pr->rho*(nodes[r]->D+nodes[p_r]->D-2*nodes[0]->D))/nodes[r]->V;
-         if (tc(nodes[r])) s+=lambda[as[r]];
-         if (tc(nodes[p_r])) s+=lambda[as[p_r]];
-         }
-         else if (i==r || i==p_r){
-         s-=2*pr->rho*(br-pr->rho*(nodes[r]->D+nodes[p_r]->D-2*nodes[0]->D))/nodes[i]->V;
-         for (vector<int>::iterator iter=nodes[i]->suc.begin(); iter!=nodes[i]->suc.end(); iter++) {
-         int s1=*iter;
-         s+=2*pr->rho*(nodes[s1]->B-pr->rho*nodes[s1]->D+pr->rho*nodes[i]->D)/nodes[s1]->V;
-         if (tc(nodes[s1])) {
-         s+=lambda[as[s1]];
-         }
-         }
-         }
-         else{
-         s-=2*pr->rho*(nodes[i]->B-pr->rho*(nodes[i]->D-nodes[nodes[i]->P]->D))/nodes[i]->V;
-         for (vector<int>::iterator iter=nodes[i]->suc.begin(); iter!=nodes[i]->suc.end(); iter++) {
-         int s1=*iter;
-         s+=2*pr->rho*(nodes[s1]->B-pr->rho*nodes[s1]->D+pr->rho*nodes[i]->D)/nodes[s1]->V;
-         if (tc(nodes[s1])) {
-         s+=lambda[as[s1]];
-         }
-         }
-         }
-         if (abs(s)>1e-6) {
-         cout<<"TEST PROBLEM "<<i<<" "<<s<<" "<<nodes[i]->P<<endl;
-         }
-         }
-         }
-         if (abs(sr)>1e-5 && pr->rho!=pr->rho_min) {
-         cout<<"TEST PROBLEM rho "<<sr<<endl;
-         }*/
+        /*
+        double sr=(2*nodes[0]->D-nodes[r]->D-nodes[p_r]->D)*(br-pr->rho*(nodes[r]->D+nodes[p_r]->D-2*nodes[0]->D))/2/nodes[r]->V;
+        for (int i=0; i<=pr->nbBranches; i++) {
+            if (i>0 && i!=r && i!=p_r){
+                sr+=(nodes[nodes[i]->P]->D-nodes[i]->D)*(nodes[i]->B-pr->rho*(nodes[i]->D-nodes[nodes[i]->P]->D))/nodes[i]->V;
+            }
+            if (nodes[i]->type!='p') {
+                double s=0;
+                if (tc(nodes[i])) {
+                    s -= lambda[as[i]];
+                }
+                if (lower(nodes[i])){
+                    s -= lambda[as[i+pr->nbBranches+1]];
+                }
+                if (upper(nodes[i])){
+                    s += lambda[as[i+pr->nbBranches+1]];
+                }
+                if (i==0){
+                    s += 2*pr->rho*(br - pr->rho*(nodes[r]->D + nodes[p_r]->D - 2*nodes[0]->D))/nodes[r]->V;
+                    if (tc(nodes[r])) s+=lambda[as[r]];
+                    if (tc(nodes[p_r])) s+=lambda[as[p_r]];
+                } else if (i==r || i==p_r){
+                    s -= pr->rho*(br - pr->rho*(nodes[r]->D + nodes[p_r]->D - 2*nodes[0]->D))/nodes[i]->V;
+                    for (vector<int>::iterator iter=nodes[i]->suc.begin(); iter!=nodes[i]->suc.end(); iter++) {
+                        int s1=*iter;
+                        s += 2*pr->rho*(nodes[s1]->B - pr->rho*nodes[s1]->D + pr->rho*nodes[i]->D)/nodes[s1]->V;
+                        if (tc(nodes[s1])) {
+                            s+=lambda[as[s1]];
+                        }
+                    }
+                } else{
+                    s -= 2*pr->rho*(nodes[i]->B-pr->rho*(nodes[i]->D-nodes[nodes[i]->P]->D))/nodes[i]->V;
+                    for (vector<int>::iterator iter=nodes[i]->suc.begin(); iter!=nodes[i]->suc.end(); iter++) {
+                        int s1=*iter;
+                        s+=2*pr->rho*(nodes[s1]->B-pr->rho*nodes[s1]->D+pr->rho*nodes[i]->D)/nodes[s1]->V;
+                        if (tc(nodes[s1])) {
+                            s+=lambda[as[s1]];
+                        }
+                    }
+                }
+                if (abs(s)>1e-8) {
+                    cout<<"TEST PROBLEM "<<i<<" "<<s<<endl;
+                }
+            }
+        }
+        if (abs(sr)>1e-6 && pr->rho!=pr->rho_min) {
+            cout<<"TEST PROBLEM rho "<<sr<<endl;
+        }*/
         delete[] Pre;
         delete[] Suc;
         delete[] feuilles;
@@ -1079,7 +1091,9 @@ bool with_constraint_active_set_lambda(double br,Pr* &pr,Node** &nodes){
         int nb_iter=0;
         double alpha;
         while (val && !conditionsQP(lambda,pr,nodes) && nb_iter<=1000){
-            for (int i=0;i<=pr->nbBranches;i++)  {dir[i]=nodes[i]->D-D_old[i];}
+            for (int i=0;i<=pr->nbBranches;i++)  {
+                dir[i]=nodes[i]->D-D_old[i];
+            }
             alpha=1;
             int as=2*pr->nbBranches+2;
             double a;
@@ -1119,8 +1133,8 @@ bool with_constraint_active_set_lambda(double br,Pr* &pr,Node** &nodes){
                     desactiveLimit(nodes[-asrm]);
                 }
             }
+            for (int i=0;i<=pr->nbBranches;i++) D_old[i]=D_old[i]+alpha*dir[i];
             if (as<2*pr->nbBranches+2) {
-                for (int i=0;i<=pr->nbBranches;i++) D_old[i]=D_old[i]+alpha*dir[i];
                 if (as>pr->nbBranches) {
                     active_set.push_back(-(as-pr->nbBranches-1));
                     nodes[(as-pr->nbBranches-1)]->D=nodes[(as-pr->nbBranches-1)]->upper;
@@ -1819,7 +1833,7 @@ bool with_constraint_active_set_lambda_multirates(double br,Pr* &pr,Node** &node
         }
         br = br/pr->multiplierRate[nodes[r]->rateGroup];
     }
-    bool consistent = with_constraint_active_set_lambda(br,pr,nodes);
+    bool consistent = with_constraint_active_set_lambda(br,pr,nodes); 
     if (pr->ratePartition.size()>0) {
         double* B = new double[pr->nbBranches+1];
         double* V = new double[pr->nbBranches+1];

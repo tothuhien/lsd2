@@ -67,7 +67,7 @@ Node** tree2data(istream& tree,Pr* pr,int & s){
     }  while (a>0);
     //Re-organize internal & leaves indices
     Node** nodes;
-    if (nbChild==2) {
+    if (nbChild==2 || pr->rooted) {
         pr->rooted=true;
         pr->nbINodes = internal_nodes.size()-1;
         pr->nbBranches = leaves.size() + internal_nodes.size() - 3; 
@@ -116,130 +116,123 @@ Node** tree2data(istream& tree,Pr* pr,int & s){
     }
     return nodes;
 }
-void readDateFile(istream &dateFile, Pr* pr,Node** &nodes,bool& constraintConsistent){
-    int lineNb=getLineNumber(dateFile);
-    int ino=readInt(dateFile,"Error in the date file, the file should begin with an integer (the number of temporal constrains)");
-    if (lineNb-1<ino) {
-        cerr<<"The number of given constraints is small than the number of constraints to read. Please change the number of constraints to read at the first line of the input date file."<<endl;
-        exit(EXIT_FAILURE);
-    }
-    string w1="";//store temporal constraints that are not in the tree;
-    string w2="";//store nodes that have more than 1 temporal constraints.
+void readInputDate(InputOutputStream* io, Pr* pr,Node** &nodes,bool& constraintConsistent){
+    int dateFormat = 2;
     vector<double> kSave;
     vector<double> m1Save;
     vector<double> m2Save;
     vector<double> d1Save;
     vector<double> d2Save;
-    int dateFormat = 2;
-    for (int i=0;i<ino;i++){
-        string s=readWord(dateFile,pr->inDateFile);
-        int type='n';
-        double v1=0;
-        double v2=0;
-        double m1=-1;
-        double m2=-1;
-        double d1=-1;
-        double d2=-1;
-        int k = getPosition(nodes,s,0,pr->nbBranches+1);
-        vector<int> mr;
-        string ld=s;
-        if (k==-1 && (s.compare("mrca")==0)){
-            char c='(';
-            ld="";
-            while (c!=')'){
-                string ss="";
-                c=readCommaBracket(dateFile,pr->inDateFile,ss);
-                int k1=getPosition(nodes,ss,0,pr->nbBranches+1);
-                if (k1!=-1){
-                    mr.push_back(k1);
-                    if (ld=="") ld=ld+ss;
-                    else ld=ld+","+ss;
+    string w1="";//store temporal constraints that are not in the tree;
+    string w2="";//store nodes that have more than 1 temporal constraints.
+    string w3="";//store the tips that do no have temporal constraints
+    int type='n';
+    double v1=0;
+    double v2=0;
+    double m1=-1;
+    double m2=-1;
+    double d1=-1;
+    double d2=-1;
+    bool* tipHaveTime = new bool[pr->nbBranches+1];
+    for (int i=pr->nbINodes; i<= pr->nbBranches; i++) tipHaveTime[i]=false;
+    if (io->inDate){
+        io->inDate->seekg(0);
+        int lineNb=getLineNumber(*(io->inDate));
+        int ino=readInt(*(io->inDate),"Error in the date file, the file should begin with an integer (the number of\n temporal constrains to read)");
+        if (lineNb-1<ino) {
+            cerr<<"The number of given constraints is smaller than the number of constraints to\n read. Please change the number of constraints to read at the first line of the input date file."<<endl;
+            exit(EXIT_FAILURE);
+        }
+        for (int i=0;i<ino;i++){
+            string s=readWord(*(io->inDate),pr->inDateFile);
+            int k = getPosition(nodes,s,0,pr->nbBranches+1);
+            vector<int> mr;
+            string ld=s;
+            if (k==-1 && (s.compare("mrca")==0 || s.compare("ancestor")==0)){
+                char c='(';
+                ld="";
+                while (c!=')'){
+                    string ss="";
+                    c=readCommaBracket(*(io->inDate),pr->inDateFile,ss);
+                    if (ss==""){
+                        myExit("Empty node label at line ",i+2,"in the date file.\n");
+                    }
+                    int k1=getPosition(nodes,ss,0,pr->nbBranches+1);
+                    if (k1!=-1){
+                        mr.push_back(k1);
+                        if (ld=="") ld=ld+ss;
+                        else ld=ld+","+ss;
+                    }
+                }
+                ld="mrca("+ld+")";
+                if (mr.size()>0){
+                    k=mrca(nodes,mr);
                 }
             }
-            ld="mrca("+ld+")";
-            if (mr.size()>0){
-                k=mrca(nodes,mr);
-            }
-        }
-        if (k!=-1){
-            if (nodes[k]->type!='n'){
-                w2=w2+" "+s;
-            }
-            char c = readChar(dateFile,pr->inDateFile);
-            while (c<33 || c>126) c=readChar(dateFile,pr->inDateFile);
-            if (c=='l' || c=='L' || c=='u' || c=='U' || c=='b' || c=='B'){//interval value
-                char p = readChar(dateFile,pr->inDateFile);
-                if (p=='('){
-                    if (c=='l' || c=='L'){
-                        type='l';
-                        v1=readDate(dateFile,pr->inDateFile,pr,m1,d1);
-                        if (m1<0 && dateFormat!=3) dateFormat = 1;
-                        else if (d1<0) dateFormat = 3;
-                    }
-                    else if (c=='u' || c=='U'){
-                        type='u';
-                        v1=readDate(dateFile,pr->inDateFile,pr,m1,d1);
-                        if (m1<0 && dateFormat!=3) dateFormat = 1;
-                        else if (d1<0) dateFormat = 3;
-                    }
-                    else if (c=='b' || c=='B'){
-                        type='b';
-                        v1=readDate(dateFile,pr->inDateFile,pr,m1,d1);
-                        v2=readDate(dateFile,pr->inDateFile,pr,m2,d2);
-                        if (m1<0 || m2<0) dateFormat = 1;
-                        else if ((d1<0 || d2<0) && dateFormat!=3) dateFormat = 3;
-                        if (v1>v2) {
-                            double t=v1;
-                            v1=v2;
-                            v2=t;
-                        }
-                        if (v1==v2) {
-                            type='p';
-                        }
-                        else {
-                            type='b';
-                        }
-                    }
-                    while (c<33 || c>126) c=readChar(dateFile,pr->inDateFile);
+            if (k!=-1){
+                tipHaveTime[k] = true;
+                if (nodes[k]->type!='n'){
+                    w2=w2+" "+s;
+                }
+                readWholeDate(*(io->inDate),pr->inDateFile,pr,type,v1,v2,m1,m2,d1,d2,dateFormat);
+                kSave.push_back(k);
+                m1Save.push_back(m1);
+                m2Save.push_back(m2);
+                d1Save.push_back(d1);
+                d2Save.push_back(d2);
+                Date* newdate;
+                if (mr.size()>0){
+                    newdate = new Date(ld,type,v1,v2,mr);
                 }
                 else{
-                    cerr<<"Error reading "<<pr->inDateFile<<" file: calibration point must be defined as either 'l(lower_bound)' or 'u(upper_bound)' or 'b(lower_bound,upper_bound)'"<<endl;
-                    exit(EXIT_FAILURE);
+                    newdate = new Date(ld,type,v1,v2,k);
+                }
+                if (k<pr->nbINodes){
+                    pr->internalConstraints.push_back(newdate);
+                }
+                else{
+                    bool bl = nodes[k]->addConstraint(newdate);
+                    delete newdate;
+                    constraintConsistent=constraintConsistent && bl;
                 }
             }
-            else {
-                v1 = readDate1(dateFile,pr->inDateFile,c,pr,m1,d1);
-                if (m1<0 && dateFormat!=3) dateFormat = 1;
-                else if (d1<0) dateFormat = 3;
-                type='p';
+            else{
+                w1=w1+" "+s;
+                if (i<ino-1){
+                    char c=readChar(*(io->inDate),pr->inDateFile);
+                    while (c!='\n') c=readChar(*(io->inDate),pr->inDateFile);
+                }
             }
-            kSave.push_back(k);
+        }
+    }
+    if (pr->MRCA != ""){
+        istream *mrca = new istringstream(pr->MRCA);
+        readWholeDate(*mrca,pr->inDateFile,pr,type,v1,v2,m1,m2,d1,d2,dateFormat);
+        kSave.push_back(0);
+        m1Save.push_back(m1);
+        m2Save.push_back(m2);
+        d1Save.push_back(d1);
+        d2Save.push_back(d2);
+        Date* newdate = new Date("",type,v1,v2,0);
+        pr->internalConstraints.push_back(newdate);
+    }
+    if (pr->LEAVES != ""){
+        istream *leaves = new istringstream(pr->LEAVES);
+        readWholeDate(*leaves,pr->inDateFile,pr,type,v1,v2,m1,m2,d1,d2,dateFormat);
+        for (int i=pr->nbINodes; i<=pr->nbBranches;i++){
+            tipHaveTime[i] = true;
+            Date* newdate = new Date(nodes[i]->L,type,v1,v2,i);
+            bool bl = nodes[i]->addConstraint(newdate);
+            delete newdate;
+            if (!bl){
+                myExit("There's conflict in the input date file and tip date specified via option -z\n");
+            }
+            kSave.push_back(i);
             m1Save.push_back(m1);
             m2Save.push_back(m2);
             d1Save.push_back(d1);
             d2Save.push_back(d2);
-            Date* newdate;
-            if (mr.size()>0){
-                newdate = new Date(ld,type,v1,v2,mr);
-            }
-            else{
-                newdate = new Date(ld,type,v1,v2,k);
-            }
-            if (k<pr->nbINodes){
-                pr->internalConstraints.push_back(newdate);
-            }
-            else{
-                bool bl = nodes[k]->addConstraint(newdate);
-                delete newdate;
-                constraintConsistent=constraintConsistent && bl;
-            }
-        }
-        else{
-            w1=w1+" "+s;
-            if (i<ino-1){
-                char c=readChar(dateFile,pr->inDateFile);
-                while (c!='\n') c=readChar(dateFile,pr->inDateFile);
-            }
+            
         }
     }
     if (pr->inDateFormat == 2 && dateFormat != 2){//the general day format is year-month-day but there're some only year or year-month
@@ -266,16 +259,23 @@ void readDateFile(istream &dateFile, Pr* pr,Node** &nodes,bool& constraintConsis
             }
         }
     }
+    for (int i=pr->nbINodes; i<= pr->nbBranches; i++){
+        if (!tipHaveTime[i]) w3=w3+" "+nodes[i]->L;
+    }
+    delete[] tipHaveTime;
     if (w1!=""){
         std::ostringstream oss;
-        if (pr->verbose) oss<<"- The nodes"+w1+" in the input date file are not present in the input tree.\n";
-        else oss<<"- There are some nodes in the input date file that are not present in the input tree.\n";
+        oss<<"- The nodes"+w1+" in the input date file are not present in the input tree.\n";
         pr->warningMessage.push_back(oss.str());
     }
     if (w2!=""){
         std::ostringstream oss;
-        if (pr->verbose) oss<<"- There nodes"+w2+" have more than one temporal constraint.\n";
-        else oss<<"- There nodes that have more than one temporal constraint.\n";
+        oss<<"- The nodes"+w2+" have more than one temporal constraint.\n";
+        pr->warningMessage.push_back(oss.str());
+    }
+    if (w3!=""){
+        std::ostringstream oss;
+        oss<<"- The tips"+w3+" do not have temporal constraint, their dates will be infered.\n";
         pr->warningMessage.push_back(oss.str());
     }
     if (pr->inDateFormat==2 && pr->outDateFormat==0) pr->outDateFormat=2;
@@ -418,7 +418,7 @@ void extrait_outgroup(InputOutputStream *io, Pr* pr){
     list<string> outgroups = getOutgroup(*(io->inOutgroup), pr->fnOutgroup);
     ostringstream w;
     for (int y=0;y<pr->nbData;y++){
-        if (pr->keepOutgroup) cout<<"Reroot the tree "<<y+1<<" using given outgroups ...\n";
+        if (!pr->removeOutgroup) cout<<"Reroot the tree "<<y+1<<" using given outgroups ...\n";
         else cout<<"Removing outgroups of tree "<<y+1<<" ...\n";
         Node** nodes = tree2data(*(io->inTree),pr,s);
         if (!pr->rooted) {
@@ -443,7 +443,7 @@ void extrait_outgroup(InputOutputStream *io, Pr* pr){
                 cerr<<"Error: The outgroups do not form a monophyletic in the input tree."<<endl;
                 exit(EXIT_FAILURE);
             }
-            if (pr->keepOutgroup) {
+            if (!pr->removeOutgroup) {
                 w.str("");
                 w << newick(0,0,pr,nodes_new,nbTips);
             }

@@ -71,6 +71,8 @@ double readDate1(istream& f,string fn,char c,Pr* pr,double& month, double& day);
 
 bool readDateFromString(const char* st,double& f);
 
+void readWholeDate(istream &dateFile,string filename,Pr* pr,int& type,double& v1,double& v2, double& m1,double& m2,double& d1,double& d2,int& dateFormat);
+
 vector<double> read_double_from_line(string line);
 
 int readInt(istream& f,string msg);
@@ -225,8 +227,6 @@ list<int> getActiveSet(Pr* pr,Node** nodes);
 Node** cloneLeaves(Pr* pr,Node** nodes,int f);
 
 void cloneInternalNodes(Pr* pr,Node** nodes,Node** & nodes_new,int f);
-
-void shiftInternalConstraints(Pr* & pr);
 
 void computeSuc_polytomy(Pr* pr,Node** nodes);
 
