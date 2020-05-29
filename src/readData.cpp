@@ -111,7 +111,7 @@ Node** tree2data(istream& tree,Pr* pr,int & s){
         }
     }
     if (!pr->rooted && pr->fnOutgroup=="" && pr->estimate_root!="" && pr->estimate_root.compare("l")==0) {
-        cout<<"The input trees are not rooted, so the \"l\" method for rooting function is turned to the \"a\" method."<<endl;
+        cout<<"The input trees are not rooted, so the 'l' method for rooting function is turned to the 'a' method."<<endl;
         pr->estimate_root="a";
     }
     return nodes;
@@ -174,7 +174,7 @@ void readInputDate(InputOutputStream* io, Pr* pr,Node** &nodes,bool& constraintC
                 if (nodes[k]->type!='n'){
                     w2=w2+" "+s;
                 }
-                readWholeDate(*(io->inDate),pr->inDateFile,pr,type,v1,v2,m1,m2,d1,d2,dateFormat);
+                readWholeDate(*(io->inDate),pr,type,v1,v2,m1,m2,d1,d2,dateFormat);
                 kSave.push_back(k);
                 m1Save.push_back(m1);
                 m2Save.push_back(m2);
@@ -207,7 +207,7 @@ void readInputDate(InputOutputStream* io, Pr* pr,Node** &nodes,bool& constraintC
     }
     if (pr->MRCA != ""){
         istream *mrca = new istringstream(pr->MRCA);
-        readWholeDate(*mrca,pr->inDateFile,pr,type,v1,v2,m1,m2,d1,d2,dateFormat);
+        readWholeDate(*mrca,pr,type,v1,v2,m1,m2,d1,d2,dateFormat);
         kSave.push_back(0);
         m1Save.push_back(m1);
         m2Save.push_back(m2);
@@ -218,7 +218,7 @@ void readInputDate(InputOutputStream* io, Pr* pr,Node** &nodes,bool& constraintC
     }
     if (pr->LEAVES != ""){
         istream *leaves = new istringstream(pr->LEAVES);
-        readWholeDate(*leaves,pr->inDateFile,pr,type,v1,v2,m1,m2,d1,d2,dateFormat);
+        readWholeDate(*leaves,pr,type,v1,v2,m1,m2,d1,d2,dateFormat);
         for (int i=pr->nbINodes; i<=pr->nbBranches;i++){
             tipHaveTime[i] = true;
             Date* newdate = new Date(nodes[i]->L,type,v1,v2,i);

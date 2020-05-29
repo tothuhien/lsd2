@@ -305,7 +305,7 @@ void output(double br,int y, Pr* pr,Node** nodes,ostream& f,ostream& tree1,ostre
         
         if (count>0) {
             std::ostringstream oss;
-            oss<<"- Number of violated temporal constraints (nodes having date smaller than the one of its parent):  "<<count<<" ("<<(count*100)/(double)pr->nbBranches<<"%%). Try option -c to impose temporal constraints on the estimated trees.\n";
+            oss<<"- Number of violated temporal constraints (nodes having date smaller than the one of its parent):  "<<count<<" ("<<(count*100)/(double)pr->nbBranches<<"%%). Try without option -F to impose temporal constraints on the estimated trees.\n";
             pr->warningMessage.push_back(oss.str());
         }
         
