@@ -288,7 +288,7 @@ char readChar(istream& f,string fn){
     char r;
     if (f.get(r)) return r;
     else {
-        cerr<<"Error in the file "<<fn<<endl;
+        cerr<<"Error in "<<fn<<endl;
         exit(EXIT_FAILURE);
     }
 }
@@ -297,7 +297,7 @@ double readdouble(istream& f,string fn){
     double r;
     if (f >>r) return r;
     else {
-        cerr<<"Error in the file "<<fn<<" : real expected"<<endl;
+        cerr<<"Error in "<<fn<<" : real expected"<<endl;
         exit(EXIT_FAILURE);
     }
 }
@@ -552,7 +552,7 @@ double readDate(istream& f,string fn,Pr* pr,double& month,double& day){
             }
         }
     }
-    cerr<<"Error in the file "<<fn<<" : real or date format year-month-date or\n year-month expected"<<endl;
+    cerr<<"Error reading input date : real or date format year-month-date or\n year-month expected"<<endl;
     exit(EXIT_FAILURE);
 }
 
@@ -567,7 +567,7 @@ double readDate1(istream& f,string fn,char c,Pr* pr,double& month,double& day){
     try {
         y=stod(wd.c_str());
     } catch (const std::invalid_argument&) {
-        cerr<<"Error in the file "<<fn<<" : real or date format year-month-date or\n year-month expected"<<wd<<endl;
+        cerr<<"Error reading input date : real or date format year-month-date or\n year-month expected"<<wd<<endl;
         exit(EXIT_FAILURE);
     }
     if (c=='-' && y==round(y)){
@@ -600,7 +600,7 @@ double readDate1(istream& f,string fn,char c,Pr* pr,double& month,double& day){
         }
         return y;
     }
-    cerr<<"Error in the file "<<fn<<" : real or date format year-month-date or\n year-month expected"<<endl;
+    cerr<<"Error reading input date : real or date format year-month-date or\n year-month expected"<<endl;
     exit(EXIT_FAILURE);
 }
 
@@ -631,28 +631,28 @@ bool readDateFromString(const char* str,double& f){
     return false;
 }
 
-void readWholeDate(istream &dateFile,string filename,Pr* pr,int& type,double& v1,double& v2, double& m1,double& m2,double& d1,double& d2,int& dateFormat){
-    char c = readChar(dateFile,filename);
-    while (c<33 || c>126) c=readChar(dateFile,filename);
+void readWholeDate(istream &dateFile,Pr* pr,int& type,double& v1,double& v2, double& m1,double& m2,double& d1,double& d2,int& dateFormat){
+    char c = readChar(dateFile,"the  input date");
+    while (c<33 || c>126) c=readChar(dateFile,"the input date");
     if (c=='l' || c=='L' || c=='u' || c=='U' || c=='b' || c=='B'){//interval value
-        char p = readChar(dateFile,filename);
+        char p = readChar(dateFile,"the input date");
         if (p=='('){
             if (c=='l' || c=='L'){
                 type='l';
-                v1=readDate(dateFile,filename,pr,m1,d1);
+                v1=readDate(dateFile,"the input date",pr,m1,d1);
                 if (m1<0 && dateFormat!=3) dateFormat = 1;
                 else if (d1<0) dateFormat = 3;
             }
             else if (c=='u' || c=='U'){
                 type='u';
-                v1=readDate(dateFile,filename,pr,m1,d1);
+                v1=readDate(dateFile,"the input date",pr,m1,d1);
                 if (m1<0 && dateFormat!=3) dateFormat = 1;
                 else if (d1<0) dateFormat = 3;
             }
             else if (c=='b' || c=='B'){
                 type='b';
-                v1=readDate(dateFile,filename,pr,m1,d1);
-                v2=readDate(dateFile,filename,pr,m2,d2);
+                v1=readDate(dateFile,"the input date",pr,m1,d1);
+                v2=readDate(dateFile,"the input date",pr,m2,d2);
                 if (m1<0 || m2<0) dateFormat = 1;
                 else if ((d1<0 || d2<0) && dateFormat!=3) dateFormat = 3;
                 if (v1>v2) {
@@ -667,14 +667,14 @@ void readWholeDate(istream &dateFile,string filename,Pr* pr,int& type,double& v1
                     type='b';
                 }
             }
-            while (c<33 || c>126) c=readChar(dateFile,filename);
+            while (c<33 || c>126) c=readChar(dateFile,"the input date");
         } else{
-            cerr<<"Error reading "<<filename<<" file: flexible temporal constraints must be defined\n as either 'l(lower_bound)' or 'u(upper_bound)' or 'b(lower_bound,upper_bound)'"<<endl;
+            cerr<<"Error reading inpute date: flexible temporal constraints must be defined\n as either 'l(lower_bound)' or 'u(upper_bound)' or 'b(lower_bound,upper_bound)'"<<endl;
             exit(EXIT_FAILURE);
         }
     }
     else {
-        v1 = readDate1(dateFile,filename,c,pr,m1,d1);
+        v1 = readDate1(dateFile,"the input date",c,pr,m1,d1);
         if (m1<0 && dateFormat!=3) dateFormat = 1;
         else if (d1<0) dateFormat = 3;
         type='p';
