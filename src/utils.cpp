@@ -3068,6 +3068,19 @@ void collapseTreeReOrder(Pr* pr,Node** nodes,Pr* prReduced,Node** nodesReduced,i
             nodesReduced[tab[i]]->L=nodes[i]->L;
         }
     }
+    for (vector<Date*>::iterator iter=pr->internalConstraints.begin();iter!=pr->internalConstraints.end();iter++){
+        Date* no = (*iter);
+        if (no->mrca.size()==0){
+            no->id = tab[no->id];
+        }
+        else{
+            vector<int> new_mrca;
+            for (vector<int>::iterator iter = no->mrca.begin(); iter != no->mrca.end(); iter++){
+                new_mrca.push_back(tab[*iter]);
+            }
+            no->mrca = new_mrca;
+        }
+    }
     if (pr->ratePartition.size()>0) {
         for (int i=root;i<=pr->nbBranches;i++){
             if (tab[i]!=-1) nodesReduced[tab[i]]->rateGroup = nodes[i]->rateGroup;
