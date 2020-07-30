@@ -17,6 +17,7 @@
 #include "subtree.h"
 #include "part.h"
 #include "lsd.h"
+#include <string.h>
 
 using namespace std;
 using namespace lsd;
@@ -276,7 +277,7 @@ bool outlierCheck(Pr* pr,Node** nodes);
 
 void calculate_tree_height(Pr* pr,Node** & nodes);
 
-void plitExternalBranches(Pr* pr,Node** nodes);
+void splitExternalBranches(Pr* pr,Node** nodes);
 
 void splitLongBranches(Pr* pr,Node** nodes,double th);
 
@@ -287,8 +288,6 @@ vector<int> intersect(vector<int> v1, vector<int> v2);
 bool checkAllConstraintConsistent(Pr* pr,Node** nodes);
 
 double median(vector<double> array);
-
-void imposeMinBlen(ostream& result,Pr* pr, Node** nodes, double median_rate,bool medianRateOK);
     
 double median_branch_lengths(Pr* pr,Node** nodes);
 

@@ -25,7 +25,7 @@ Pr* getOptions( int argc, char** argv )
 
 Pr* getCommandLine( int argc, char** argv)
 {
-    const string VERSION="v.1.8.1";
+    const string VERSION="v.1.8.3";
     Pr* opt = new Pr();
     int c;
     string s;
@@ -36,10 +36,11 @@ Pr* getCommandLine( int argc, char** argv)
     sflag=false,
     fflag=false,
     uflag=false,
+    Uflag=false,
     vflag=false,
     lflag=false,
     validDate = true;
-    while ( (c = getopt(argc, argv, ":i:d:D:o:s:n:g:r:v:Ft:w:b:ha:z:f:Gje:m:p:q:u:l:U:R:S:V")) != -1 )
+    while ( (c = getopt(argc, argv, ":i:d:D:o:s:n:g:r:v:Ft:w:b:ha:z:f:Gje:m:p:q:u:l:U:R:S:EV")) != -1 )
     {
         switch (c)
         {
@@ -187,20 +188,35 @@ Pr* getCommandLine( int argc, char** argv)
                 opt->ci=true;
                 break;
             case 'u':
-                if ( !isReal(optarg))
-                    myExit("Argument of option -u must be a real\n");
-                opt->minblen = atof(optarg);
-                if (opt->minblen<0)
-                    myExit("Argument of option -u must be >= 0\n");
-                uflag = true;
+                if ( !isReal(optarg)){
+                    if (!strcmp(optarg,"e")){
+                        opt->minblen = -1;
+                        uflag = true;
+                    } else {
+                        myExit("Argument of option -u must be a real or letter e\n");
+                    }
+                } else{
+                    opt->minblen = atof(optarg);
+                    if (opt->minblen <0){
+                        myExit("Argument of option -u must be >= 0\n");
+                    }
+                }
                 break;
             case 'U':
-                if ( !isReal(optarg))
-                    myExit("Argument of option -U must be a real\n");
-                opt->minblenL = atof(optarg);
-                if (opt->minblenL<0)
-                    myExit("Argument of option -U must be >= 0\n");
-                uflag = true;
+                if ( !isReal(optarg)){
+                    if (!strcmp(optarg,"e")){
+                        opt->minblenL = -1;
+                        uflag = true;
+                    } else {
+                        myExit("Argument of option -U must be a real or letter e\n");
+                    }
+                } else{
+                    opt->minblenL = atof(optarg);
+                    Uflag = true;
+                    if (opt->minblenL <0){
+                        myExit("Argument of option -U must be >= 0\n");
+                    }
+                }
                 break;
             case 'l':
                 if ( !isReal(optarg))
@@ -220,7 +236,10 @@ Pr* getCommandLine( int argc, char** argv)
                     myExit("Argument of option -S must be a real\n");
                 opt->support = atof(optarg);
                 if (opt->round_time<0)
-                    myExit("Argument of option -S must be positive\n");
+                    myExit("Argument of option -S must be non negative\n");
+                break;
+            case 'E':
+                opt->splitExternal = true;
                 break;
             case 'V':
                 cout<<"lsd2 "<<VERSION<<endl;
@@ -237,7 +256,7 @@ Pr* getCommandLine( int argc, char** argv)
     }
     if( !(iflag) )
         myExit("Argument -i is necessary to continue.\n");
-    if ( !(sflag) && (fflag || !uflag || !lflag || vflag))
+    if ( !(sflag) && (fflag || uflag || !lflag || vflag))
         myExit("Argument -s is necessary to continue.\n");
     if (!dflag && !flagA && !flagZ){
         //opt->relative=true;
@@ -253,6 +272,9 @@ Pr* getCommandLine( int argc, char** argv)
     }
     if (!lflag){
         opt->nullblen = 0.5/opt->seqLength;
+    }
+    if (opt->minblen < 0 && !Uflag){
+        opt->minblenL = -1;
     }
     if (!opt->constraint && opt->estimate_root.compare("as")==0){
         cout<<"The non constrained mode is chosen, so the \"as\" method for rooting function\n is the same as the \"a\" method."<<endl;
@@ -328,26 +350,46 @@ Pr* getInterface()
 
 void printInterface(ostream& in, Pr* opt)
 {
-    const string VERSION = "v.1.8.1";
+    const string VERSION = "v.1.8.3";
 
     in<<"\nLEAST-SQUARE METHODS TO ESTIMATE RATES AND DATES - "<<VERSION<<" \n\n";
     in<<"\nInput files:\n";
         in<<"  i                                               Input tree file : "<<opt->inFile.c_str()<<"\n";
-    if (opt->MRCA!=""){
-        in<<"  a                                                     Root date : "<<opt->MRCA.c_str()<<"\n";
-    }
-    if (opt->LEAVES!=""){
-        in<<"  z                                                     Tips date : "<<opt->LEAVES.c_str()<<"\n";
-    }
+    in<<"  d                                               Input date file : ";
     if (opt->inDateFile!=""){
-        in<<"  d                                               Input date file : "<<opt->inDateFile.c_str()<<"\n";
+        in<<opt->inDateFile.c_str()<<"\n";
+    } else {
+        in<<"No\n";
     }
     in<<"  p                                                Partition file : ";
     if (opt->partitionFile=="")        in<<"No\n";
     else in<<opt->partitionFile.c_str()<<"\n";
+    if (opt->fnOutgroup=="")
+        in<<"  g                                               Given outgroups : No\n";
+    else {
+        in<<"  g                                       File contains outgroups : "<<opt->fnOutgroup.c_str()<<"\n";
+        if (opt->removeOutgroup) {
+            in<<"  G                       Remove outgroups in the estimating tree : Yes\n";
+        }
+        else{
+            in<<"  G                       Remove outgroups in the estimating tree : No\n";
+        }
+    }
     in<<"Output file:\n";
     in<<"  o                                                  Output file  : "<<opt->outFile.c_str()<<"\n";
     in<<"Parameters:\n";
+    in<<"  a                                                     Root date : ";
+    if (opt->MRCA!=""){
+        in<<opt->MRCA.c_str()<<"\n";
+    } else {
+        in<<"No\n";
+    }
+    in<<"  z                                                     Tips date : ";
+    if (opt->LEAVES!=""){
+        in<<opt->LEAVES.c_str()<<"\n";
+    } else {
+        in<<"No\n";
+    }
     in<<"  c                                              With constraints : ";
     if (!opt->constraint) in<<"No\n";
     else {
@@ -388,17 +430,6 @@ void printInterface(ostream& in, Pr* opt)
     in<<"  w                                       Given substitution rate : ";
     if (opt->rate=="") in<<"No\n";
     else in<<opt->rate.c_str()<<"\n";
-    if (opt->fnOutgroup=="")
-        in<<"  g                                               Given outgroups : No\n";
-    else {
-        in<<"  g                                       File contains outgroups : "<<opt->fnOutgroup.c_str()<<"\n";
-        if (opt->removeOutgroup) {
-            in<<"  G                       Remove outgroups in the estimating tree : Yes\n";
-        }
-        else{
-            in<<"  G                       Remove outgroups in the estimating tree : No\n";
-        }
-    }
     in<<"  n                                             Multiple data set : ";
     if( opt->nbData< 2 )
         in<<"No\n";
@@ -458,6 +489,12 @@ void printInterface(ostream& in, Pr* opt)
     if (opt->outDateFormat==2){
         in<<" Year-Month-Day\n";
     }
+    in<<"  E  Estimate rates for external and internal branches separately : ";
+    if (opt->splitExternal){
+        in<<"Yes\n";
+    } else{
+        in<<"No\n";
+    }
     in<<"\n  h to print Help ";
     in<<"\n  y to accept or type a letter to change an option (x = Exit) ";
 }
@@ -467,7 +504,7 @@ void printHelp( void )
     const string BOLD = "\033[00;01m";
     const string LINE = "\033[00;04m";
     const string FLAT = "\033[00;00m";
-    const string VERSION = "v.1.8.1";
+    const string VERSION = "v.1.8.3";
     
     cout<<BOLD<<"LSD: LEAST-SQUARES METHODS TO ESTIMATE RATES AND DATES - "<<VERSION<<"\n\n";
     cout<<BOLD<<"DESCRIPTION\n"
@@ -516,6 +553,8 @@ void printHelp( void )
            <<FLAT<<"\t   A normal value of " <<LINE<<"ZscoreOutlier" <<FLAT<<"could be 3, but you can adjust it bigger/smaller depending if you want to have\n"
            <<FLAT<<"\t   less/more outliers. Note that for now, some functionalities could not be combined with outliers estimation, for example \n"
            <<FLAT<<"\t   estimating multiple rates, imprecise date constraints.\n"
+           <<FLAT<<"\t" <<BOLD<<"-E\n"
+           <<FLAT<<"\t   Use this option if you want to estimate the rate of internal and external branches separately.\n"
            <<FLAT<<"\t" <<BOLD<<"-f " <<LINE<<"samplingNumberCI\n"
            <<FLAT<<"\t   This option calculates the confidence intervals of the estimated rate and dates. The branch lengths of the esimated\n"
            <<FLAT<<"\t   tree are sampled " <<FLAT<<LINE<<"samplingNumberCI" <<FLAT<< " times to generate a set of simulated trees. To generate simulated lengths\n"
@@ -600,9 +639,10 @@ void printHelp( void )
            <<FLAT<<"\t" <<BOLD<<"-t " <<LINE<<"rateLowerBound\n"
            <<FLAT<<"\t   This option corresponds to the lower bound for the estimating rate. It is 1e-10 by default.\n"
            <<FLAT<<"\t" <<BOLD<<"-u " <<LINE<<"minBlen\n"
-           <<FLAT<<"\t   By default without this option, lsd2 forces every branch of the time scaled tree to be greater than 1/(seq_length*rate) where rate is\n"
-           <<FLAT<<"\t   an pre-estimated median rate. This value is rounded to the number of days or weeks or years, depending on the rounding parameter -R.\n"
-           <<FLAT<<"\t   By using option -u, the program will not estimate the minimum branch length but use the specified value instead.\n"
+           <<FLAT<<"\t   Using this option, lsd2 forces every branch of the time scaled tree to be >= minBlen. minBlen is either a positive real or letter e. \n"
+           <<FLAT<<"\t   For the later case lsd2 estimates a minimum branch length, which is m/rate (m is the minimum branch length of the input tree, and \n"
+           <<FLAT<<"\t   rate is an pre-estimated rate). This estimated value is then rounded to the number of days or weeks or years, using the rounding\n"
+           <<FLAT<<"\t   parameter -R. Without this option minBlen = 0 by default.\n"
            <<FLAT<<"\t" <<BOLD<<"-U " <<LINE<<"minExBlen\n"
            <<FLAT<<"\t   Similar to option -u but applies for external branches if specified. If it's not specified then the minimum branch length of external\n"
            <<FLAT<<"\t   branches is set the same as the one of internal branch.\n"
@@ -716,9 +756,24 @@ double getInputNonNegativeReal( string msg )
     do
     {
         word = getInputString( msg );
-        if( isReal(word.c_str()) && atof( word.c_str())>0)
+        if( isReal(word.c_str()) && atof( word.c_str())>=0)
             break;
-        myErrorMsg("Your word is not recognized as a positive real.\n");
+        myErrorMsg("Your word is not recognized as a non negative real.\n");
+    } while( true );
+    return atof( word.c_str() );
+}
+
+double getInputNonNegativeRealOrE( string msg )
+{
+    string word;
+    do
+    {
+        word = getInputString( msg );
+        if( isReal(word.c_str()) && atof( word.c_str())>=0)
+            break;
+        if (word.compare("e")==0)
+            return -1;
+        myErrorMsg("Your word is not recognized as a non negative real or letter e.\n");
     } while( true );
     return atof( word.c_str() );
 }
@@ -783,6 +838,7 @@ bool isOptionActivate( Pr* opt, char l )
         case 'a':
         case 'z':
         case 'h':
+        case 'E':
         return true;
     }
     return false;
@@ -963,20 +1019,22 @@ void setOptionsWithLetter( Pr* opt, char letter)
             opt->e = getInputReal("Enter the Zscore threshold for outliers detection> ");
             break;
         case 'u':
-            opt->minblen = getInputPositiveReal("Enter the minimum branch length of the time scaled tree> ");
+            opt->minblen = getInputNonNegativeRealOrE("Enter the minimum branch length of the time scaled tree> ");
             break;
         case 'U':
-            opt->minblenL = getInputPositiveReal("Enter the minimum external branch length of the time scaled tree> ");
+            opt->minblenL = getInputNonNegativeRealOrE("Enter the minimum external branch length of the time scaled tree> ");
             break;
         case 'l':
-            opt->nullblen = getInputNonNegativeReal("Maximum length that an internal branch will be collapsed (default is 1/(2*seq_length))> ");
+            opt->nullblen = getInputReal("Collapse all internal branches that are shorter than this value (default is 1/(2*seq_length))> ");
             break;
         case 'R':
             opt->round_time = getInputPositiveReal("Rounding number for minimum branch length of time scaled tree>");
             break;
         case 'S':
-            opt->support = getInputPositiveReal("Threshold of support value to collapse>");
+            opt->support = getInputNonNegativeReal("Threshold of support value to collapse>");
             break;
+        case 'E':
+            opt->splitExternal = !opt->splitExternal;
         case 'h':
             printHelp();
             break;

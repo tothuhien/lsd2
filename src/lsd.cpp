@@ -71,6 +71,12 @@ int lsd::buildTimeTree( int argc, char** argv, InputOutputStream *inputOutput)
             opt->warningMessage.push_back(oss.str());
         }
         computeSuc_polytomy(opt,nodes);
+        double minB = nodes[1]->B;
+        if (opt->minblen < 0){
+            for (int i=2; i <= opt->nbBranches; i++){
+                if (nodes[i]->B < minB) minB = nodes[i]->B;
+            }
+        }
         collapseUnInformativeBranches(opt,nodes);
         if (!opt->rooted){
             nodes = unrooted2rooted(opt,nodes);
@@ -110,10 +116,9 @@ int lsd::buildTimeTree( int argc, char** argv, InputOutputStream *inputOutput)
                 opt->givenRate[0] = false;
             }
         }
+        if (opt->splitExternal) splitExternalBranches(opt,nodes);
         constraintConsistent = initConstraint(opt, nodes);
-        bool medianRateOK = true;
-        if (opt->e>0) medianRateOK = calculateOutliers(opt,nodes,median_rate);
-        else if (opt->minblen<0 && opt->constraint) medianRateOK = calculateMedianRate(opt,nodes,median_rate);
+        if (opt->e>0) calculateOutliers(opt,nodes,median_rate);
         if (!opt->constraint){//LD without constraints
             if (!constraintConsistent){
                 ostringstream oss;
@@ -171,7 +176,7 @@ int lsd::buildTimeTree( int argc, char** argv, InputOutputStream *inputOutput)
             }
         }
         else {//QPD with temporal constrains
-            imposeMinBlen(*(io->outResult),opt,nodes,median_rate,medianRateOK);
+            imposeMinBlen(*(io->outResult),opt,nodes,minB);
             if (constraintConsistent || (opt->estimate_root!="" && opt->estimate_root!="k")){
                 if (constraintConsistent){
                     if (opt->estimate_root==""){//keep the given root

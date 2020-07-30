@@ -210,7 +210,8 @@ void output(double br,int y, Pr* pr,Node** nodes,ostream& f,ostream& tree1,ostre
     if (pr->ratePartition.size()==0) {
         std::ostringstream oss;
         oss<<"- Dating results:\n";
-        oss<<" rate "<<pr->rho<<", tMRCA "<<tMRCA.str()<<"\n";//, objective function "<<pr->objective<<"\n";
+        //oss<<" rate "<<pr->rho<<", tMRCA "<<tMRCA.str()<<"\n";//, objective function "<<pr->objective<<"\n";
+        oss<<" rate "<<pr->rho<<", tMRCA "<<tMRCA.str()<<" , objective function "<<pr->objective<<"\n";
         pr->resultMessage.push_back(oss.str());
     }
     else{

@@ -348,171 +348,79 @@ bool without_constraint_lambda(double br,Pr* &par,Node** &nodes,list<int> active
     }
 }
 
-bool starting_point_without_constraint_lambda(double br,Pr* &pr,Node** &nodes,list<int> &active_set){
-    for (vector<int>::iterator iter=nodes[0]->suc.begin(); iter!=nodes[0]->suc.end(); iter++) {
-        nodes[*iter]->B=br/2.;
-    }
-    without_constraint(pr,nodes);
-    double* lowerX = new double[pr->nbBranches+1];
-    bool* bl = new bool[pr->nbBranches+1];
-    vector<int> pre = preorder_polytomy(pr,nodes);
-    for (int i=0;i<=pr->nbBranches;i++){
-        if (nodes[i]->type=='l' || nodes[i]->type=='b'){
-            bl[i]=true;
-            lowerX[i]=nodes[i]->lower;
-        }
-        else if (nodes[i]->type=='p'){
-            bl[i]=true;
-            lowerX[i]=nodes[i]->D;
-        }
-        else bl[i]=false;
-    }
-    for (vector<int>::iterator iter = pre.begin();iter!=pre.end();iter++){
-        int i=*iter;
-        if (bl[i]){
-            for (vector<int>::iterator iter=nodes[i]->suc.begin(); iter!=nodes[i]->suc.end(); iter++) {
-                int s=*iter;
-                if (!bl[s] || (nodes[s]->type=='l' && (nodes[s]->lower<lowerX[i]))){
-                    lowerX[s]=lowerX[i];
-                    nodes[s]->lower=lowerX[i];
-                    bl[s]=true;
-                }
-                else if (nodes[s]->type=='u' && nodes[s]->upper<lowerX[i]){
-                    return false;
-                }
-                else if (nodes[s]->type=='b'){
-                    if (nodes[s]->upper>=lowerX[i]){
-                        if (nodes[s]->lower<lowerX[i]){
-                            lowerX[s]=lowerX[i];
-                            nodes[s]->lower=lowerX[i];
-                            bl[s]=true;
-                        }
-                    }
-                    else {
-                        return false;
-                    }
-                }
-                else if ((nodes[s]->type=='p') && nodes[s]->D<lowerX[i]){
-                    return false;
-                }
-                if (nodes[s]->D<lowerX[s]){
-                    nodes[s]->D=lowerX[s];
-                }
-            }
-        }
-    }
-    delete[] bl;
-    delete[] lowerX;
-    for (int i =0;i<pr->nbINodes;i++) {
-        if (lower(nodes[i]) || upper(nodes[i])) {
-            active_set.push_back(-i);
-        }
-        else if (nodes[i]->type!='p') {
-            if ((nodes[i]->type=='l' || nodes[i]->type=='b') && nodes[i]->D<nodes[i]->lower) {
-                activeLower(nodes[-i]);
-                nodes[i]->D=nodes[i]->lower;
-                active_set.push_back(-i);
-            }
-            else if ((nodes[i]->type=='u' || nodes[i]->type=='b') && nodes[i]->D>nodes[i]->upper) {
-                activeUpper(nodes[i]);
-                nodes[i]->D=nodes[i]->upper;
-                active_set.push_back(-i);
-            }
-        }
-    }
-    for (int i=pr->nbINodes; i<=pr->nbBranches; i++) {
-        if (lower(nodes[i]) || upper(nodes[i])) {
-            active_set.push_back(-i);
-        }
-        else if (nodes[i]->type!='p') {
-            if ((nodes[i]->type=='l' || nodes[i]->type=='b') && nodes[i]->D<nodes[i]->lower) {
-                activeLower(nodes[i]);
-                nodes[i]->D=nodes[i]->lower;
-                active_set.push_back(-i);
-            }
-            else if ((nodes[i]->type=='u' || nodes[i]->type=='b') && nodes[i]->D>nodes[i]->upper) {
-                activeUpper(nodes[i]);
-                nodes[i]->D=nodes[i]->upper;
-                active_set.push_back(-i);
-            }
-        }
-    }
-    return true;
-}
-
 bool without_constraint_active_set_lambda(double br,Pr* &pr,Node** &nodes){
     initialize_status(pr,nodes);
     list<int> active_set;
-    bool consistent=starting_point_without_constraint_lambda(br,pr,nodes,active_set);
-    if (consistent) {
-        double* D_old = new double[pr->nbBranches+1];
-        for (int i=0; i<=pr->nbBranches; i++) {
-            D_old[i]=nodes[i]->D;
-        }
-        list<double> lambda;
-        bool val = without_constraint_lambda(br,pr,nodes,active_set,lambda);
-        int nb_iter=0;
-        double alpha;
-        double* dir = new double[pr->nbBranches+1];
-        while (val && !conditions(lambda,pr,nodes) && nb_iter<=1000){
-            for (int i=0;i<=pr->nbBranches;i++)  {dir[i]=nodes[i]->D-D_old[i];}
-            alpha=1;
-            int as=0;
-            double a;
-            for (int i=0;i<=pr->nbBranches;i++){
-                if (nodes[i]->status==0 && (nodes[i]->type=='l' || nodes[i]->type=='u' || nodes[i]->type=='b')){
-                    if (dir[i]<0 && (nodes[i]->type=='l' || nodes[i]->type=='b') ){
-                        a = (nodes[i]->lower-D_old[i])/dir[i];
-                        if (a<alpha){
-                            alpha = a;
-                            as = i+pr->nbBranches+1;
-                        }
-                    }
-                    if (dir[i]>0 && (nodes[i]->type=='u' || nodes[i]->type=='b')){
-                        a = (nodes[i]->upper-D_old[i])/dir[i];
-                        if (a<alpha){
-                            alpha = a;
-                            as = i+2*pr->nbBranches+2;
-                        }
-                    }
-                }
-            }
-            int asrm;
-            if (remove_ne_lambda(lambda,active_set,asrm)){
-                active_set.remove(asrm);
-                if (asrm>0) {
-                    desactive(nodes[asrm]);
-                }
-                else {
-                    desactive(nodes[-asrm]);
-                }
-            }
-            for (int i=0;i<=pr->nbBranches;i++) D_old[i]=D_old[i]+alpha*dir[i];
-            
-            if (as!=0) {
-                if (as>2*pr->nbBranches+1) {
-                    active_set.push_back(-(as-2*pr->nbBranches-2));
-                    activeUpper(nodes[as-2*pr->nbBranches-2]);
-                    nodes[as-2*pr->nbBranches-2]->D=nodes[as-2*pr->nbBranches-2]->upper;
-                }
-                else {
-                    active_set.push_back(-(as-pr->nbBranches-1));
-                    activeLower(nodes[as-pr->nbBranches-1]);
-                    nodes[as-pr->nbBranches-1]->D=nodes[as-pr->nbBranches-1]->lower;
-                }
-            }
-            lambda.clear();
-            val = without_constraint_lambda(br,pr,nodes,active_set,lambda);
-            nb_iter++;
-        }
-        if (nb_iter>1000){
-            for (int i=0;i<=pr->nbBranches;i++) nodes[i]->D=D_old[i];
-        }
-        delete[] D_old;
-        delete[] dir;
-        return val;
+    for (vector<int>::iterator iter=nodes[0]->suc.begin(); iter!=nodes[0]->suc.end(); iter++) {
+        nodes[*iter]->B=br/2.;
     }
-    return false;
+    //starting_point(pr,nodes,active_set);
+    double* D_old = new double[pr->nbBranches+1];
+    for (int i=0; i<=pr->nbBranches; i++) {
+        D_old[i]=nodes[i]->D;
+    }
+    list<double> lambda;
+    bool val = without_constraint_lambda(br,pr,nodes,active_set,lambda);
+    int nb_iter=0;
+    double alpha;
+    double* dir = new double[pr->nbBranches+1];
+    while (val && !conditions(lambda,pr,nodes) && nb_iter<=1000){
+        for (int i=0;i<=pr->nbBranches;i++)  {dir[i]=nodes[i]->D-D_old[i];}
+        alpha=1;
+        int as=0;
+        double a;
+        for (int i=0;i<=pr->nbBranches;i++){
+            if (nodes[i]->status==0 && (nodes[i]->type=='l' || nodes[i]->type=='u' || nodes[i]->type=='b')){
+                if (dir[i]<0 && (nodes[i]->type=='l' || nodes[i]->type=='b') ){
+                    a = (nodes[i]->lower-D_old[i])/dir[i];
+                    if (a<alpha){
+                        alpha = a;
+                        as = i+pr->nbBranches+1;
+                    }
+                }
+                if (dir[i]>0 && (nodes[i]->type=='u' || nodes[i]->type=='b')){
+                    a = (nodes[i]->upper-D_old[i])/dir[i];
+                    if (a<alpha){
+                        alpha = a;
+                        as = i+2*pr->nbBranches+2;
+                    }
+                }
+            }
+        }
+        int asrm;
+        if (remove_ne_lambda(lambda,active_set,asrm)){
+            active_set.remove(asrm);
+            if (asrm>0) {
+                desactive(nodes[asrm]);
+            }
+            else {
+                desactive(nodes[-asrm]);
+            }
+        }
+        for (int i=0;i<=pr->nbBranches;i++) D_old[i]=D_old[i]+alpha*dir[i];
+        
+        if (as!=0) {
+            if (as>2*pr->nbBranches+1) {
+                active_set.push_back(-(as-2*pr->nbBranches-2));
+                activeUpper(nodes[as-2*pr->nbBranches-2]);
+                nodes[as-2*pr->nbBranches-2]->D=nodes[as-2*pr->nbBranches-2]->upper;
+            }
+            else {
+                active_set.push_back(-(as-pr->nbBranches-1));
+                activeLower(nodes[as-pr->nbBranches-1]);
+                nodes[as-pr->nbBranches-1]->D=nodes[as-pr->nbBranches-1]->lower;
+            }
+        }
+        lambda.clear();
+        val = without_constraint_lambda(br,pr,nodes,active_set,lambda);
+        nb_iter++;
+    }
+    if (nb_iter>1000){
+        for (int i=0;i<=pr->nbBranches;i++) nodes[i]->D=D_old[i];
+    }
+    delete[] D_old;
+    delete[] dir;
+    return val;
 }
 
 bool with_constraint_lambda(double br,Pr* &pr,Node** &nodes,list<int> active_set,list<double> &ld){
@@ -1833,7 +1741,7 @@ bool with_constraint_active_set_lambda_multirates(double br,Pr* &pr,Node** &node
         }
         br = br/pr->multiplierRate[nodes[r]->rateGroup];
     }
-    bool consistent = with_constraint_active_set_lambda(br,pr,nodes); 
+    bool consistent = with_constraint_active_set_lambda(br,pr,nodes);
     if (pr->ratePartition.size()>0) {
         double* B = new double[pr->nbBranches+1];
         double* V = new double[pr->nbBranches+1];
@@ -1919,3 +1827,97 @@ bool with_constraint_active_set_lambda_multirates(double br,Pr* &pr,Node** &node
  return res;
  }*/
 
+void imposeMinBlen(ostream& file,Pr* pr, Node** nodes,double minB){
+    double minblen = pr->minblen;
+    double round_time = pr->round_time;
+    if (pr->minblen < 0){
+        if (minB==0) minblen = 0;
+        else {
+            double br;
+            if (pr->estimate_root == ""){
+                without_constraint_multirates(pr,nodes,true);
+            } else if (pr->estimate_root == "k"){
+                int s1 = nodes[0]->suc[0];
+                int s2 = nodes[0]->suc[1];
+                br=nodes[s1]->B+nodes[s2]->B;
+                nodes[s1]->V=variance(pr,br);
+                nodes[s2]->V=nodes[s1]->V;
+                without_constraint_active_set_lambda_multirates(br,pr,nodes,true);
+            } else {
+                int r=0;
+                if (pr->estimate_root.compare("l")==0){
+                    r=estimate_root_without_constraint_local_rooted(pr,nodes);
+                }
+                else{
+                    r=estimate_root_without_constraint_rooted(pr,nodes);
+                }
+                Node** nodes_new = cloneLeaves(pr,nodes,0);
+                int s1 = nodes[0]->suc[0];
+                int s2 = nodes[0]->suc[1];
+                for (int i=pr->nbINodes; i<=pr->nbBranches; i++) {
+                    nodes_new[i]->status=nodes[i]->status;
+                }
+                reroot_rootedtree(br,r,s1,s2,pr,nodes,nodes_new);
+                without_constraint_active_set_lambda_multirates(br,pr,nodes_new,true);
+                for (int i=0;i<pr->nbBranches+1;i++) delete nodes_new[i];
+                delete[] nodes_new;
+            }
+            minblen = minB/pr->rho;
+        }
+    }
+    double minblenL = minblen;
+    if (minblen == 0 || pr->minblen > 0 || (pr->inDateFile=="" && pr->inDateFormat!=2 && pr->round_time==-1)){//do not round
+        if (pr->minblen == pr->minblenL){
+            cout<<"Minimum branch length of time scaled tree (settable via option -u and -U): "<<minblen<<endl;
+            file<<"Minimum branch length of time scaled tree (settable via option -u and -U): "<<minblen<<"\n";
+        } else {
+            cout<<"Minimum internal branches lengths of time scaled tree (settable via option -u): "<<minblen<<endl;
+            cout<<"Minimum external branches lengths of time scaled tree (settable via option -U): "<<pr->minblenL<<endl;
+            file<<"Minimum internal branches lengths of time scaled tree (settable via option -u): "<<minblen<<"\n";
+            file<<"Minimum external branches lengths of time scaled tree (settable via option -U): "<<pr->minblenL<<"\n";
+            minblenL = pr->minblenL;
+        }
+    } else {//rounding
+        if (round_time <0){
+            if ((pr->inDateFormat == 2 || pr->inDateFormat == 1) && (pr->LEAVES == "")){
+                round_time = 365;
+            } else {
+                if (minblen >= 1) round_time = 100;
+                else {
+                    round_time = 10;
+                    double mm = minblen;
+                    while (mm<1){
+                        mm = mm*10;
+                        round_time = round_time*10;
+                    }
+                }
+            }
+        }
+        string unit="";
+        if (round_time==365) unit=" days";
+        if (round_time==52) unit=" weeks";
+        double minblenRound = round(round_time*minblen)/(double)round_time;
+        if (pr->minblenL < 0){
+            cout<<"Minimum branch length of time scaled tree (settable via option -u and -U): "<<minblen<<",\n rounded to "<<minblenRound<<" ("<<round(round_time*minblen)<<unit<<"/"<<round_time<<") using factor "<<round_time<<" (settable via option -R)"<<endl;
+            file<<"Minimum branch length of time scaled tree (settable via option -u and -U): "<<minblen<<",\n rounded to "<<minblenRound<<" ("<<round(round_time*minblen)<<"/"<<round_time<<") using factor "<<round_time<<" (settable via option -R)\n";
+            minblen = minblenRound;
+            minblenL = minblenRound;
+        } else {
+            cout<<"Minimum internal branches lengths of time scaled tree (settable via option -u):\n "<<minblen<<", rounded to "<<minblenRound<<" ("<<round(round_time*minblen)<<"/"<<round_time<<") using factor "<<round_time<<" (settable via option -R)"<<endl;
+            cout<<"Minimum external branches lengths of time scaled tree was set to "<<pr->minblenL<<"\n (settable via option -U)"<<endl;
+            file<<"Minimum internal branches lengths of time scaled tree (settable via option -u):\n "<<minblen<<", rounded to "<<minblenRound<<" ("<<round(round_time*minblen)<<"/"<<round_time<<") using factor "<<round_time<<" (settable via option -R)\n";
+            file<<"Minimum external branches lengths of time scaled tree was set to "<<pr->minblenL<<"\n (settable via option -U)"<<endl;
+            minblen = minblenRound;
+            minblenL = pr->minblenL;
+        }
+    }
+    //apply min branch length for each branch
+    nodes[0]->minblen = minblen;
+    for (int i=1;i<=pr->nbBranches;i++){
+        if (i<pr->nbINodes) {
+            nodes[i]->minblen = minblen;
+        } else{
+            nodes[i]->minblen = minblenL;
+        }
+    }
+}

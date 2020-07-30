@@ -116,6 +116,7 @@ bool without_constraint(Pr* pr,Node** nodes){
                 b += 2*(nodes[i]->B+G[i])*F[i]/nodes[i]->V;
             }
         }
+        if (abs(a) < 1e-10) return false;
         pr->rho = -b/(2*a);
         if (pr->rho<pr->rho_min) pr->rho=pr->rho_min;
         delete[] F;
@@ -271,13 +272,16 @@ bool without_constraint_active_set(Pr* pr,Node** nodes){
     //this methods implements the LD algorithm (active set method)
     initialize_status(pr,nodes);
     list<int> active_set;
-    starting_point(pr,nodes,active_set);
+    //starting_point(pr,nodes,active_set);
     double* D_old = new double[pr->nbBranches+1];
     for (int i=0; i<=pr->nbBranches; i++) {
         D_old[i]=nodes[i]->D;
     }
-    bool val = without_constraint(pr,nodes);
-    if (!val) return false;
+    double val = without_constraint(pr,nodes);
+    if (!val) {
+        cerr<<"Error: There's not enough signal in the input temporal constraints to have unique solution."<<endl;
+        exit(EXIT_FAILURE);
+    }
     list<double> lambda = computeLambda(active_set,pr,nodes);
     int nb_iter=0;
     double alpha;
@@ -311,18 +315,6 @@ bool without_constraint_active_set(Pr* pr,Node** nodes){
             desactive(nodes[-asrm]);
         }
         for (int i=0;i<=pr->nbBranches;i++) D_old[i]=D_old[i]+alpha*dir[i];
-        /*for (int i=0;i<=pr->nbBranches;i++){
-         if (nodes[i]->type=='l'||nodes[i]->type=='b') {
-         if (D_old[i]-nodes[i]->lower<-1e-10) {
-         cout<<"PROBLEM"<<endl;
-         }
-         }
-         if (nodes[i]->type=='u'||nodes[i]->type=='b') {
-         if (D_old[i]-nodes[i]->upper>1e-10) {
-         cout<<"PROBLEM"<<endl;
-         }
-         }
-         }*/
         if (as!=0) {
             if (as>2*pr->nbBranches+1) {
                 active_set.push_back(-(as-2*pr->nbBranches-2));
@@ -375,7 +367,8 @@ bool conditionsQP(list<double>& ldLagrange,Pr* pr,Node** nodes){
 
 bool starting_pointQP(Pr* pr,Node** nodes,list<int> &active_set){
     //compute a starting feasible point, which is the solution from without constraint and then collapse all the branches that violate the constraints.
-    without_constraint_active_set(pr,nodes);
+    bool val = without_constraint_active_set(pr,nodes);
+    if (!val) return val;
     double* lowerX = new double[pr->nbBranches+1];
     bool* bl = new bool[pr->nbBranches+1];
     for (int i=0;i<=pr->nbBranches;i++){
@@ -389,7 +382,7 @@ bool starting_pointQP(Pr* pr,Node** nodes,list<int> &active_set){
         }
         else bl[i]=false;
     }
-    vector<int> pre = preorder_polytomy(pr,nodes);
+    vector<int> pre = preorder_polytomy(pr,nodes); //top-bottom order
     for (vector<int>::iterator iter = pre.begin();iter!=pre.end();iter++){
         int i=*iter;
         if (bl[i]){
@@ -824,6 +817,7 @@ bool with_constraint_active_set(Pr* pr,Node** &nodes){
         int nb_iter=0;
         double alpha;
         while (val && !conditionsQP(lambda,pr,nodes) && nb_iter <= 1000){
+            //for (list<double>::iterator iter = lambda.begin(); iter != lambda.end(); iter++) cout<<*iter<<" "; cout<<endl;
             for (int i=0;i<=pr->nbBranches;i++)  {
                 dir[i] = nodes[i]->D - D_old[i];
             }
@@ -858,7 +852,7 @@ bool with_constraint_active_set(Pr* pr,Node** &nodes){
             }
             int asrm;
             if (remove_ne_lambda(lambda,active_set,asrm)){
-                active_set.remove(asrm);
+                active_set.remove(asrm);//cout<<"remove "<<asrm<<endl;
                 if (asrm>0) {
                     desactiveTC(nodes[asrm]);
                 }
@@ -869,16 +863,16 @@ bool with_constraint_active_set(Pr* pr,Node** &nodes){
             for (int i=0;i<=pr->nbBranches;i++) D_old[i]=D_old[i]+alpha*dir[i];
             if (as<2*pr->nbBranches+2) {
                 if (as>pr->nbBranches) {
-                    active_set.push_back(-(as-pr->nbBranches-1));
+                    active_set.push_back(-(as-pr->nbBranches-1));//cout<<"add "<<-(as-pr->nbBranches-1)<<endl;
                     nodes[(as-pr->nbBranches-1)]->D=nodes[(as-pr->nbBranches-1)]->upper;
                     activeUpper(nodes[(as-pr->nbBranches-1)]);
                 }
                 else if (as>0) {
-                    active_set.push_back(as);
+                    active_set.push_back(as);//cout<<"add "<<as<<endl;
                     activeTC(nodes[as]);
                 }
                 else{
-                    active_set.push_back(as);
+                    active_set.push_back(as);//cout<<"add "<<as<<endl;
                     nodes[-as]->D=nodes[-as]->lower;
                     activeLower(nodes[-as]);
                 }
@@ -889,7 +883,6 @@ bool with_constraint_active_set(Pr* pr,Node** &nodes){
         }
         if (nb_iter>1000){
             for (int i=0;i<=pr->nbBranches;i++) nodes[i]->D=D_old[i];
-            
         }
         computeObjective(pr,nodes);
         

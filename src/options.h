@@ -10,6 +10,7 @@ string    getOutgroupFileName( string );
 void     printInterface(ostream& result, Pr*);
 void     setOptionsWithLetter( Pr* , char);
 double   getInputReal( string );
+double getInputRealOrE( string msg );
 double getInputDate( string msg, int& type );
 double   getInputPositiveReal( string );
 int      getInputInteger( string );
@@ -18,4 +19,4 @@ string    getInputString( string );
 bool     isOptionActivate( Pr*, char );
 FILE*    openOutputFile( char** );
 FILE*    myFopen( char*, char* );
-
+double getInputNonNegativeRealOrE( string msg );

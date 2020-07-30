@@ -772,10 +772,7 @@ bool outliers_unrooted(Pr* &pr,Node** &nodes,double& median_rate){
 
 
 
-
-
-//just calculate median rate, do not estimate and exclude outliers
-
+/*
 bool calculateMedianRate(Pr* pr,Node** nodes,double& med_rate){
     double rate_min, rate_max;
     if (pr->estimate_root=="" || pr->estimate_root=="k"){
@@ -952,3 +949,223 @@ bool calculateMedianRate(Pr* pr,Node** nodes,double& med_rate){
         }
     }
 }
+
+
+double rate_rtt(Pr* pr,Node** & nodes){
+    vector<double> paths;
+    vector<double> dates;
+    calculateRoot2DatedNode(pr,nodes,paths,dates);
+    double slope;
+    double intercept;
+    int n = paths.size();
+    double mean_dates = 0;
+    double mean_paths = 0;
+    double det = 0;
+    for (int i=0;i<n;i++){
+        mean_dates += dates[i];
+        mean_paths += paths[i];
+    }
+    mean_dates /= n;
+    mean_paths /= n;
+    slope = 0;
+    if (pr->givenRate[0] && nodes[0]->type=='p'){
+        slope = pr->rho;
+        intercept = nodes[0]->D;
+    }
+    else if (pr->relative){
+        slope = (mean_paths)/(pr->leaves - pr->mrca);
+        intercept = pr->mrca;
+    }
+    else if (pr->givenRate[0]){
+        slope = pr->rho;
+        intercept =  mean_paths - slope*mean_dates;
+    }
+    else if (nodes[0]->type=='p'){
+        intercept = nodes[0]->D;
+        for (int i=0;i<n;i++){
+            det += dates[i]*dates[i];
+            slope += dates[i]*(paths[i] - intercept);
+        }
+        slope = slope / det;
+    }
+    else{
+        for (int i=0;i<n;i++){
+            slope += (paths[i] - mean_paths)*(dates[i] - mean_dates);
+            det += (dates[i] - mean_dates)*(dates[i] - mean_dates);
+        }
+        slope = slope / det;
+        intercept =  mean_paths - slope*mean_dates;
+    }
+    return slope;
+}
+
+void calculateRoot2DatedNode_lambda(double br,Pr* pr,Node** nodes,vector<double> & paths, vector<double> & paths_lambda,vector<double> & dates){
+    vector<int> s = nodes[0]->suc;
+    int s1 = s[0];
+    int s2 = s[1];
+    for (int i=pr->nbINodes;i<=pr->nbBranches;i++){
+        if (nodes[i]->type == 'p'){
+            int k=i;
+            double rtt = 0;
+            double rtt_lambda = 0;
+            while (k!=s1 && k!=s2){
+                rtt += nodes[k]->B;
+                k = nodes[k]->P;
+            }
+            if (k == s1){
+                rtt_lambda = br;
+            }
+            if (k == s2){
+                rtt += br;
+                rtt_lambda = -br;
+            }
+            paths.push_back(rtt);
+            paths_lambda.push_back(rtt_lambda);
+            dates.push_back(nodes[i]->D);
+        }
+    }
+    vector<int> visited;
+    for (int i=0;i<pr->internalConstraints.size();i++){
+        Date* no = pr->internalConstraints[i];
+        if ((no->type=='p') && !isIn(no->id,visited)){
+            int k=no->id;
+            double rtt = 0;
+            double rtt_lambda = 0;
+            while (k!=s1 && k!=s2){
+                rtt += nodes[k]->B;
+                k = nodes[k]->P;
+            }
+            if (k == s1){
+                rtt_lambda = br;
+            }
+            if (k == s2){
+                rtt += br;
+                rtt_lambda = -br;
+            }
+            paths.push_back(rtt);
+            paths_lambda.push_back(rtt_lambda);
+            dates.push_back(nodes[i]->D);
+            visited.push_back(no->id);
+        }
+    }
+}
+
+
+double regression_lambda(double br,Pr* pr, Node** nodes){
+    double lambda;
+    vector<double> paths;
+    vector<double> dates;
+    vector<double> paths_lambda;
+    double slope = 0;
+    double slope_lambda = 0;
+    double intercept = 0;
+    double intercept_lambda = 0;
+    double det = 0;
+    if (br == 0){
+        return rate_rtt(pr,nodes);
+    }
+    calculateRoot2DatedNode_lambda(br,pr,nodes,paths,paths_lambda,dates);
+    double mean_dates = 0;
+    double mean_paths = 0;
+    double mean_paths_lambda = 0;
+    int n = dates.size();
+    for (int i=0;i<n;i++){
+        mean_dates += dates[i];
+        mean_paths += paths[i];
+        mean_paths_lambda += paths_lambda[i];
+    }
+    mean_dates /= n;
+    mean_paths /= n;
+    mean_paths_lambda /= n;
+    
+    if (pr->givenRate[0] && nodes[0]->type=='p'){
+        slope = pr->rho;
+        slope_lambda = 0;
+        intercept = -slope*nodes[0]->D;
+        intercept_lambda = 0;
+    }
+    else if (pr->relative){
+        slope = (mean_paths)/(pr->leaves - pr->mrca);
+        slope_lambda = (mean_paths_lambda)/(pr->leaves - pr->mrca);
+        intercept = -slope*pr->mrca;
+        intercept_lambda = -slope_lambda*pr->mrca;
+    }
+    else if (pr->givenRate[0]){
+        slope = pr->rho;
+        slope_lambda = 0;
+        intercept =  mean_paths - slope*mean_dates;
+        intercept_lambda = mean_paths_lambda;
+    }
+    else if (nodes[0]->type=='p'){
+        intercept = nodes[0]->D;
+        intercept_lambda = 0;
+        for (int i=0;i<n;i++){
+            det += dates[i]*dates[i];
+            slope += dates[i]*(paths[i] - intercept);
+            slope_lambda += dates[i]*(paths_lambda[i]);
+        }
+        slope = slope / det;
+        slope_lambda = slope_lambda / det;
+    }
+    else{
+        for (int i=0;i<n;i++){
+            slope += (dates[i] - mean_dates)*(paths[i] - mean_paths);
+            slope_lambda += (dates[i] - mean_dates)*(paths_lambda[i] - mean_paths_lambda);
+            det += (dates[i] - mean_dates)*(dates[i] - mean_dates);
+        }
+        slope /= det;
+        slope_lambda /= det;
+        intercept =  mean_paths - slope*mean_dates;
+        intercept_lambda = mean_paths_lambda - slope_lambda*mean_dates;
+    }
+    
+    double A = 0;
+    double B = 0;
+    double C = 0;
+    //square_residus = A*lambda^2 + B*lambda + C
+    for (int i=0;i<n;i++){
+        A += (paths_lambda[i] - slope_lambda*dates[i] - intercept_lambda)*(paths_lambda[i] - slope_lambda*dates[i] - intercept_lambda);
+        B += 2*(paths_lambda[i] - slope_lambda*dates[i] - intercept_lambda)*(paths[i] - slope*dates[i] - intercept);
+        C += (paths[i] - slope*dates[i] - intercept)*(paths[i] - slope*dates[i] - intercept);
+    }
+    lambda = -B/2/A;
+    if (lambda <0) lambda = 0;
+    if (lambda >1) lambda = 1;
+    return (slope + lambda*slope_lambda);//or (slope + slope_lambda/lambda);
+}
+
+double median_rate_rtt(Pr* pr, Node** & nodes){
+    //only apply for non-flexible given dates and non internal node date
+    Node** nodes_new = cloneLeaves(pr,nodes,0);
+    int y=1;
+    double l=0;
+    double br=0;
+    vector<int> s=nodes[0]->suc;
+    int s1=s[0];
+    int s2=s[1];
+    vector<double> originalD;
+    for (int i=0;i<=pr->nbBranches;i++) originalD.push_back(nodes[i]->D);
+    bool bl=reroot_rootedtree(br,y,s1,s2,pr,nodes,nodes_new);
+    for (int i=pr->nbINodes;i<=pr->nbBranches;i++){
+        if (nodes_new[i]->type=='p') nodes_new[i]->D = originalD[i];
+    }
+    vector<double> slopes;
+    double slope = regression_lambda(br,pr,nodes_new);
+    slopes.push_back(slope);
+    y++;
+    double phi;
+    while (y<=pr->nbBranches){
+        for (int i=pr->nbINodes; i<=pr->nbBranches; i++) {
+            nodes_new[i]->status=nodes[i]->status;
+        }
+        bl=reroot_rootedtree(br,y,s1,s2,pr,nodes,nodes_new);
+        for (int i=pr->nbINodes;i<=pr->nbBranches;i++){
+            if (nodes_new[i]->type=='p') nodes_new[i]->D = originalD[i];
+        }
+        slope = regression_lambda(br,pr,nodes_new);
+        slopes.push_back(slope);
+        y++;
+    }
+    return median(slopes);
+}
+*/

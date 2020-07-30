@@ -55,6 +55,7 @@ typedef struct Pr
     bool removeOutgroup;
     int m;
     double e;
+    bool splitExternal;
     vector<Part* > ratePartition;
     vector<Date*> internalConstraints;
     vector<int> outlier;
@@ -102,6 +103,7 @@ typedef struct Pr
         minblenL=pr->minblenL;
         nullblen=pr->nullblen;
         verbose=pr->verbose;
+        splitExternal=pr->splitExternal;
         inDateFormat=pr->inDateFormat;
         outDateFormat=pr->outDateFormat;
         rho=pr->rho;
@@ -141,8 +143,8 @@ typedef struct Pr
         estimate_root = "";
         constraint = true;
         variance = 1;
-        minblen = -1;
-        minblenL = -1;
+        minblen = 0;
+        minblenL = 0;
         nullblen = 0;
         support = -1;
         c = -1;
@@ -156,6 +158,7 @@ typedef struct Pr
         outDateFormat=0;
         rooted=false;
         removeOutgroup=false;
+        splitExternal=false;
         ratePartition = vector<Part* >();
         internalConstraints = vector<Date* >();
         outlier = vector<int>();

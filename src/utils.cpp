@@ -1802,6 +1802,7 @@ Node** cloneLeaves(Pr* pr,Node** nodes,int f){
         nodes_new[i+f]->upper=nodes[i]->upper;
         nodes_new[i+f]->D=nodes[i]->D;
         nodes_new[i+f]->status=nodes[i]->status;
+        nodes_new[i+f]->minblen=nodes[i]->minblen;
     }
     return nodes_new;
 }
@@ -1811,6 +1812,7 @@ void cloneInternalNodes(Pr* pr,Node** nodes,Node** &nodes_new,int f){
         nodes_new[i+f]->P=nodes[i]->P+f;
         nodes_new[i+f]->B=nodes[i]->B;
         nodes_new[i+f]->L=nodes[i]->L;
+        nodes_new[i+f]->minblen=nodes[i]->minblen;
         nodes_new[i+f]->suc.clear();
         for (vector<int>::iterator iter=nodes[i]->suc.begin(); iter!=nodes[i]->suc.end(); iter++) {
             nodes_new[i+f]->suc.push_back((*iter)+f);
@@ -2177,7 +2179,7 @@ string nexusIC(int i,Pr* pr,Node** nodes,double* D_min,double* D_max,double* H_m
         hmin<< H_min[i];
         hmax<< H_max[i];
         if (i>=pr->nbINodes) {
-            return nodes[i]->L+"[&date=\""+date.str()+"\",CI_height=\"{"+hmin.str()+","+hmax.str()+"}\",CI_date=\"{"+dmin.str()+","+dmax.str()+"}\"]:"+b.str();
+            return nodes[i]->L+"[&date=\""+date.str()+"\",CI_height={"+hmin.str()+","+hmax.str()+"},CI_date=\"{"+dmin.str()+","+dmax.str()+"}\"]:"+b.str();
         }
         else{
             string newLabel="(";
@@ -2188,12 +2190,12 @@ string nexusIC(int i,Pr* pr,Node** nodes,double* D_min,double* D_max,double* H_m
                 else newLabel+=","+l;
             }
             if (i>0) {
-                return newLabel+")"+nodes[i]->L+"[&date=\""+date.str()+"\",CI_height=\"{"+hmin.str()+","+hmax.str()+"}\",CI_date=\"{"+dmin.str()+","+dmax.str()+"}\"]:"+b.str();
+                return newLabel+")"+nodes[i]->L+"[&date=\""+date.str()+"\",CI_height={"+hmin.str()+","+hmax.str()+"},CI_date=\"{"+dmin.str()+","+dmax.str()+"}\"]:"+b.str();
                 //if (abs(nodes[i]->B)>0) return newLabel+")"+nodes[i]->L+"[&date=\""+date.str()+"\",CI_height=\"{"+hmin.str()+","+hmax.str()+"}\",CI_date=\"{"+dmin.str()+","+dmax.str()+"}\"]:"+b.str();
                 //else return newLabel+")"+nodes[i]->L+":"+b.str();
             }
             else{
-                return newLabel+")"+nodes[i]->L+"[&date=\""+date.str()+"\",CI_height=\"{"+hmin.str()+","+hmax.str()+"}\",CI_date=\"{"+dmin.str()+","+dmax.str()+"}\"];\n";
+                return newLabel+")"+nodes[i]->L+"[&date=\""+date.str()+"\",CI_height={"+hmin.str()+","+hmax.str()+"},CI_date=\"{"+dmin.str()+","+dmax.str()+"}\"];\n";
             }
             
         }
@@ -2239,11 +2241,11 @@ string nexusICDate(int i,Pr* pr,Node** nodes,double* D_min,double* D_max,double*
                 else newLabel+=","+l;
             }
             if (i>0) {
-                if (abs(nodes[i]->B)>0) return newLabel+")"+nodes[i]->L+"[&date=\""+date.str()+"\",CI_height=\"{"+hmin.str()+","+hmax.str()+"}\",CI_date=\"{"+dmin.str()+","+dmax.str()+"}\"]:"+b.str();
+                if (abs(nodes[i]->B)>0) return newLabel+")"+nodes[i]->L+"[&date=\""+date.str()+"\",CI_height={"+hmin.str()+","+hmax.str()+"},CI_date=\"{"+dmin.str()+","+dmax.str()+"}\"]:"+b.str();
                 else return newLabel+")"+nodes[i]->L+":"+b.str();
             }
             else{
-                return newLabel+")"+nodes[i]->L+"[&date=\""+date.str()+"\",CI_height=\"{"+hmin.str()+","+hmax.str()+"}\",CI_date=\"{"+dmin.str()+","+dmax.str()+"}\"];\n";
+                return newLabel+")"+nodes[i]->L+"[&date=\""+date.str()+"\",CI_height={"+hmin.str()+","+hmax.str()+"},CI_date=\"{"+dmin.str()+","+dmax.str()+"}\"];\n";
             }
             
         }
@@ -2779,7 +2781,7 @@ void calculate_tree_height(Pr* pr,Node** & nodes){
     }
 }
 
-void plitExternalBranches(Pr* pr,Node** nodes){
+void splitExternalBranches(Pr* pr,Node** nodes){
     pr->ratePartition.clear();
     Part* part = new Part("externalBranches");
     for (int i=pr->nbINodes;i<=pr->nbBranches;i++){
@@ -2852,7 +2854,7 @@ double median(vector<double> array){
 }
 
 
-void imposeMinBlen(ostream& file,Pr* pr, Node** nodes, double median_rate,bool medianRateOK){
+/*void imposeMinBlen(ostream& file,Pr* pr, Node** nodes, double median_rate,bool medianRateOK){
     double minblen = pr->minblen;
     double round_time = pr->round_time;
     double m = 1./(pr->seqLength*median_rate);
@@ -2926,7 +2928,7 @@ void imposeMinBlen(ostream& file,Pr* pr, Node** nodes, double median_rate,bool m
             nodes[i]->minblen = minblenL;
         }
     }
-}
+}*/
 
 double median_branch_lengths(Pr* pr,Node** nodes){
     vector<double> bl;
