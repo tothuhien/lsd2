@@ -61,9 +61,9 @@ input date file can be as follows:
     5			# number of temporal constraints
     A 1999.2		# the date of A is 1999.2
     B 2000.1		# the date of B is 2000.1
-    C l(1990.5)		# the date of C is at least 1990.5
+    C l(1990.5)		# the date of C is >= 1990.5 (more recent than 1990.5)
     D b(1998.21,2000.5)	# the date of D is between 1998.21 and 2000.5
-    mrca(A,B,C) u(2000.12)	# the date of the most recent ancestor of A,B, and C is at most 2000.12
+    mrca(A,B,C) u(1980)	# the date of the most recent ancestor of A,B, and C is <= 1980 (older than 1980)
     
 You can also define the labels for internal nodes and use them to define their dates. 
 For example you have an input tree: ((A:0.12,D:0.12)n1:0.3,(B:0.3,C:0.5)n2:0.4); 
