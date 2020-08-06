@@ -1110,11 +1110,11 @@ int estimate_root_without_constraint_local_rooted(Pr* &pr,Node** &nodes){
             }
         }
         else{
-            if (pr->verbose) cout<<"Ignoring due to undetermined solution.\n";
+            if (pr->verbose) cout<<"Ignoring due to conflict in the input temporal constraints.\n";
         }
     }
     else{
-        if (pr->verbose) cout<<"Ignoring due to conflict temporal constraints.\n";
+        if (pr->verbose) cout<<"Ignoring due to conflict in the input temporal constraints.\n";
     }
     list<int> next;
     if (s1<pr->nbINodes){
@@ -1159,7 +1159,7 @@ int estimate_root_without_constraint_local_rooted(Pr* &pr,Node** &nodes){
                 }
             }
             else{
-                if (pr->verbose) cout<<"Ignoring due to undetermined solution.\n";
+                if (pr->verbose) cout<<"Ignoring due to conflict in the input temporal constraints.\n";
                 if (i<pr->nbINodes){
                     for (vector<int>::iterator iter=nodes[i]->suc.begin(); iter!=nodes[i]->suc.end(); iter++) {
                         next.push_back(*iter);
@@ -1168,7 +1168,7 @@ int estimate_root_without_constraint_local_rooted(Pr* &pr,Node** &nodes){
             }
         }
         else{
-            if (pr->verbose) cout<<"Ignoring due to conflict temporal constraints.\n";
+            if (pr->verbose) cout<<"Ignoring due to conflict in the input temporal constraints.\n";
             if (i<pr->nbINodes){
                 for (vector<int>::iterator iter=nodes[i]->suc.begin(); iter!=nodes[i]->suc.end(); iter++) {
                     next.push_back(*iter);
@@ -1177,9 +1177,11 @@ int estimate_root_without_constraint_local_rooted(Pr* &pr,Node** &nodes){
         }
         next.remove(i);
     }
+    if (r==0) {
+        myExit("There's conflict in the input temporal constraints.\n");
+    }
     if (pr->verbose) {
-        if (r==0) cout<<"Undetermined solution."<<endl;
-        else if (r==s1 || r==s2) cout<<"The new root is on the original branch."<<endl;
+        if (r==s1 || r==s2) cout<<"The new root is on the original branch."<<endl;
         else cout<<"The new root is on the branch "<<r<<endl;
     }
     delete[] cv;
@@ -1218,7 +1220,7 @@ int estimate_root_without_constraint_rooted(Pr* &pr,Node** &nodes){
         if (consistent) {
             phi1=pr->objective;
             if (pr->verbose){
-                cout<<"objective function: "<<phi1<<", rate: "<<pr->rho<<"\n";
+                cout<<"objective function: "<<phi1<<", rate: "<<pr->rho<<" root: "<<nodes_new[0]->D<<"\n";
             }
             r=y;
             for (int i=1; i<=pr->ratePartition.size(); i++) {
@@ -1226,11 +1228,11 @@ int estimate_root_without_constraint_rooted(Pr* &pr,Node** &nodes){
             }
         }
         else{
-            if (pr->verbose) cout<<"Ignoring due to undetermined solution.\n";
+            if (pr->verbose) cout<<"Ignoring due to conflict in the input temporal constraints.\n";
         }
     }
     else{
-        if (pr->verbose) cout<<"Ignoring due to undetermined solution.\n";
+        if (pr->verbose) cout<<"Ignoring due to conflict in the input temporal constraints.\n";
     }
     y++;
     double phi;
@@ -1248,7 +1250,7 @@ int estimate_root_without_constraint_rooted(Pr* &pr,Node** &nodes){
             if (consistent) {
                 phi=pr->objective;
                 if (pr->verbose){
-                    cout<<"objective function: "<<phi<<", rate: "<<pr->rho<<"\n";
+                    cout<<"objective function: "<<phi<<", rate: "<<pr->rho<<" root: "<<nodes_new[0]->D<<"\n";
                 }
                 if (phi1>phi || r==0){
                     phi1=phi;
@@ -1259,17 +1261,19 @@ int estimate_root_without_constraint_rooted(Pr* &pr,Node** &nodes){
                 }
             }
             else{
-                if (pr->verbose) cout<<"Ignoring due to undetermined solution.\n";
+                if (pr->verbose) cout<<"Ignoring due to conflict in the input temporal constraints.\n";
             }
         }
         else{
-            if (pr->verbose) cout<<"Ignoring due to undetermined solution.\n";
+            if (pr->verbose) cout<<"Ignoring due to conflict in the input temporal constraints.\n";
         }
         y++;
     }
+    if (r==0) {
+        myExit("There's conflict in the input temporal constraints.\n");
+    }
     if (pr->verbose) {
-        if (r==0) cout<<"Undetermined solution."<<endl;
-        else if (r==s1 || r==s2) cout<<"The new root is on the original branch."<<endl;
+        if (r==s1 || r==s2) cout<<"The new root is on the original branch."<<endl;
         else cout<<"The new root is on the branch "<<r<<endl;
     }
     for (int i=0;i<pr->nbBranches+1;i++) delete nodes_new[i];
@@ -1316,11 +1320,11 @@ int estimate_root_with_constraint_local_rooted(Pr* &pr,Node** &nodes){
             }
         }
         else{
-            if (pr->verbose) cout<<"Ignoring due to undetermined solution.\n";
+            if (pr->verbose) cout<<"Ignoring due to conflict in the input temporal constraints.\n";
         }
     }
     else{
-        if (pr->verbose) cout<<"Ignoring due to undetermined solution.\n";
+        if (pr->verbose) cout<<"Ignoring due to conflict in the input temporal constraints.\n";
     }
     list<int> next;
     if (s1<pr->nbINodes){
@@ -1365,7 +1369,7 @@ int estimate_root_with_constraint_local_rooted(Pr* &pr,Node** &nodes){
                 }
             }
             else{
-                if (pr->verbose) cout<<"Ignoring due to temporal constrainst conflict.\n";
+                if (pr->verbose) cout<<"Ignoring due to conflict in the input temporal constraints.\n";
                 if (i<pr->nbINodes){
                     for (vector<int>::iterator iter=nodes[i]->suc.begin(); iter!=nodes[i]->suc.end(); iter++) {
                         next.push_back(*iter);
@@ -1374,7 +1378,7 @@ int estimate_root_with_constraint_local_rooted(Pr* &pr,Node** &nodes){
             }
         }
         else{
-            if (pr->verbose) cout<<"Ignoring due to undetermined solution.\n";
+            if (pr->verbose) cout<<"Ignoring due to conflict in the input temporal constraints.\n";
             if (i<pr->nbINodes){
                 for (vector<int>::iterator iter=nodes[i]->suc.begin(); iter!=nodes[i]->suc.end(); iter++) {
                     next.push_back(*iter);
@@ -1383,9 +1387,11 @@ int estimate_root_with_constraint_local_rooted(Pr* &pr,Node** &nodes){
         }
         next.remove(i);
     }
+    if (r==0) {
+        myExit("There's conflict in the input temporal constraints.\n");
+    }
     if (pr->verbose) {
-        if (r==0) cout<<"Undetermined solution.\n"<<endl;
-        else if (r==s1 || r==s2) cout<<"The new root is on the original branch."<<endl;
+        if (r==s1 || r==s2) cout<<"The new root is on the original branch."<<endl;
         else cout<<"The new root is on the branch "<<r<<endl;
     }
     delete[] cv;
@@ -1432,7 +1438,7 @@ int estimate_root_with_constraint_fast_rooted(Pr* &pr,Node** &nodes){
             if (consistent){
                 cv[r]=pr->objective;
                 if (pr->verbose){
-                    cout<<"objective function: "<<cv[r]<<", rate: "<<pr->rho<<"\n";
+                    cout<<"objective function: "<<cv[r]<<", rate: "<<pr->rho<<" root: "<<nodes_new[0]->D<<"\n";
                 }
                 phi1=cv[r];
                 for (int i=1; i<=pr->ratePartition.size(); i++) {
@@ -1440,11 +1446,11 @@ int estimate_root_with_constraint_fast_rooted(Pr* &pr,Node** &nodes){
                 }
             }
             else{
-                if (pr->verbose) cout<<"Ignoring due to undetermined solution.\n";
+                if (pr->verbose) cout<<"Ignoring due to conflict in the input temporal constraints.\n";
             }
         }
         else{
-            if (pr->verbose) cout<<"Ignoring due to undetermined solution.\n";
+            if (pr->verbose) cout<<"Ignoring due to conflict in the input temporal constraints.\n";
         }
         list<int> next;
         int* Suc1_ref = new int[pr->nbINodes];
@@ -1476,7 +1482,7 @@ int estimate_root_with_constraint_fast_rooted(Pr* &pr,Node** &nodes){
                 if (consistent){
                     cv[e]=pr->objective;
                     if (pr->verbose){
-                        cout<<"objective function: "<<cv[e]<<", rate: "<<pr->rho<<"\n";
+                        cout<<"objective function: "<<cv[e]<<", rate: "<<pr->rho<<" root: "<<nodes_new[0]->D<<"\n";
                     }
                     if (cv[e]<cv[tab[P_ref[i]]]+1e-10 || r==0){
                         if (i<pr->nbINodes){
@@ -1492,7 +1498,7 @@ int estimate_root_with_constraint_fast_rooted(Pr* &pr,Node** &nodes){
                     }
                 }
                 else{
-                    if (pr->verbose) cout<<"Ignoring due to undetermined solution\n";
+                    if (pr->verbose) cout<<"Ignoring due to conflict in the input temporal constraints.\n";
                     if (i<pr->nbINodes){
                         next.push_back(Suc1_ref[i]);
                         next.push_back(Suc2_ref[i]);
@@ -1500,7 +1506,7 @@ int estimate_root_with_constraint_fast_rooted(Pr* &pr,Node** &nodes){
                 }
             }
             else{
-                if (pr->verbose) cout<<"Ignoring due to undetermined solution.\n";
+                if (pr->verbose) cout<<"Ignoring due to conflict in the input temporal constraints.\n";
                 if (i<pr->nbINodes){
                     next.push_back(Suc1_ref[i]);
                     next.push_back(Suc2_ref[i]);
@@ -1560,11 +1566,11 @@ int estimate_root_with_constraint_rooted(Pr* &pr,Node** &nodes){
             }
         }
         else{
-            if (pr->verbose) cout<<"Ignoring due to undetermined solution.\n";
+            if (pr->verbose) cout<<"Ignoring due to conflict in the input temporal constraints.\n";
         }
     }
     else{
-        if (pr->verbose) cout<<"Ignoring due to inderminable problem.\n";
+        if (pr->verbose) cout<<"Ignoring due to conflict in the input temporal constraints.\n";
     }
     y++;
     while (y<=pr->nbBranches){
@@ -1592,17 +1598,19 @@ int estimate_root_with_constraint_rooted(Pr* &pr,Node** &nodes){
                 }
             }
             else{
-                if (pr->verbose) cout<<"Ignoring due to undetermined solution.\n";
+                if (pr->verbose) cout<<"Ignoring due to conflict in the input temporal constraints.\n";
             }
         }
         else{
-            if (pr->verbose) cout<<"Ignoring due to undetermined solution.\n";
+            if (pr->verbose) cout<<"Ignoring due to conflict in the input temporal constraints.\n";
         }
         y++;
     }
+    if (r==0) {
+        myExit("There's conflict in the input temporal constraints.\n");
+    }
     if (pr->verbose) {
-        if (r==0) cout<<"Undetermined solution."<<endl;
-        else if (r==s1 || r==s2) cout<<"The new root is on the original branch."<<endl;
+        if (r==s1 || r==s2) cout<<"The new root is on the original branch."<<endl;
         else cout<<"The new root is on the branch "<<r<<endl;
     }
     for (int i=0;i<pr->nbBranches+1;i++) delete nodes_new[i];
@@ -1867,15 +1875,16 @@ void imposeMinBlen(ostream& file,Pr* pr, Node** nodes,double minB){
     }
     double minblenL = minblen;
     if (minblen == 0 || pr->minblen > 0 || (pr->inDateFile=="" && pr->inDateFormat!=2 && pr->round_time==-1)){//do not round
-        if (pr->minblen == pr->minblenL){
+        if (pr->minblenL < 0) minblenL = minblen;
+        else minblenL = pr->minblen;
+        if (minblen == minblenL){
             cout<<"Minimum branch length of time scaled tree (settable via option -u and -U): "<<minblen<<endl;
             file<<"Minimum branch length of time scaled tree (settable via option -u and -U): "<<minblen<<"\n";
         } else {
             cout<<"Minimum internal branches lengths of time scaled tree (settable via option -u): "<<minblen<<endl;
-            cout<<"Minimum external branches lengths of time scaled tree (settable via option -U): "<<pr->minblenL<<endl;
+            cout<<"Minimum external branches lengths of time scaled tree (settable via option -U): "<<minblenL<<endl;
             file<<"Minimum internal branches lengths of time scaled tree (settable via option -u): "<<minblen<<"\n";
-            file<<"Minimum external branches lengths of time scaled tree (settable via option -U): "<<pr->minblenL<<"\n";
-            minblenL = pr->minblenL;
+            file<<"Minimum external branches lengths of time scaled tree (settable via option -U): "<<minblenL<<"\n";
         }
     } else {//rounding
         if (round_time <0){

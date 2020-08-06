@@ -2994,8 +2994,7 @@ int collapseTree(Pr* pr,Node** nodes,Node** nodes_new,int* &tab, double toCollap
             nodes_new[i]->rateGroup = nodes[i]->rateGroup;
         }
     }
-    int cc=0;//number of internal nodes reduced
-    cc++;
+    int cc = root+1;//number of internal nodes reduced
     tab[root]=root;
     if (pr->removeOutgroup == false && pr->fnOutgroup!=""){
         for (vector<int>::iterator iter = nodes[root]->suc.begin(); iter != nodes[root]->suc.end();iter++){
@@ -3070,6 +3069,7 @@ void collapseTreeReOrder(Pr* pr,Node** nodes,Pr* prReduced,Node** nodesReduced,i
             nodesReduced[tab[i]]->L=nodes[i]->L;
         }
     }
+    
     for (vector<Date*>::iterator iter=pr->internalConstraints.begin();iter!=pr->internalConstraints.end();iter++){
         Date* no = (*iter);
         if (no->mrca.size()==0){
@@ -3096,13 +3096,13 @@ void collapseUnInformativeBranches(Pr* &pr,Node** &nodes){
     bool useSupport = (pr->support>=0);
     int nbC = collapseTree(pr, nodes, nodes_new,tab, pr->nullblen,useSupport);//nbC is the number of internal nodes reduced
     if (!useSupport) {
-        cout<<"Collapse "<<(pr->nbINodes - (!pr->rooted) - nbC)<<" (over "<<(pr->nbINodes - (!pr->rooted))<<") internal branches having branch length <= "<<pr->nullblen<<"\n (settable via option -l)"<<endl;
+        cout<<"Collapse "<<(pr->nbINodes - nbC)<<" (over "<<(pr->nbINodes - (!pr->rooted) -1 )<<") internal branches having branch length <= "<<pr->nullblen<<"\n (settable via option -l)"<<endl;
     } else {
-        cout<<"Collapse "<<(pr->nbINodes - nbC)<<" internal branches having branch length <= "<<pr->nullblen<<" (settable via option -l) or support value <= "<<pr->support<<"\n (settable via option -S)"<<endl;
+        cout<<"Collapse "<<(pr->nbINodes - nbC)<<" (over "<<(pr->nbINodes - (!pr->rooted) -1 )<<") internal branches having branch length <= "<<pr->nullblen<<"\n (settable via option -l) or support value <= "<<pr->support<<"\n (settable via option -S)"<<endl;
     }
-    if (  (double)(pr->nbINodes - nbC)/pr->nbINodes > 0.1){
+    if (  (double)(pr->nbINodes - nbC)/(pr->nbINodes - (!pr->rooted) -1) > 0.1){
         ostringstream oss;
-        oss<<"- "<<(pr->nbINodes - (!pr->rooted) - nbC)*100/(double)pr->nbINodes<<"% internal branches were collapsed.\n";
+        oss<<"- "<<(pr->nbINodes - nbC)*100/(double)(pr->nbINodes - (!pr->rooted) -1)<<"% internal branches were collapsed.\n";
         pr->warningMessage.push_back(oss.str());
     }
     Node** nodesReduced = new Node*[nbC+pr->nbBranches-pr->nbINodes+1];
