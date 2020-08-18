@@ -368,7 +368,7 @@ int getBranchOut(Pr* pr,Node** nodes,list<string> &outgroups,bool &keepBelow){
         return getPosition(nodes,*iter,0,pr->nbBranches+1);
     }
     else{
-        list<int> out;
+        vector<int> out;
         while (iter!=outgroups.end()) {
             int t=getPosition(nodes,*iter,0,pr->nbBranches+1);
             if (t!=-1) {
@@ -380,8 +380,8 @@ int getBranchOut(Pr* pr,Node** nodes,list<string> &outgroups,bool &keepBelow){
             int s=pr->nbINodes;
             while (s<=pr->nbBranches && contain(s , out)) {
                 s++;
-            }
-            list<int>::iterator t=out.begin();
+            }// s is one of tip not in outgroups
+            vector<int>::iterator t=out.begin();
             list<int> common = path(pr,nodes,s,*t);
             t++;
             while (t!=out.end()) {
@@ -394,16 +394,12 @@ int getBranchOut(Pr* pr,Node** nodes,list<string> &outgroups,bool &keepBelow){
             int r=*iter;
             while (iter!=common.end()){
                 r=*iter;
-                if (nodes[r]->P==0){
-                    nbPass0++;
-                }
                 iter++;
             }
-            if (nbPass0==2) {
-                keepBelow=false;
-            }
-            else{
-                keepBelow=true;
+            if (isAncestor(nodes,r,out[0])){
+                keepBelow = false;
+            } else{
+                keepBelow = true;
             }
             return r;
         }

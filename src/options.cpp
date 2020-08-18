@@ -25,7 +25,7 @@ Pr* getOptions( int argc, char** argv )
 
 Pr* getCommandLine( int argc, char** argv)
 {
-    const string VERSION="v.1.8.4";
+    const string VERSION="v.1.8.5";
     Pr* opt = new Pr();
     int c;
     string s;
@@ -350,7 +350,7 @@ Pr* getInterface()
 
 void printInterface(ostream& in, Pr* opt)
 {
-    const string VERSION = "v.1.8.4";
+    const string VERSION = "v.1.8.5";
 
     in<<"\nLEAST-SQUARE METHODS TO ESTIMATE RATES AND DATES - "<<VERSION<<" \n\n";
     in<<"\nInput files:\n";
@@ -504,7 +504,7 @@ void printHelp( void )
     const string BOLD = "\033[00;01m";
     const string LINE = "\033[00;04m";
     const string FLAT = "\033[00;00m";
-    const string VERSION = "v.1.8.4";
+    const string VERSION = "v.1.8.5";
     
     cout<<BOLD<<"LSD: LEAST-SQUARES METHODS TO ESTIMATE RATES AND DATES - "<<VERSION<<"\n\n";
     cout<<BOLD<<"DESCRIPTION\n"
@@ -556,13 +556,13 @@ void printHelp( void )
            <<FLAT<<"\t" <<BOLD<<"-E\n"
            <<FLAT<<"\t   Use this option if you want to estimate the rate of internal and external branches separately.\n"
            <<FLAT<<"\t" <<BOLD<<"-f " <<LINE<<"samplingNumberCI\n"
-           <<FLAT<<"\t   This option calculates the confidence intervals of the estimated rate and dates. The branch lengths of the esimated\n"
-           <<FLAT<<"\t   tree are sampled " <<FLAT<<LINE<<"samplingNumberCI" <<FLAT<< " times to generate a set of simulated trees. To generate simulated lengths\n"
-           <<FLAT<<"\t   for each branch, we use a Poisson distribution whose mean equals to the estimated one multiplied by the sequence length, which is \n"
-           <<FLAT<<"\t   1000 by default if nothing was specified via option -s. Long sequence length tends to give small confidence intervals. To avoid \n"
-           <<FLAT<<"\t   over-estimate the confidence intervals in the case of very long sequence length but not necessarily strict molecular clock, you \n"
-           <<FLAT<<"\t   could use a smaller sequence length than the actual ones. Confidence intervals are written in the nexus tree with label CI_height,\n"
-           <<FLAT<<"\t   and can be visualzed with Figtree under Node bar feature.\n"
+           <<FLAT<<"\t   This option calculates the confidence intervals of the estimated rate and dates. The branch lengths of the esimated tree are sampled\n"
+           <<FLAT<<"\t   " <<FLAT<<LINE<<"samplingNumberCI" <<FLAT<< " times to generate a set of simulated trees. The simulated branch lengths are generated as follow:\n"
+           <<FLAT<<"\t          b_i = Poisson(B_i*seqLen)*lognormal(1,q)\n"
+           <<FLAT<<"\t   where B_i is the branch length estimated by lsd2 and q is the standard deviation of relaxed clock settable via option -q.\n"
+           <<FLAT<<"\t   The first term represents a simulation of number of substitutions on the branch i; and the second term adds the effect of relaxed clock\n"
+           <<FLAT<<"\t   on that branch length. Dating is performed on those simulated trees and give the 5th & 95th percentile as confidence intervals. Confidence \n"
+           <<FLAT<<"\t   intervals are written in the nexus tree with label CI_date, and can be visualzed with Figtree under Node bar feature with CI_height.\n"
            <<FLAT<<"\t" <<BOLD<<"-g " <<LINE<<"outgroupFile\n"
            <<FLAT<<"\t   If your data contain outgroups, then specify the name of the outgroup file here. The program will use the outgroups to root the trees.\n"
            <<FLAT<<"\t   If you use this combined with options -G, then the outgroups will be removed. The format of this file should be:\n"
