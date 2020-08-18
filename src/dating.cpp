@@ -442,7 +442,7 @@ bool starting_pointQP(Pr* pr,Node** nodes,list<int> &active_set){
                 active_set.push_back(-i);
             }
         }
-        bool conflictU = ((nodes[i]->type == 'u' || nodes[i]->type == 'b') && nodes[i]->D < nodes[i]->upper);
+        bool conflictU = ((nodes[i]->type == 'u' || nodes[i]->type == 'b') && nodes[i]->D > nodes[i]->upper);
         bool conflictTC = false;
         int minI = i;
         double minS = nodes[i]->D;
@@ -463,8 +463,10 @@ bool starting_pointQP(Pr* pr,Node** nodes,list<int> &active_set){
                     active_set.remove(-i);
                 }
                 nodes[i]->D = minS;
-                activeTC(nodes[minI]);
-                active_set.push_back(minI);
+                if (!tc(nodes[minI])){
+                    activeTC(nodes[minI]);
+                    active_set.push_back(minI);
+                }
             }
             else{
                 if (lower(nodes[i]) || upper(nodes[i])){

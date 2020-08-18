@@ -2448,7 +2448,6 @@ stack<int>* computeFeuilles_polytomy(list<int> ls,Pr* pr,Node** nodes){
             }
         }
         count++;
-        
     }
     return feuilles;
 }
