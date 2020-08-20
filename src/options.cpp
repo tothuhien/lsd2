@@ -25,7 +25,7 @@ Pr* getOptions( int argc, char** argv )
 
 Pr* getCommandLine( int argc, char** argv)
 {
-    const string VERSION="v.1.8.6";
+    const string VERSION="v.1.8.7";
     Pr* opt = new Pr();
     int c;
     string s;
@@ -179,12 +179,18 @@ Pr* getCommandLine( int argc, char** argv)
                 opt->verbose = true;
                 break;
             case 'f':
-                if( !isInteger(optarg) )
-                    myExit("Argument of option -f must be the number of samplings to compute confidence\n intervals, e.g. 100 ...\n");
-                opt->nbSampling = atoi( optarg );
-                if (opt->nbSampling<0)
-                    myExit("Argument of option -f must be a positive integer.\n");
-                fflag = true;
+                if ( !isInteger(optarg) ){
+                    if( access( optarg, R_OK )!=0 ){
+                        myExit( "Argument of option -f must be an integer or a file containing bootstraps trees\n" );
+                    }
+                    opt->bootstraps_file = optarg;
+                } else{
+                    opt->nbSampling = atoi( optarg );
+                    if (opt->nbSampling <= 0){
+                        myExit("Argument of option -f must be a positive integer.\n");
+                    }
+                    fflag = true;
+                }
                 opt->ci=true;
                 break;
             case 'u':
@@ -350,11 +356,11 @@ Pr* getInterface()
 
 void printInterface(ostream& in, Pr* opt)
 {
-    const string VERSION = "v.1.8.6";
+    const string VERSION = "v.1.8.7";
 
     in<<"\nLEAST-SQUARE METHODS TO ESTIMATE RATES AND DATES - "<<VERSION<<" \n\n";
     in<<"\nInput files:\n";
-        in<<"  i                                               Input tree file : "<<opt->inFile.c_str()<<"\n";
+    in<<"  i                                               Input tree file : "<<opt->inFile.c_str()<<"\n";
     in<<"  d                                               Input date file : ";
     if (opt->inDateFile!=""){
         in<<opt->inDateFile.c_str()<<"\n";
@@ -436,11 +442,12 @@ void printInterface(ostream& in, Pr* opt)
     else
         in<<"Yes, "<<opt->nbData<<" data sets\n";
     in<<"  f                                  Compute confidence intervals : ";
-    if (opt->ci){
+    if (opt->ci && opt->bootstraps_file==""){
         in<<"Yes, sampling "<<opt->nbSampling<<" times\n";
         in<<"  q                  Standard deviation of lognormal relaxed clock: "<<opt->q<<" (for computing confidence intervals)\n";
-    }
-    else
+    } else if (opt->bootstraps_file!=""){
+        in<<"Use bootstrap trees from "<<opt->bootstraps_file<<"\n";
+    } else
         in<<"No\n";
     if (opt->nullblen==-1 || opt->ci){
         in<<"  s                                               Sequence length : "<<opt->seqLength<<"\n";
@@ -474,7 +481,9 @@ void printInterface(ostream& in, Pr* opt)
         in<<opt->minblenL<<"\n";
     }
     in<<"  l                        Collapsed internal branch length limit : ";
-    if (opt->nullblen==-1){
+    if (opt->bootstraps_file!=""){
+        in<<"Don't collapse\n";
+    } else if (opt->nullblen==-1){
         in<<0.5/opt->seqLength<<"\n";
     } else {
         in<<opt->nullblen<<"\n";
@@ -504,167 +513,169 @@ void printHelp( void )
     const string BOLD = "\033[00;01m";
     const string LINE = "\033[00;04m";
     const string FLAT = "\033[00;00m";
-    const string VERSION = "v.1.8.6";
+    const string VERSION = "v.1.8.7";
     
     cout<<BOLD<<"LSD: LEAST-SQUARES METHODS TO ESTIMATE RATES AND DATES - "<<VERSION<<"\n\n";
     cout<<BOLD<<"DESCRIPTION\n"
-           <<FLAT<<"\tThis program estimates the rate and the dates of the input phylogenies given some temporal constraints.\n"
-           <<FLAT<<"\tIt minimizes the square errors of the branch lengths under normal distribution model.\n\n";
+    <<FLAT<<"\tThis program estimates the rate and the dates of the input phylogenies given some temporal constraints.\n"
+    <<FLAT<<"\tIt minimizes the square errors of the branch lengths under normal distribution model.\n\n";
     cout<<BOLD<<"SYNOPSIS\n"
-           <<FLAT<<"\t" <<BOLD<<"./lsd " <<FLAT<<"[" <<BOLD<<"-i " <<LINE<<"inputFile" <<FLAT<<"] "
-           <<FLAT<<"[" <<BOLD<<"-d " <<LINE<<"inputDateFile" <<FLAT<<"] "
-           <<FLAT<<"[" <<BOLD<<"-o " <<LINE<<"outputFile" <<FLAT<<"] "
-           <<FLAT<<"[" <<BOLD<<"-s " <<LINE<<"sequenceLength" <<FLAT<<"] "
-           <<FLAT<<"[" <<BOLD<<"-g " <<LINE<<"outgroupFile" <<FLAT<<"] "
-           <<FLAT<<"[" <<BOLD<<"-f " <<LINE<<"nbSamplings" <<FLAT<<"] "
-           <<FLAT<<"\n";
+    <<FLAT<<"\t" <<BOLD<<"./lsd " <<FLAT<<"[" <<BOLD<<"-i " <<LINE<<"inputFile" <<FLAT<<"] "
+    <<FLAT<<"[" <<BOLD<<"-d " <<LINE<<"inputDateFile" <<FLAT<<"] "
+    <<FLAT<<"[" <<BOLD<<"-o " <<LINE<<"outputFile" <<FLAT<<"] "
+    <<FLAT<<"[" <<BOLD<<"-s " <<LINE<<"sequenceLength" <<FLAT<<"] "
+    <<FLAT<<"[" <<BOLD<<"-g " <<LINE<<"outgroupFile" <<FLAT<<"] "
+    <<FLAT<<"[" <<BOLD<<"-f " <<LINE<<"nbSamplings" <<FLAT<<"] "
+    <<FLAT<<"\n";
     
     cout<<BOLD<<"OPTIONS\n"
-           <<FLAT<<"\t" <<BOLD<<"-a " <<LINE<<"rootDate\n"
-           <<FLAT<<"\t   To specify the root date if there's any. If the root date is not a number, but a string (ex: 2020-01-10, or b(2019,2020)) then it should\n"
-           <<FLAT<<"\t   be put between the quotes.\n"
-           <<FLAT<<"\t" <<BOLD<<"-b " <<LINE<<"varianceParameter\n"
-           <<FLAT<<"\t   The parameter (between 0 and 1) to compute the variances in option -v. It is the pseudo positive constant to add to the branch lengths\n"
-           <<FLAT<<"\t   when calculating variances, to adjust the dependency of variances to branch lengths. By default b is the maximum between median branch length\n"
-           <<FLAT<<"\t   and 10/seqlength; but it should be adjusted  based on how/whether the input tree is relaxed or strict. The smaller it is the more variances\n"
-           <<FLAT<<"\t   would be linear to branch lengths, which is relevant for strict clock. The bigger it is the less effect of branch lengths on variances, \n"
-           <<FLAT<<"\t   which might be better for relaxed clock.\n"
-           <<FLAT<<"\t" <<BOLD<<"-d " <<LINE<<"inputDateFile\n"
-           <<FLAT<<"\t   This options is used to read the name of the input date file which contains temporal constraints of internal nodes\n"
-           <<FLAT<<"\t   or tips. An internal node can be defined either by its label (given in the input tree) or by a subset of tips that have it as \n"
-           <<FLAT<<"\t   the most recent common ancestor (mrca). A date could be a real or a string or format year-month-day.\n"
-           <<FLAT<<"\t   The first line of this file is the number of temporal constraints. A temporal constraint can be fixed date, or a \n"
-           <<FLAT<<"\t   lower bound " <<FLAT<<LINE<<"l(value)" <<FLAT<<", or an upper bound " <<FLAT<<LINE<<"u(value)" <<FLAT<<", or an interval " <<LINE<<"b(v1,v2)\n"
-           <<FLAT<<"\t   For example, if the input tree has 4 taxa a,b,c,d, and an internal node named n, then following is a possible date file:\n"
-           <<FLAT<<"\t    6\n"
-           <<FLAT<<"\t    a l(2003.12)\n"
-           <<FLAT<<"\t    b u(2007.07)\n"
-           <<FLAT<<"\t    c 2005\n"
-           <<FLAT<<"\t    d b(2001.2,2007.11)\n"
-           <<FLAT<<"\t    mrca(a,b,c,d) b(2000,2001)\n"
-           <<FLAT<<"\t    n l(2004.3)\n"
-           <<FLAT<<"\t   If this option is omitted, and option -a, -z are also omitted, the program will estimate relative dates by giving T[root]=0 and T[tips]=1.\n"
-           <<FLAT<<"\t" <<BOLD<<"-D " <<LINE<<"outDateFormat\n"
-           <<FLAT<<"\t    Specify output date format: 1 for real, 2 for year-month-day. By default the program will guess the format of input dates and uses it for\n"
-           <<FLAT<<"\t    output dates.\n"
-           <<FLAT<<"\t" <<BOLD<<"-e " <<LINE<<"ZscoreOutlier\n"
-           <<FLAT<<"\t   This option is used to estimate and exclude outlier nodes before dating process.\n"
-           <<FLAT<<"\t   LSD2 normalize the branch residus and decide a node is outlier if its related residus is great than the " <<LINE<<"ZscoreOutlier.\n"
-           <<FLAT<<"\t   A normal value of " <<LINE<<"ZscoreOutlier" <<FLAT<<"could be 3, but you can adjust it bigger/smaller depending if you want to have\n"
-           <<FLAT<<"\t   less/more outliers. Note that for now, some functionalities could not be combined with outliers estimation, for example \n"
-           <<FLAT<<"\t   estimating multiple rates, imprecise date constraints.\n"
-           <<FLAT<<"\t" <<BOLD<<"-E\n"
-           <<FLAT<<"\t   Use this option if you want to estimate the rate of internal and external branches separately.\n"
-           <<FLAT<<"\t" <<BOLD<<"-f " <<LINE<<"samplingNumberCI\n"
-           <<FLAT<<"\t   This option calculates the confidence intervals of the estimated rate and dates. The branch lengths of the esimated tree are sampled\n"
-           <<FLAT<<"\t   " <<FLAT<<LINE<<"samplingNumberCI" <<FLAT<< " times to generate a set of simulated trees. The simulated branch lengths are generated as follow:\n"
-           <<FLAT<<"\t          b_i = Poisson(B_i*seqLen)*lognormal(1,q)\n"
-           <<FLAT<<"\t   where B_i is the branch length estimated by lsd2 and q is the standard deviation of relaxed clock settable via option -q.\n"
-           <<FLAT<<"\t   The first term represents a simulation of number of substitutions on the branch i; and the second term adds the effect of relaxed clock\n"
-           <<FLAT<<"\t   on that branch length. Dating is performed on those simulated trees and give the 5th & 95th percentile as confidence intervals. Confidence \n"
-           <<FLAT<<"\t   intervals are written in the nexus tree with label CI_date, and can be visualzed with Figtree under Node bar feature with CI_height.\n"
-           <<FLAT<<"\t" <<BOLD<<"-g " <<LINE<<"outgroupFile\n"
-           <<FLAT<<"\t   If your data contain outgroups, then specify the name of the outgroup file here. The program will use the outgroups to root the trees.\n"
-           <<FLAT<<"\t   If you use this combined with options -G, then the outgroups will be removed. The format of this file should be:\n"
-           <<FLAT<<"\t        n\n"
-           <<FLAT<<"\t        OUTGROUP1\n"
-           <<FLAT<<"\t        OUTGROUP2\n"
-           <<FLAT<<"\t        ...\n"
-           <<FLAT<<"\t        OUTGROUPn\n"
-           <<FLAT<<"\t" <<BOLD<<"-F \n"
-           <<FLAT<<"\t   By default without this option, we impose the constraints that the date of every node is equal or smaller then the\n"
-           <<FLAT<<"\t   dates of its descendants, so the running time is quasi-linear. Using this option we ignore this temporal constraints, and\n"
-           <<FLAT<<"\t   the the running time becomes linear, much faster.\n"
-           <<FLAT<<"\t" <<BOLD<<"-h " <<LINE<<"help\n"
-           <<FLAT<<"\t   Print this message.\n"
-           <<FLAT<<"\t" <<BOLD<<"-i " <<LINE<<"inputTreesFile\n"
-           <<FLAT<<"\t   The name of the input trees file. It contains tree(s) in newick format, each tree on one line. Note that the taxa sets of all\n"
-           <<FLAT<<"\t   trees must be the same.\n"
-           <<FLAT<<"\t" <<BOLD<<"-j\n"
-           <<FLAT<<"\t   Verbose mode for output messages.\n"
-           <<FLAT<<"\t" <<BOLD<<"-G\n"
-           <<FLAT<<"\t   Use this option to remove the outgroups (given in option -g) in the estimated tree. If this option is not used, the outgroups \n"
-           <<FLAT<<"\t   will be kept and the root position in estimated on the branch defined by the outgroups.\n"
-           <<FLAT<<"\t" <<BOLD<<"-l " <<LINE<<"nullBlen\n"
-           <<FLAT<<"\t   A branch in the input tree is considered informative if its length is greater this value. By default it is 0.5/seq_length. Only \n"
-           <<FLAT<<"\t   informative branches are forced to be bigger than a minimum branch length (see option -u for more information about this).\n"
-           <<FLAT<<"\t" <<BOLD<<"-m " <<LINE<<"samplingNumberOutlier\n"
-           <<FLAT<<"\t   The number of dated nodes to be sampled when detecting outlier nodes. This should be smaller than the number of dated nodes,\n"
-           <<FLAT<<"\t   and is 10 by default.\n"
-           <<FLAT<<"\t" <<BOLD<<"-n " <<LINE<<"datasetNumber\n"
-           <<FLAT<<"\t   The number of trees that you want to read and analyse.\n"
-           <<FLAT<<"\t" <<BOLD<<"-o " <<LINE<<"outputFile\n"
-           <<FLAT<<"\t   The base name of the output files to write the results and the time-scale trees.\n"
-           <<FLAT<<"\t" <<BOLD<<"-p " <<LINE<<"partitionFile\n"
-           <<FLAT<<"\t   The file that defines the partition of branches into multiple subsets in the case that you know each subset has a different rate.\n"
-           <<FLAT<<"\t   In the partition file, each line contains the name of the group, the prior proportion of the group rate compared to the main rate\n"
-           <<FLAT<<"\t   (selecting an appropriate value for this helps to converge faster), and a list of subtrees whose branches are supposed to have the \n"
-           <<FLAT<<"\t   same substitution rate. All branches that are not assigned to any subtree form a group having another rate.\n"
-           <<FLAT<<"\t   A subtree is defined between {}: its first node corresponds to the root of the subtree, and the following nodes (if there any) \n"
-           <<FLAT<<"\t   correspond to the tips of the subtree. If the first node is a tip label then it takes the mrca of all tips as the root of the subtree.\n"
-           <<FLAT<<"\t   If the tips of the subtree are not defined (so there's only the defined root), then by \n"
-           <<FLAT<<"\t   default this subtree is extended down to the tips of the full tree. For example the input tree is \n"
-           <<FLAT<<"\t   ((A:0.12,D:0.12)n1:0.3,((B:0.3,C:0.5)n2:0.4,(E:0.5,(F:0.2,G:0.3)n3:0.33)n4:0.22)n5:0.2)root;\n"
-           <<FLAT<<"\t   and you have the following partition file:\n"
-           <<FLAT<<"\t         group1 1 {n1} {n5 n4}\n"
-           <<FLAT<<"\t         group2 1 {n3}\n"
-           <<FLAT<<"\t   then there are 3 rates: the first one includes the branches (n1,A), (n1,D), (n5,n4), (n5,n2), (n2,B), (n2,C); the second one \n"
-           <<FLAT<<"\t   includes the branches (n3,F), (n3,G), and the last one includes all the remaining branches. If the internal nodes don't have labels,\n"
-           <<FLAT<<"\t   then they can be defined by mrca of at least two tips, for example n1 is mrca(A,D)\n"
-           <<FLAT<<"\t" <<BOLD<<"-q " <<LINE<<"standardDeviationRelaxedClock\n"
-           <<FLAT<<"\t   This value is involved in calculating confidence intervals to simulate a lognormal relaxed clock. We multiply the simulated branch lengths\n"
-           <<FLAT<<"\t   with a lognormal distribution with mean 1, and standard deviation q. By default q is 0.2. The bigger q is, the more your tree is relaxed\n"
-           <<FLAT<<"\t   and give you bigger confidence intervals.\n"
-           <<FLAT<<"\t" <<BOLD<<"-r " <<LINE<<"rootingMethod\n"
-           <<FLAT<<"\t   This option is used to specify the rooting method to estimate the position of the root for unrooted trees, or\n"
-           <<FLAT<<"\t   re-estimate the root for rooted trees. The principle is to search for the position of the root that minimizes\n"
-           <<FLAT<<"\t   the objective function.\n"
-           <<FLAT<<"\t   Use " <<BOLD<<"-r l" <<FLAT<<" if your tree is rooted, and you want to re-estimate the root locally around the given root.\n"
-           <<FLAT<<"\t   Use " <<BOLD<<"-r a" <<FLAT<<" if you want to estimate the root on all branches (ignoring the given root if the tree is rooted).\n"
-           <<FLAT<<"\t       In this case, if the constrained mode is chosen (option -c), method \"a\" first estimates the root without using the constraints.\n"
-           <<FLAT<<"\t       After that, it uses the constrained mode to improve locally the position of the root around this pre-estimated root.\n"
-           <<FLAT<<"\t   Use " <<BOLD<<"-r as" <<FLAT<<" if you want to estimate to root using constrained mode on all branches.\n"
-           <<FLAT<<"\t   Use " <<BOLD<<"-r k" <<FLAT<<" if you want to re-estimate the root position on the same branche of the given root.\n"
-           <<FLAT<<"\t       If combined with option -g, the root will be estimated on the branche defined by the outgroups.\n"
-           <<FLAT<<"\t" <<BOLD<<"-R " <<LINE<<"round_time\n"
-           <<FLAT<<"\t   This value is used to round the minimum branch length of the time scaled tree. The purpose of this is to make the minimum branch length\n"
-           <<FLAT<<"\t   a meaningful time unit, such as day, week, year ... By default this value is 365, so if the input dates are year, the minimum branch\n"
-           <<FLAT<<"\t   length is rounded to day. The rounding formula is round(R*minblen)/R.\n"
-           <<FLAT<<"\t" <<BOLD<<"-s " <<LINE<<"sequenceLength\n"
-           <<FLAT<<"\t   This option is used to specify the sequence length when estimating confidence intervals (option -f). It is used to generate \n"
-           <<FLAT<<"\t   integer branch lengths (number of substitutions) by multiplying this with the estimated branch lengths. By default it is 1000.\n"
-           <<FLAT<<"\t" <<BOLD<<"-S " <<LINE<<"minSupport\n"
-           <<FLAT<<"\t   Together with collapsing internal short branches (see option -l), users can also collapse internal branches having weak support values (if\n"
-           <<FLAT<<"\t   provided in the input tree) by using this option. The program will collapse all internal branches having support <= the specifed value.\n"
-           <<FLAT<<"\t" <<BOLD<<"-t " <<LINE<<"rateLowerBound\n"
-           <<FLAT<<"\t   This option corresponds to the lower bound for the estimating rate. It is 1e-10 by default.\n"
-           <<FLAT<<"\t" <<BOLD<<"-u " <<LINE<<"minBlen\n"
-           <<FLAT<<"\t   Using this option, lsd2 forces every branch of the time scaled tree to be >= minBlen. minBlen is either a positive real or letter e. \n"
-           <<FLAT<<"\t   For the later case lsd2 estimates a minimum branch length, which is m/rate (m is the minimum branch length of the input tree, and \n"
-           <<FLAT<<"\t   rate is an pre-estimated rate). This estimated value is then rounded to the number of days or weeks or years, using the rounding\n"
-           <<FLAT<<"\t   parameter -R. Without this option minBlen = 0 by default.\n"
-           <<FLAT<<"\t" <<BOLD<<"-U " <<LINE<<"minExBlen\n"
-           <<FLAT<<"\t   Similar to option -u but applies for external branches if specified. If it's not specified then the minimum branch length of external\n"
-           <<FLAT<<"\t   branches is set the same as the one of internal branch.\n"
-           <<FLAT<<"\t" <<BOLD<<"-v " <<LINE<<"variance\n"
-           <<FLAT<<"\t   Use this option to specify the way you want to apply variances for the branch lengths. Variances are used to recompense big errors on\n"
-           <<FLAT<<"\t   long estimated branch lengths. The variance of the branch Bi is Vi = (Bi+b) where b is specified by option -b.\n"
-           <<FLAT<<"\t   If " <<FLAT<<LINE<<"variance" <<FLAT<<"=0, then we don't use variance. If " <<FLAT<<LINE<<"variance" <<FLAT<<"=1, then LSD uses the input branch lengths to calculate variances.\n"
-           <<FLAT<<"\t   If " <<FLAT<<LINE<<"variance" <<FLAT<<"=2, then LSD runs twice where the second time it calculates the variances based on the estimated branch\n"
-           <<FLAT<<"\t   lengths of the first run. By default " <<FLAT<<LINE<<"variance" <<FLAT<<"=1.\n"
-           <<FLAT<<"\t" <<BOLD<<"-V \n"
-           <<FLAT<<"\t   Get the actual version.\n"
-           <<FLAT<<"\t" <<BOLD<<"-w " <<LINE<<"givenRte\n"
-           <<FLAT<<"\t   This option is used to specify the name of the file containing the substitution rates.\n"
-           <<FLAT<<"\t   In this case, the program will use the given rates to estimate the dates of the nodes.\n"
-           <<FLAT<<"\t   This file should have the following format\n"
-           <<FLAT<<"\t        RATE1\n"
-           <<FLAT<<"\t        RATE2\n"
-           <<FLAT<<"\t        ...\n"
-           <<FLAT<<"\t  where RATEi is the rate of the tree i in the inputTreesFile.\n"
-           <<FLAT<<"\t" <<BOLD<<"-z " <<LINE<<"tipsDate\n"
-           <<FLAT<<"\t   To specify the tips date if they are all equal. If the tips date is not a number, but a string (ex: 2020-01-10, or b(2019,2020))\n"
-           <<FLAT<<"\t   then it should be put between the quotes.\n";
+    <<FLAT<<"\t" <<BOLD<<"-a " <<LINE<<"rootDate\n"
+    <<FLAT<<"\t   To specify the root date if there's any. If the root date is not a number, but a string (ex: 2020-01-10, or b(2019,2020)) then it should\n"
+    <<FLAT<<"\t   be put between the quotes.\n"
+    <<FLAT<<"\t" <<BOLD<<"-b " <<LINE<<"varianceParameter\n"
+    <<FLAT<<"\t   The parameter (between 0 and 1) to compute the variances in option -v. It is the pseudo positive constant to add to the branch lengths\n"
+    <<FLAT<<"\t   when calculating variances, to adjust the dependency of variances to branch lengths. By default b is the maximum between median branch length\n"
+    <<FLAT<<"\t   and 10/seqlength; but it should be adjusted  based on how/whether the input tree is relaxed or strict. The smaller it is the more variances\n"
+    <<FLAT<<"\t   would be linear to branch lengths, which is relevant for strict clock. The bigger it is the less effect of branch lengths on variances, \n"
+    <<FLAT<<"\t   which might be better for relaxed clock.\n"
+    <<FLAT<<"\t" <<BOLD<<"-d " <<LINE<<"inputDateFile\n"
+    <<FLAT<<"\t   This options is used to read the name of the input date file which contains temporal constraints of internal nodes\n"
+    <<FLAT<<"\t   or tips. An internal node can be defined either by its label (given in the input tree) or by a subset of tips that have it as \n"
+    <<FLAT<<"\t   the most recent common ancestor (mrca). A date could be a real or a string or format year-month-day.\n"
+    <<FLAT<<"\t   The first line of this file is the number of temporal constraints. A temporal constraint can be fixed date, or a \n"
+    <<FLAT<<"\t   lower bound " <<FLAT<<LINE<<"l(value)" <<FLAT<<", or an upper bound " <<FLAT<<LINE<<"u(value)" <<FLAT<<", or an interval " <<LINE<<"b(v1,v2)\n"
+    <<FLAT<<"\t   For example, if the input tree has 4 taxa a,b,c,d, and an internal node named n, then following is a possible date file:\n"
+    <<FLAT<<"\t    6\n"
+    <<FLAT<<"\t    a l(2003.12)\n"
+    <<FLAT<<"\t    b u(2007.07)\n"
+    <<FLAT<<"\t    c 2005\n"
+    <<FLAT<<"\t    d b(2001.2,2007.11)\n"
+    <<FLAT<<"\t    mrca(a,b,c,d) b(2000,2001)\n"
+    <<FLAT<<"\t    n l(2004.3)\n"
+    <<FLAT<<"\t   If this option is omitted, and option -a, -z are also omitted, the program will estimate relative dates by giving T[root]=0 and T[tips]=1.\n"
+    <<FLAT<<"\t" <<BOLD<<"-D " <<LINE<<"outDateFormat\n"
+    <<FLAT<<"\t    Specify output date format: 1 for real, 2 for year-month-day. By default the program will guess the format of input dates and uses it for\n"
+    <<FLAT<<"\t    output dates.\n"
+    <<FLAT<<"\t" <<BOLD<<"-e " <<LINE<<"ZscoreOutlier\n"
+    <<FLAT<<"\t   This option is used to estimate and exclude outlier nodes before dating process.\n"
+    <<FLAT<<"\t   LSD2 normalize the branch residus and decide a node is outlier if its related residus is great than the " <<LINE<<"ZscoreOutlier.\n"
+    <<FLAT<<"\t   A normal value of " <<LINE<<"ZscoreOutlier" <<FLAT<<"could be 3, but you can adjust it bigger/smaller depending if you want to have\n"
+    <<FLAT<<"\t   less/more outliers. Note that for now, some functionalities could not be combined with outliers estimation, for example \n"
+    <<FLAT<<"\t   estimating multiple rates, imprecise date constraints.\n"
+    <<FLAT<<"\t" <<BOLD<<"-E\n"
+    <<FLAT<<"\t   Use this option if you want to estimate the rate of internal and external branches separately.\n"
+    <<FLAT<<"\t" <<BOLD<<"-f " <<LINE<<"samplingNumberCI or bootstrapTreeFile\n"
+    <<FLAT<<"\t   This option calculates the confidence intervals of the estimated rate and dates. If the bootstrap trees file is specified, then dating is \n"
+    <<FLAT<<"\t   processed on each of these trees, and the 2.5th and 97.5th percentile of calculated rates and dates are reported as confidence intervals.\n"
+    <<FLAT<<"\t   If there's no bootstrap trees, then we simulate a set of trees. In this case, the number of simulated trees should be specified. Those \n"
+    <<FLAT<<"\t   trees have the same topology as the original one, and their branch lengths are generated as follow:\n"
+    <<FLAT<<"\t          b_i = Poisson(B_i*seqLen)*lognormal(1,q)\n"
+    <<FLAT<<"\t   where B_i is the branch length estimated by lsd2 and q is the standard deviation of relaxed clock settable via option -q.\n"
+    <<FLAT<<"\t   So the first term represents a simulation for the number of substitutions on the branch i; and the second term adds the effect of relaxed\n"
+    <<FLAT<<"\t   clock on that branch length.\n"
+    <<FLAT<<"\t   Confidence intervals are written in the nexus tree with label CI_date, and can be visualzed with Figtree under Node bar feature with CI_height.\n"
+    <<FLAT<<"\t" <<BOLD<<"-g " <<LINE<<"outgroupFile\n"
+    <<FLAT<<"\t   If your data contain outgroups, then specify the name of the outgroup file here. The program will use the outgroups to root the trees.\n"
+    <<FLAT<<"\t   If you use this combined with options -G, then the outgroups will be removed. The format of this file should be:\n"
+    <<FLAT<<"\t        n\n"
+    <<FLAT<<"\t        OUTGROUP1\n"
+    <<FLAT<<"\t        OUTGROUP2\n"
+    <<FLAT<<"\t        ...\n"
+    <<FLAT<<"\t        OUTGROUPn\n"
+    <<FLAT<<"\t" <<BOLD<<"-F \n"
+    <<FLAT<<"\t   By default without this option, we impose the constraints that the date of every node is equal or smaller then the\n"
+    <<FLAT<<"\t   dates of its descendants, so the running time is quasi-linear. Using this option we ignore this temporal constraints, and\n"
+    <<FLAT<<"\t   the the running time becomes linear, much faster.\n"
+    <<FLAT<<"\t" <<BOLD<<"-h " <<LINE<<"help\n"
+    <<FLAT<<"\t   Print this message.\n"
+    <<FLAT<<"\t" <<BOLD<<"-i " <<LINE<<"inputTreesFile\n"
+    <<FLAT<<"\t   The name of the input trees file. It contains tree(s) in newick format, each tree on one line. Note that the taxa sets of all\n"
+    <<FLAT<<"\t   trees must be the same.\n"
+    <<FLAT<<"\t" <<BOLD<<"-j\n"
+    <<FLAT<<"\t   Verbose mode for output messages.\n"
+    <<FLAT<<"\t" <<BOLD<<"-G\n"
+    <<FLAT<<"\t   Use this option to remove the outgroups (given in option -g) in the estimated tree. If this option is not used, the outgroups \n"
+    <<FLAT<<"\t   will be kept and the root position in estimated on the branch defined by the outgroups.\n"
+    <<FLAT<<"\t" <<BOLD<<"-l " <<LINE<<"nullBlen\n"
+    <<FLAT<<"\t   A branch in the input tree is considered informative if its length is greater this value. By default it is 0.5/seq_length. Only \n"
+    <<FLAT<<"\t   informative branches are forced to be bigger than a minimum branch length (see option -u for more information about this).\n"
+    <<FLAT<<"\t" <<BOLD<<"-m " <<LINE<<"samplingNumberOutlier\n"
+    <<FLAT<<"\t   The number of dated nodes to be sampled when detecting outlier nodes. This should be smaller than the number of dated nodes,\n"
+    <<FLAT<<"\t   and is 10 by default.\n"
+    <<FLAT<<"\t" <<BOLD<<"-n " <<LINE<<"datasetNumber\n"
+    <<FLAT<<"\t   The number of trees that you want to read and analyse.\n"
+    <<FLAT<<"\t" <<BOLD<<"-o " <<LINE<<"outputFile\n"
+    <<FLAT<<"\t   The base name of the output files to write the results and the time-scale trees.\n"
+    <<FLAT<<"\t" <<BOLD<<"-p " <<LINE<<"partitionFile\n"
+    <<FLAT<<"\t   The file that defines the partition of branches into multiple subsets in the case that you know each subset has a different rate.\n"
+    <<FLAT<<"\t   In the partition file, each line contains the name of the group, the prior proportion of the group rate compared to the main rate\n"
+    <<FLAT<<"\t   (selecting an appropriate value for this helps to converge faster), and a list of subtrees whose branches are supposed to have the \n"
+    <<FLAT<<"\t   same substitution rate. All branches that are not assigned to any subtree form a group having another rate.\n"
+    <<FLAT<<"\t   A subtree is defined between {}: its first node corresponds to the root of the subtree, and the following nodes (if there any) \n"
+    <<FLAT<<"\t   correspond to the tips of the subtree. If the first node is a tip label then it takes the mrca of all tips as the root of the subtree.\n"
+    <<FLAT<<"\t   If the tips of the subtree are not defined (so there's only the defined root), then by \n"
+    <<FLAT<<"\t   default this subtree is extended down to the tips of the full tree. For example the input tree is \n"
+    <<FLAT<<"\t   ((A:0.12,D:0.12)n1:0.3,((B:0.3,C:0.5)n2:0.4,(E:0.5,(F:0.2,G:0.3)n3:0.33)n4:0.22)n5:0.2)root;\n"
+    <<FLAT<<"\t   and you have the following partition file:\n"
+    <<FLAT<<"\t         group1 1 {n1} {n5 n4}\n"
+    <<FLAT<<"\t         group2 1 {n3}\n"
+    <<FLAT<<"\t   then there are 3 rates: the first one includes the branches (n1,A), (n1,D), (n5,n4), (n5,n2), (n2,B), (n2,C); the second one \n"
+    <<FLAT<<"\t   includes the branches (n3,F), (n3,G), and the last one includes all the remaining branches. If the internal nodes don't have labels,\n"
+    <<FLAT<<"\t   then they can be defined by mrca of at least two tips, for example n1 is mrca(A,D)\n"
+    <<FLAT<<"\t" <<BOLD<<"-q " <<LINE<<"standardDeviationRelaxedClock\n"
+    <<FLAT<<"\t   This value is involved in calculating confidence intervals to simulate a lognormal relaxed clock. We multiply the simulated branch lengths\n"
+    <<FLAT<<"\t   with a lognormal distribution with mean 1, and standard deviation q. By default q is 0.2. The bigger q is, the more your tree is relaxed\n"
+    <<FLAT<<"\t   and give you bigger confidence intervals.\n"
+    <<FLAT<<"\t" <<BOLD<<"-r " <<LINE<<"rootingMethod\n"
+    <<FLAT<<"\t   This option is used to specify the rooting method to estimate the position of the root for unrooted trees, or\n"
+    <<FLAT<<"\t   re-estimate the root for rooted trees. The principle is to search for the position of the root that minimizes\n"
+    <<FLAT<<"\t   the objective function.\n"
+    <<FLAT<<"\t   Use " <<BOLD<<"-r l" <<FLAT<<" if your tree is rooted, and you want to re-estimate the root locally around the given root.\n"
+    <<FLAT<<"\t   Use " <<BOLD<<"-r a" <<FLAT<<" if you want to estimate the root on all branches (ignoring the given root if the tree is rooted).\n"
+    <<FLAT<<"\t       In this case, if the constrained mode is chosen (option -c), method \"a\" first estimates the root without using the constraints.\n"
+    <<FLAT<<"\t       After that, it uses the constrained mode to improve locally the position of the root around this pre-estimated root.\n"
+    <<FLAT<<"\t   Use " <<BOLD<<"-r as" <<FLAT<<" if you want to estimate to root using constrained mode on all branches.\n"
+    <<FLAT<<"\t   Use " <<BOLD<<"-r k" <<FLAT<<" if you want to re-estimate the root position on the same branche of the given root.\n"
+    <<FLAT<<"\t       If combined with option -g, the root will be estimated on the branche defined by the outgroups.\n"
+    <<FLAT<<"\t" <<BOLD<<"-R " <<LINE<<"round_time\n"
+    <<FLAT<<"\t   This value is used to round the minimum branch length of the time scaled tree. The purpose of this is to make the minimum branch length\n"
+    <<FLAT<<"\t   a meaningful time unit, such as day, week, year ... By default this value is 365, so if the input dates are year, the minimum branch\n"
+    <<FLAT<<"\t   length is rounded to day. The rounding formula is round(R*minblen)/R.\n"
+    <<FLAT<<"\t" <<BOLD<<"-s " <<LINE<<"sequenceLength\n"
+    <<FLAT<<"\t   This option is used to specify the sequence length when estimating confidence intervals (option -f). It is used to generate \n"
+    <<FLAT<<"\t   integer branch lengths (number of substitutions) by multiplying this with the estimated branch lengths. By default it is 1000.\n"
+    <<FLAT<<"\t" <<BOLD<<"-S " <<LINE<<"minSupport\n"
+    <<FLAT<<"\t   Together with collapsing internal short branches (see option -l), users can also collapse internal branches having weak support values (if\n"
+    <<FLAT<<"\t   provided in the input tree) by using this option. The program will collapse all internal branches having support <= the specifed value.\n"
+    <<FLAT<<"\t" <<BOLD<<"-t " <<LINE<<"rateLowerBound\n"
+    <<FLAT<<"\t   This option corresponds to the lower bound for the estimating rate. It is 1e-10 by default.\n"
+    <<FLAT<<"\t" <<BOLD<<"-u " <<LINE<<"minBlen\n"
+    <<FLAT<<"\t   Using this option, lsd2 forces every branch of the time scaled tree to be >= minBlen. minBlen is either a positive real or letter e. \n"
+    <<FLAT<<"\t   For the later case lsd2 estimates a minimum branch length, which is m/rate (m is the minimum branch length of the input tree, and \n"
+    <<FLAT<<"\t   rate is an pre-estimated rate). This estimated value is then rounded to the number of days or weeks or years, using the rounding\n"
+    <<FLAT<<"\t   parameter -R. Without this option minBlen = 0 by default.\n"
+    <<FLAT<<"\t" <<BOLD<<"-U " <<LINE<<"minExBlen\n"
+    <<FLAT<<"\t   Similar to option -u but applies for external branches if specified. If it's not specified then the minimum branch length of external\n"
+    <<FLAT<<"\t   branches is set the same as the one of internal branch.\n"
+    <<FLAT<<"\t" <<BOLD<<"-v " <<LINE<<"variance\n"
+    <<FLAT<<"\t   Use this option to specify the way you want to apply variances for the branch lengths. Variances are used to recompense big errors on\n"
+    <<FLAT<<"\t   long estimated branch lengths. The variance of the branch Bi is Vi = (Bi+b) where b is specified by option -b.\n"
+    <<FLAT<<"\t   If " <<FLAT<<LINE<<"variance" <<FLAT<<"=0, then we don't use variance. If " <<FLAT<<LINE<<"variance" <<FLAT<<"=1, then LSD uses the input branch lengths to calculate variances.\n"
+    <<FLAT<<"\t   If " <<FLAT<<LINE<<"variance" <<FLAT<<"=2, then LSD runs twice where the second time it calculates the variances based on the estimated branch\n"
+    <<FLAT<<"\t   lengths of the first run. By default " <<FLAT<<LINE<<"variance" <<FLAT<<"=1.\n"
+    <<FLAT<<"\t" <<BOLD<<"-V \n"
+    <<FLAT<<"\t   Get the actual version.\n"
+    <<FLAT<<"\t" <<BOLD<<"-w " <<LINE<<"givenRte\n"
+    <<FLAT<<"\t   This option is used to specify the name of the file containing the substitution rates.\n"
+    <<FLAT<<"\t   In this case, the program will use the given rates to estimate the dates of the nodes.\n"
+    <<FLAT<<"\t   This file should have the following format\n"
+    <<FLAT<<"\t        RATE1\n"
+    <<FLAT<<"\t        RATE2\n"
+    <<FLAT<<"\t        ...\n"
+    <<FLAT<<"\t  where RATEi is the rate of the tree i in the inputTreesFile.\n"
+    <<FLAT<<"\t" <<BOLD<<"-z " <<LINE<<"tipsDate\n"
+    <<FLAT<<"\t   To specify the tips date if they are all equal. If the tips date is not a number, but a string (ex: 2020-01-10, or b(2019,2020))\n"
+    <<FLAT<<"\t   then it should be put between the quotes.\n";
 }
 string getInputString(string msg)
 {
@@ -744,7 +755,7 @@ double getInputPositiveReal( string msg )
     {
         word = getInputString( msg );
         if( isReal(word.c_str()) && atof( word.c_str())>0)
-	  break;
+            break;
         myErrorMsg("Your word is not recognized as a strictly positive real.\n");
     } while( true );
     return atof( word.c_str() );
@@ -839,7 +850,7 @@ bool isOptionActivate( Pr* opt, char l )
         case 'z':
         case 'h':
         case 'E':
-        return true;
+            return true;
     }
     return false;
 }
@@ -975,11 +986,11 @@ void setOptionsWithLetter( Pr* opt, char letter)
             break;
         case 'G':
             if (opt->fnOutgroup!=""){
-            	opt->removeOutgroup=!opt->removeOutgroup;
-            	if (!opt->removeOutgroup) {
-                	opt->estimate_root="k";
-            	}
-	    }
+                opt->removeOutgroup=!opt->removeOutgroup;
+                if (!opt->removeOutgroup) {
+                    opt->estimate_root="k";
+                }
+            }
             break;
         case 'w':
             if (opt->rate=="") {
@@ -998,10 +1009,16 @@ void setOptionsWithLetter( Pr* opt, char letter)
         case 'f':
             if (!opt->ci) {
                 opt->nbSampling = getInputInteger("Enter the number of sampling for calculating confidence intervals> ");
+                opt->bootstraps_file = "";
                 opt->ci=true;
             }
             else{
-                opt->ci = false;
+                if (opt->bootstraps_file==""){
+                   opt->bootstraps_file = getInputFileName("Enter your bootstrap trees file> ");
+                   opt->ci = true;
+                } else{
+                    opt->ci = false;
+                }
             }
             break;
         case 'j':

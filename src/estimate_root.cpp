@@ -453,9 +453,6 @@ bool with_constraint_lambda(double br,Pr* &pr,Node** &nodes,list<int> active_set
             }
             else if (!tc(nodes[-i]) && leaf(nodes[-i])) ls.push_back(-i);//only limit constraint
         }
-        /*for (list<int>::iterator iter = ls.begin();iter!=ls.end();iter++){
-            cout<<*iter<<" ";
-        }cout<<endl;*/
         stack<int>* feuilles = computeFeuilles_polytomy(ls,pr,nodes);
         list<int> top;
         for (int i=0;i<pr->nbINodes;i++){

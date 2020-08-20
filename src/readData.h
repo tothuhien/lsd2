@@ -9,4 +9,4 @@ Node** tree2data(istream& tree,Pr* pr,int & s);
 void readInputDate(InputOutputStream* io, Pr* pr,Node** &nodes,bool& constraintConsistent);
 void readPartitionFile(istream &partFile, Pr* pr);
 int tree2dataS(FILE *,Pr*,Node**);
-void extrait_outgroup(InputOutputStream *io, Pr* pr);
+void extrait_outgroup(InputOutputStream *io, Pr* pr, bool useBootstrapTree);

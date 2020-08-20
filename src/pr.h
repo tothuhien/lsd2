@@ -15,6 +15,7 @@ typedef struct Pr
     string  inFile;         //Nom du fichier d'arbres
     string  inDateFile;     //Nom du fichier contenant les dates
     string partitionFile;   //Nom du fichier contenant la partition des arretes pour different taux
+    string bootstraps_file; //Name of the file containing bootstrap trees
     string  outFile;        //Nom du fichier de resultats.
     string treeFile1;       //Nom du fichier d'abres sorties Nexus
     string treeFile2;       //Nom du fichier d'arbres sorties Nexus avec des longueurs de branches mesures par des temps ecoules
@@ -25,7 +26,8 @@ typedef struct Pr
     double leaves;
     string LEAVES;
     int    seqLength;      //Longueur des sequences dans l'alignement
-    int    nbData;         //Nombre de cas a  traiter (dans le cas de bootstrap)
+    int    nbData;         //Nombre de cas a  traiter
+    int    nbBootstrap;     //Number of bootstrap trees
     string fnOutgroup;
     string rate;           //le fichier contient les taux en entree
     string estimate_root;    //Method to estimate root
@@ -76,21 +78,23 @@ typedef struct Pr
         inFile = pr->inFile;
         inDateFile = pr->inDateFile;
         partitionFile = pr->partitionFile;
+        bootstraps_file = pr->bootstraps_file;
+        fnOutgroup = pr->fnOutgroup;
         outFile = pr->outFile;
         treeFile1 = pr->treeFile1;
         treeFile2 = pr->treeFile2;
-        //relative=pr->relative;
         mrca=pr->mrca;
         MRCA=pr->MRCA;
         leaves=pr->leaves;
         LEAVES=pr->LEAVES;
-        seqLength=pr->seqLength; 
+        seqLength=pr->seqLength;
         nbData=pr->nbData;
+        nbBootstrap = pr->nbBootstrap;
         rate=pr->rate;
         estimate_root = pr->estimate_root;
         rooted=pr->rooted;
-        constraint=pr->constraint;  
-        variance=pr->variance;  
+        constraint=pr->constraint;
+        variance=pr->variance;
         ci=pr->ci;
         q=pr->q;
         c=pr->c;
@@ -128,12 +132,14 @@ typedef struct Pr
         inFile = "";
         inDateFile = "";
         partitionFile = "";
+        bootstraps_file = "";
         outFile = "";
         treeFile1 = "";
         treeFile2 = "";
         fnOutgroup = "";
         seqLength = 1000;
         nbData = 1;
+        nbBootstrap = 0;
         rate = "";
         //relative = false;
         mrca=0;

@@ -44,7 +44,7 @@ int lsd::buildTimeTree( int argc, char** argv, InputOutputStream *inputOutput)
     clock_t start = clock();
     double elapsed_time;
     if (io->inOutgroup){
-        extrait_outgroup(io, opt);
+        extrait_outgroup(io, opt, false);
     }
     *(io->outTree1)<<"#NEXUS\n";
     *(io->outTree2)<<"#NEXUS\n";
@@ -77,7 +77,9 @@ int lsd::buildTimeTree( int argc, char** argv, InputOutputStream *inputOutput)
                 if (nodes[i]->B < minB) minB = nodes[i]->B;
             }
         }
-        collapseUnInformativeBranches(opt,nodes);
+        if (opt->bootstraps_file==""){
+            collapseUnInformativeBranches(opt,nodes);
+        }
         if (!opt->rooted){
             nodes = unrooted2rooted(opt,nodes);
         }
@@ -96,6 +98,7 @@ int lsd::buildTimeTree( int argc, char** argv, InputOutputStream *inputOutput)
         }
         computeVariance(opt,nodes);
         double br=0;
+        int r=0;
         if (opt->givenRate[0]){
             string line;
             if( getline(*(io->inRate), line)) {
@@ -128,10 +131,10 @@ int lsd::buildTimeTree( int argc, char** argv, InputOutputStream *inputOutput)
             if (opt->estimate_root==""){//keep the given root
                 cout<<"Dating without temporal constraints ..."<<endl;
                 without_constraint_multirates(opt,nodes,true);
-                output(br,y,opt,nodes,*(io->outResult),*(io->outTree1),*(io->outTree2),*(io->outTree3));
+                output(br,y,io, opt,nodes,*(io->outResult),*(io->outTree1),*(io->outTree2),*(io->outTree3),r);
             }
             else if (opt->estimate_root=="k"){
-                cout<<"Estimating the root position on the branch defined by given root ..."<<endl;
+                cout<<"Estimating the root position on the branch defined by given outgroups ..."<<endl;
                 double br=0;
                 vector<int>::iterator iter=nodes[0]->suc.begin();
                 int s1=(*iter);
@@ -142,14 +145,13 @@ int lsd::buildTimeTree( int argc, char** argv, InputOutputStream *inputOutput)
                 nodes[s2]->V=nodes[s1]->V;
                 constraintConsistent = without_constraint_active_set_lambda_multirates(br,opt,nodes,true);
                 if (constraintConsistent){
-                    output(br,y,opt,nodes,*(io->outResult),*(io->outTree1),*(io->outTree2),*(io->outTree3));
+                    output(br,y,io, opt,nodes,*(io->outResult),*(io->outTree1),*(io->outTree2),*(io->outTree3),r);
                 }
                 else{
                     myExit("There's conflict or not enough signal in the input temporal constraints.\n");
                 }
             }
             else{//estimate the root
-                int r;
                 if (opt->estimate_root.compare("l")==0){//improve locally the root around the given root
                     cout<<"Estimating the root position locally around the given root ..."<<endl;
                     r=estimate_root_without_constraint_local_rooted(opt,nodes);
@@ -169,7 +171,7 @@ int lsd::buildTimeTree( int argc, char** argv, InputOutputStream *inputOutput)
                     }
                     reroot_rootedtree(br,r,s1,s2,opt,nodes,nodes_new);
                     without_constraint_active_set_lambda_multirates(br,opt,nodes_new,true);
-                    output(br,y,opt,nodes_new,*(io->outResult),*(io->outTree1),*(io->outTree2),*(io->outTree3));
+                    output(br,y,io, opt,nodes_new,*(io->outResult),*(io->outTree1),*(io->outTree2),*(io->outTree3),r);
                     for (int i=0;i<opt->nbBranches+1;i++) delete nodes_new[i];
                     delete[] nodes_new;
                 }
@@ -185,7 +187,7 @@ int lsd::buildTimeTree( int argc, char** argv, InputOutputStream *inputOutput)
                             constraintConsistent = with_constraint_multirates(opt,nodes,true);
                         }
                         if (constraintConsistent) {
-                            output(br,y,opt,nodes,*(io->outResult),*(io->outTree1),*(io->outTree2),*(io->outTree3));
+                            output(br,y,io, opt,nodes,*(io->outResult),*(io->outTree1),*(io->outTree2),*(io->outTree3),r);
                         }
                         else{
                             myExit("There's conflict or not enough signal in the input temporal constraints.\n");
@@ -205,13 +207,12 @@ int lsd::buildTimeTree( int argc, char** argv, InputOutputStream *inputOutput)
                             constraintConsistent = with_constraint_active_set_lambda_multirates(br,opt,nodes,true);
                         }
                         if (constraintConsistent) {
-                            output(br,y,opt,nodes,*(io->outResult),*(io->outTree1),*(io->outTree2),*(io->outTree3));
+                            output(br,y,io, opt,nodes,*(io->outResult),*(io->outTree1),*(io->outTree2),*(io->outTree3),r);
                         } else {
                             myExit("There's conflict or not enough signal in the input temporal constraints.\n");
                         }
                     }
                     else{//estimate the root
-                        int r;
                         if (opt->estimate_root.compare("l")==0){//improve locally the root around the given root
                             cout<<"Estimating the root position locally around the given root ..."<<endl;
                             r=estimate_root_with_constraint_local_rooted(opt,nodes);
@@ -235,7 +236,7 @@ int lsd::buildTimeTree( int argc, char** argv, InputOutputStream *inputOutput)
                         }
                         reroot_rootedtree(br,r,s1,s2,opt,nodes,nodes_new);
                         with_constraint_active_set_lambda_multirates(br,opt,nodes_new,true);
-                        output(br,y,opt,nodes_new,*(io->outResult),*(io->outTree1),*(io->outTree2),*(io->outTree3));
+                        output(br,y,io, opt,nodes_new,*(io->outResult),*(io->outTree1),*(io->outTree2),*(io->outTree3),r);
                         for (int i=0;i<opt->nbBranches+1;i++) delete nodes_new[i];
                         delete[] nodes_new;
                     }
@@ -256,8 +257,9 @@ int lsd::buildTimeTree( int argc, char** argv, InputOutputStream *inputOutput)
     *(io->outTree1)<<"End;\n";
     *(io->outTree2)<<"End;\n";
     cout<<"\nTOTAL ELAPSED TIME: "<<elapsed_time<<" seconds"<<endl;
-    if (!inputOutput)
+    if (!inputOutput){
         delete io;
+    }
     return EXIT_SUCCESS;
 }
 

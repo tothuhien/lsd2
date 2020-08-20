@@ -1011,7 +1011,6 @@ bool with_constraint_multirates(Pr* pr,Node** nodes,bool reassign){
         for (int i=1;i<pr->multiplierRate.size();i++) cout<<pr->multiplierRate[i]<<" ";
     }
     bool val = with_constraint_active_set(pr,nodes);
-    if (pr->verbose) cout<<pr->rho<<endl;
     if (pr->ratePartition.size()>0) {
         /*printf("ROUND 0 , objective function %.15e , rate %.15f ",pr->objective,pr->rho);
         for (int r=1; r<=pr->ratePartition.size(); r++) {

@@ -41,10 +41,17 @@ public:
      @param str a tree string
      */
     virtual void setTree(string str);
+    
+    /**
+     set the content of the bootstrap tree stream
+     @param str a tree string
+     */
+    virtual void setBootstrapTree(string str);
 
 protected:
     /** true tree is a file, false other (e.g. stringstream) */
     bool treeIsFile;
+    bool bootstrapTreeIsFile;
 };
 
 

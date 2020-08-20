@@ -409,14 +409,25 @@ int getBranchOut(Pr* pr,Node** nodes,list<string> &outgroups,bool &keepBelow){
     }
 }
 
-void extrait_outgroup(InputOutputStream *io, Pr* pr){
+void extrait_outgroup(InputOutputStream *io, Pr* pr, bool useBootstrapTree){
     int s =0;
+    io->inOutgroup->seekg(0);
     list<string> outgroups = getOutgroup(*(io->inOutgroup), pr->fnOutgroup);
     ostringstream w;
-    for (int y=0;y<pr->nbData;y++){
-        if (!pr->removeOutgroup) cout<<"Reroot the tree "<<y+1<<" using given outgroups ...\n";
-        else cout<<"Removing outgroups of tree "<<y+1<<" ...\n";
-        Node** nodes = tree2data(*(io->inTree),pr,s);
+    int nbData = pr->nbData;
+    if (useBootstrapTree) nbData = pr->nbBootstrap;
+    else{
+        if (!pr->removeOutgroup) cout<<"Reroot the tree(s) using given outgroups ...\n";
+        else cout<<"Removing outgroups of tree(s) ...\n";
+    }
+    for (int y=0;y<nbData;y++){
+        Node** nodes;
+        pr->rooted = false;
+        if (!useBootstrapTree){
+            nodes = tree2data(*(io->inTree),pr,s);
+        } else{
+            nodes = tree2data(*(io->inBootstrapTree),pr,s);
+        }
         if (!pr->rooted) {
             nodes=unrooted2rootedS(pr, nodes, s);
         } else{
@@ -436,7 +447,7 @@ void extrait_outgroup(InputOutputStream *io, Pr* pr){
                 w << newick(p_r, p_r,pr, nodes_new,nbTips).c_str();
             }
             if ((nbTips+outgroups.size()) != (pr->nbBranches+1 - pr->nbINodes)){
-                cerr<<"Error: The outgroups do not form a monophyletic in the input tree."<<endl;
+                cerr<<"Error: The outgroups do not form a monophyletic in the tree "<<y+1<<endl;
                 exit(EXIT_FAILURE);
             }
             if (!pr->removeOutgroup) {
@@ -453,6 +464,10 @@ void extrait_outgroup(InputOutputStream *io, Pr* pr){
         for (int i=0;i<=pr->nbBranches;i++) delete nodes[i];
         delete[] nodes;
     }
-    io->setTree(w.str());
+    if (!useBootstrapTree){
+       io->setTree(w.str());
+    } else{
+        io->setBootstrapTree(w.str());
+    }
 }
 

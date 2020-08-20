@@ -23,23 +23,26 @@ InputOutputStream::InputOutputStream () {
     inDate = nullptr;
     inRate = nullptr;
     inPartition = nullptr;
+    inBootstrapTree = nullptr;
     outResult = nullptr;
     outTree1 = nullptr;
     outTree2 = nullptr;
     outTree3 = nullptr;
 }
 
-InputOutputStream::InputOutputStream(string tree, string outgroup, string date, string rate, string partition) {
+InputOutputStream::InputOutputStream(string tree, string outgroup, string date, string rate, string partition, string bootstrap) {
     inTree = nullptr;
     inOutgroup = nullptr;
     inDate = nullptr;
     inRate = nullptr;
     inPartition = nullptr;
+    inBootstrapTree = nullptr;
     setTree(tree);
     setOutgroup(outgroup);
     setDate(date);
     setRate(rate);
     setPartition(partition);
+    setBootstrapTree(bootstrap);
     outResult = new ostringstream;
     outTree1 = new ostringstream;
     outTree2 = new ostringstream;
@@ -66,6 +69,10 @@ InputOutputStream::~InputOutputStream() {
     if (inRate) {
         delete inRate;
         inRate = nullptr;
+    }
+    if (inBootstrapTree) {
+        delete inBootstrapTree;
+        inBootstrapTree = nullptr;
     }
     if (outResult) {
         delete outResult;
@@ -115,6 +122,13 @@ void InputOutputStream::setPartition(string str) {
     inPartition = new istringstream(str);
 }
 
+void InputOutputStream::setBootstrapTree(string str) {
+    if (str.empty())
+        return;
+    if (inBootstrapTree)
+        delete inBootstrapTree;
+    inBootstrapTree = new istringstream(str);
+}
 void InputOutputStream::setRate(string str) {
     if (str.empty())
         return;
@@ -125,6 +139,7 @@ void InputOutputStream::setRate(string str) {
 
 InputOutputFile::InputOutputFile(Pr *opt) : InputOutputStream() {
     treeIsFile = true;
+    bootstrapTreeIsFile = true;
     // open the tree file
     ifstream *tree_file = new ifstream(opt->inFile);
     inTree = tree_file;
@@ -152,17 +167,26 @@ InputOutputFile::InputOutputFile(Pr *opt) : InputOutputStream() {
             exit(EXIT_FAILURE);
         }
     }
-
+    
     // open partition file
     if (opt->partitionFile != "") {
         ifstream *part_file = new ifstream(opt->partitionFile);
         inPartition = part_file;
         if (!part_file->is_open()) {
-            cerr << "Error: cannot open date file " << opt->partitionFile << endl;
+            cerr << "Error: cannot open partition file " << opt->partitionFile << endl;
             exit(EXIT_FAILURE);
         }
     }
     
+    // open bootstrap tree file
+    if (opt->bootstraps_file != "") {
+        ifstream *bootstrap_file = new ifstream(opt->bootstraps_file);
+        inBootstrapTree = bootstrap_file;
+        if (!bootstrap_file->is_open()) {
+            cerr << "Error: cannot open bootstrap file " << opt->bootstraps_file << endl;
+            exit(EXIT_FAILURE);
+        }
+    }
     // open given rate file
     if (opt->rate != "") {
         ifstream *rate_file = new ifstream(opt->rate);
@@ -172,7 +196,7 @@ InputOutputFile::InputOutputFile(Pr *opt) : InputOutputStream() {
             exit(EXIT_FAILURE);
         }
     }
-
+    
     
     // open the result file
     ofstream *result_file = new ofstream(opt->outFile);
@@ -181,21 +205,21 @@ InputOutputFile::InputOutputFile(Pr *opt) : InputOutputStream() {
         cerr << "Error: cannot create the output file "<< opt->outFile << endl;
         exit(EXIT_FAILURE);
     }
-
+    
     ofstream *tree1_file = new ofstream(opt->treeFile1);
     outTree1 = tree1_file;
     if (!tree1_file->is_open()) {
         cerr << "Error: can not create the output tree file " << opt->treeFile1 << endl;
         exit(EXIT_FAILURE);
     }
-
+    
     ofstream *tree2_file = new ofstream(opt->treeFile2);
     outTree2 = tree2_file;
     if (!tree2_file->is_open()) {
         cerr << "Error: can not create the output tree file " << opt->treeFile2 << endl;
         exit(EXIT_FAILURE);
     }
-
+    
     ofstream *tree3_file = new ofstream(opt->treeFile3);
     outTree3 = tree3_file;
     if (!tree3_file->is_open()) {
@@ -216,6 +240,9 @@ InputOutputFile::~InputOutputFile() {
     }
     if (inPartition) {
         ((ifstream*)inPartition)->close();
+    }
+    if (inBootstrapTree && bootstrapTreeIsFile) {
+        ((ifstream*)inBootstrapTree)->close();
     }
     if (inRate) {
         ((ifstream*)inRate)->close();
@@ -244,6 +271,18 @@ void InputOutputFile::setTree(string str) {
     // change tree to stringstream
     treeIsFile = false;
     inTree = new istringstream(str);
+}
+
+void InputOutputFile::setBootstrapTree(string str) {
+    if (inBootstrapTree) {
+        if (bootstrapTreeIsFile) {
+            ((ifstream*)inBootstrapTree)->close();
+        }
+        delete inBootstrapTree;
+    }
+    // change tree to stringstream
+    bootstrapTreeIsFile = false;
+    inBootstrapTree = new istringstream(str);
 }
 
 string readWord(istream& f,string fn){
