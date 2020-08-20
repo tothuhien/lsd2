@@ -128,45 +128,50 @@ Variance is used to penalize long branch lengths. The variance formula of each b
 
 * If the input tree is rooted:
 
-    - You want to estimate rate & dates (by default under temporal constraints, and using variances):
+    - You want to estimate rate & dates (by default under temporal constraints, using variances, your sequence length is 1000):
 
-    `./lsd2 -i rootedtree_file -d date_file`
+    `./lsd2 -i rootedtree_file -d date_file -s 1000`
     
     - Similar as above, but you want to force the root date to 0:
     
-    `./lsd2 -i rootedtree_file -d date_file -a 0`
+    `./lsd2 -i rootedtree_file -d date_file -a 0 -s 1000`
 
 	  - You want to remove outlier nodes with Zscore threshold 3:
 
-    `./lsd2 -i rootedtree_file -d date_file -e 3`
+    `./lsd2 -i rootedtree_file -d date_file -e 3 -s 1000`
   
     - You want to collapse only null branches in the input tree (by default all branches <= 0.5/seqlength are collapsed), and impose a minimum of 0.1 (estimated by default) for the branches of the time scaled tree:
   
-    `./lsd2 -i rootedtree_file -d date_file -e 3 -u 0.1 -l 0`
+    `./lsd2 -i rootedtree_file -d date_file -e 3 -u 0.1 -l 0 -s 1000`
     
     - Similar as above, but you don't want to collapse any branch even null, then set a negative value for option -l:
     
-    `./lsd2 -i rootedtree_file -d date_file -e 3 -u 0.1 -l -1`
+    `./lsd2 -i rootedtree_file -d date_file -e 3 -u 0.1 -l -1 -s 1000`
   
     - Similar as above, but you allow nullability for external branches of output tree:
 
-    `./lsd2 -i rootedtree_file -d date_file -e 3 -u 0.1 -U 0 -l 0`
+    `./lsd2 -i rootedtree_file -d date_file -e 3 -u 0.1 -U 0 -l 0 -s 1000`
     
 	  - You know the tree partition where each part should have a different rate:
 
-    `./lsd2 -i rootedtree_file -d date_file -p parition_file`
+    `./lsd2 -i rootedtree_file -d date_file -p parition_file -s 1000`
 
 	  - You want to re-estimate the root position locally around the given root
 
-    `./lsd2 -i rootedtree_file -d date_file -r l`
+    `./lsd2 -i rootedtree_file -d date_file -r l -s 1000`
 
-	  - You want to calculate confidence intervals from 100 simulated trees. The sequence length used to build your tree was 1000, and you'd like to apply a lognormal relaxed clock of standard deviation 0.4 to the simulated branch lengths.
+	  - You want to calculate confidence intervals from 100 simulated trees, and you'd like to apply a lognormal relaxed clock of standard deviation 0.4 to the simulated branch lengths.
 
     `./lsd2 -i rootedtree_file -d date_file -r l -f 100 -s 1000 -q 0.4`
     
     (To calculate confidence intervals, the sequence length is required via option -s. The program generates simulated branch lengths using Poisson distributions whose mean equal to the estimated ones multiplied with sequence length. In addition, a lognormal relaxed clock is also applied to the branch lengths. This ditribution has mean 1 and standard deviation settable by users with option -q, by default is 0.2; 0 means strict clock. The bigger q is, the more your tree is relaxed and the bigger confidence intervals you should get).
 
-	  - If all tips are supposed to have the same date (for example 0), and you know the root date (for example -10)
+    - You want to calculate confidence intervals from your bootstrap trees.
+    
+    `./lsd2 -i rootedtree_file -d date_file -f bootstrap.nwk -s 1000`
+    
+
+	  - If all tips have the same date (for example 0), and you know the root date (for example -10)
 	
 	`./lsd2 -i tree_file -a -10 -z 0`
 
