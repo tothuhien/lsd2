@@ -314,4 +314,6 @@ void adjustDateToYMD(Date*& date,int m1,int d1,int m2,int d2);
 
 void adjustDateToYM(Date*& date,int m1,int d1,int m2,int d2);
 
+bool checkTopology(Pr* pr,Node** nodes1, Node** nodes2);
+
 #endif

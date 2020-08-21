@@ -887,7 +887,6 @@ bool with_constraint_active_set(Pr* pr,Node** &nodes){
             for (int i=0;i<=pr->nbBranches;i++) nodes[i]->D=D_old[i];
         }
         computeObjective(pr,nodes);
-        
         delete[] D_old;
         delete[] dir;
         return val;

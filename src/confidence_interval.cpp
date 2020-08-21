@@ -181,6 +181,9 @@ void computeIC_bootstraps(InputOutputStream *io, Pr* pr,Node** nodes,double* &T_
     for (int i=0; i<= pr->nbBranches; i++){
         minblen[i] = nodes[i]->minblen;
     }
+    int original_nbInodes = pr->nbINodes;
+    int original_nbBranches = pr->nbBranches;
+    double original_objective = pr->objective;
     int s = 0;
     if (io->inOutgroup){
         extrait_outgroup(io, pr, true);
@@ -219,6 +222,9 @@ void computeIC_bootstraps(InputOutputStream *io, Pr* pr,Node** nodes,double* &T_
         if (pr->splitExternal) splitExternalBranches(pr,nodes_bootstrap);
         initConstraint(pr, nodes_bootstrap);
         if (pr->e>0) remove_outlier_nodes(pr,nodes_bootstrap);
+        if ((original_nbInodes != pr->nbINodes) || (original_nbBranches != pr->nbBranches) || !checkTopology(pr,nodes,nodes_bootstrap)){
+            myExit("The bootstrap tree %d does not have the same topology as the original tree\n",y+1);
+        }
         if (!pr->constraint){//LD without constraints
             if (pr->estimate_root==""){
                 without_constraint_multirates(pr,nodes_bootstrap,true);
@@ -257,6 +263,7 @@ void computeIC_bootstraps(InputOutputStream *io, Pr* pr,Node** nodes,double* &T_
         for (int i=0;i<=pr->nbBranches;i++) delete nodes_bootstrap[i];
         delete[] nodes_bootstrap;
     }
+    pr->objective = original_objective;
     sort(rho_bootstrap,pr->nbBootstrap);
     rho_left=rho_bootstrap[int(0.025*pr->nbBootstrap)];
     rho_right=rho_bootstrap[pr->nbSampling-int(0.025*pr->nbBootstrap)-1];
@@ -318,14 +325,14 @@ void computeIC_bootstraps(InputOutputStream *io, Pr* pr,Node** nodes,double* &T_
 }
 
 void output(double br,int y, InputOutputStream *io, Pr* pr,Node** nodes,ostream& f,ostream& tree1,ostream& tree2,ostream& tree3,int r){
-    if (pr->outlier.size()>0){
+    /*if (pr->outlier.size()>0){
         std::ostringstream oss;
         oss<<"- There are "<<pr->outlier.size()<<" nodes that are considered as outliers and were excluded from the analysis:\n";
         for (int i=0;i<pr->outlier.size();i++){
             oss<<"    "<<nodes[pr->outlier[i]]->L<<", suggesting date "<<nodes[pr->outlier[i]]->D<<"\n";
         }
         pr->resultMessage.push_back(oss.str());
-    }
+    }*/
     if (!pr->constraint && pr->ci) {
         std::ostringstream oss;
         oss<<"- Confidence intervals are not warranted under non-constraint mode.\n";

@@ -2333,9 +2333,9 @@ void initialize_status(Pr* &pr,Node** &nodes){
         if (nodes[i]->type=='p') nodes[i]->status=8;
         else nodes[i]->status=0;
     }
-    for (int i=0;i<pr->outlier.size();i++){
+    /*for (int i=0;i<pr->outlier.size();i++){
         nodes[pr->outlier[i]]->status=0;
-    }
+    }*/
 }
 
 list<int> getActiveSet(Pr* pr,Node** nodes){
@@ -3155,4 +3155,14 @@ void collapseUnInformativeBranches(Pr* &pr,Node** &nodes){
     computeSuc_polytomy(prReduced, nodesReduced);
     pr = prReduced;
     nodes = nodesReduced;
+}
+
+bool checkTopology(Pr* pr,Node** nodes1, Node** nodes2){
+    for (int i=pr->nbINodes;i<=pr->nbBranches;i++){
+        if (nodes1[i]->L != nodes2[i]->L) return false;
+    }
+    for (int i=1;i<=pr->nbBranches;i++){
+        if (nodes1[i]->P != nodes2[i]->P) return false;
+    }
+    return true;
 }

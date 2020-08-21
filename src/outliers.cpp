@@ -122,7 +122,7 @@ bool calculateOutliers(Pr* & pr,Node** & nodes,double & median_rate){
         }
         if (pr->outlier.size()>0){
             std::ostringstream oss;
-            oss<<"- The input dates associated with the following "<<pr->outlier.size()<<" nodes are considered as\n outliers, so the nodes were removed from the analysis:\n";
+            oss<<"- The input dates associated with the following "<<pr->outlier.size()<<" nodes are considered as\n outliers, so those nodes were removed from the analysis:\n";
             for (int i=0;i<pr->outlier.size();i++){
                 //if (pr->outlier[i] >= pr->nbINodes){
                     oss<<" "<<(nodes[pr->outlier[i]]->L).c_str();
@@ -264,7 +264,6 @@ void shift_node_id(Pr* &pr,Node** &nodes,int* &tab){
     }
     Pr* prReduced = new Pr(pr->nbINodes-inodes_shift,pr->nbBranches-shift);
     prReduced->copy(pr);
-    prReduced->outlier.clear();
     
     Node** nodesReduced = new Node*[prReduced->nbBranches+1];
     nodesReduced[0]=new Node();

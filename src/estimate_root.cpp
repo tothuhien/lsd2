@@ -26,8 +26,18 @@ bool without_constraint_lambda(double br,Pr* &par,Node** &nodes,list<int> active
     int r=(*iter);//r=r1
     iter++;
     int pr=(*iter);//pr=r2
-    if (r >= par->nbINodes && nodes[r]->type == 'n') return false;
-    if (pr >= par->nbINodes && nodes[pr]->type == 'n') return false;
+    if (r >= par->nbINodes && nodes[r]->type == 'n'){
+        if (par->estimate_root == "k"){
+            myExit("Either provide dates for your outgroups or remove them with option -G\n");
+        }
+        return false;
+    }
+    if (pr >= par->nbINodes && nodes[pr]->type == 'n'){
+        if (par->estimate_root == "k"){
+            myExit("Either provide dates for your outgroups or remove them with option -G\n");
+        }
+        return false;
+    }
     int l=0;
     for (int i=par->nbINodes;i<=par->nbBranches;i++){
         if (leaf(nodes[i])) l++;
@@ -428,8 +438,18 @@ bool with_constraint_lambda(double br,Pr* &pr,Node** &nodes,list<int> active_set
     int r=(*iter);//r=r1
     iter++;
     int p_r=(*iter);//pr=r2
-    if (r >= pr->nbINodes && nodes[r]->type == 'n') return false;
-    if (p_r >= pr->nbINodes && nodes[p_r]->type == 'n') return false;
+    if (r >= pr->nbINodes && nodes[r]->type == 'n'){
+        if (pr->estimate_root == "k"){
+            myExit("Either provide dates for your outgroups or remove them with option -G\n");
+        }
+        return false;
+    }
+    if (p_r >= pr->nbINodes && nodes[p_r]->type == 'n'){
+        if (pr->estimate_root == "k"){
+            myExit("Either provide dates for your outgroups or remove them with option -G\n");
+        }
+        return false;
+    }
     if (br==0) {
         nodes[0]->B=0;
         nodes[p_r]->B=0;

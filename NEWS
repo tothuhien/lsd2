@@ -11,3 +11,4 @@ Something new lsd2:
 - Can use variances twice where the second time uses the branches lengths of the estimated tree to calculate variances.
 - Accept date format year-month-date
 - Compute confidence intervals using bootstrap trees
+

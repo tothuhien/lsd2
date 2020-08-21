@@ -73,6 +73,7 @@ typedef struct Pr
         if (fnOutgroup != "" ) rooted = true;
         warningMessage.clear();
         resultMessage.clear();
+        outlier.clear();
     }
     void copy(Pr* pr){
         inFile = pr->inFile;
@@ -83,6 +84,7 @@ typedef struct Pr
         outFile = pr->outFile;
         treeFile1 = pr->treeFile1;
         treeFile2 = pr->treeFile2;
+        outlier = pr->outlier;
         mrca=pr->mrca;
         MRCA=pr->MRCA;
         leaves=pr->leaves;
