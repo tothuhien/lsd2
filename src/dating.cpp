@@ -277,7 +277,7 @@ bool without_constraint_active_set(Pr* pr,Node** nodes){
     for (int i=0; i<=pr->nbBranches; i++) {
         D_old[i]=nodes[i]->D;
     }
-    double val = without_constraint(pr,nodes);
+    bool val = without_constraint(pr,nodes);
     if (!val) {
         cerr<<"Error: There's not enough signal in the input temporal constraints to have unique solution."<<endl;
         exit(EXIT_FAILURE);
@@ -942,12 +942,16 @@ bool without_constraint_multirates(Pr* pr,Node** nodes,bool reassign){
             nodes[r]->V = V[r]/m/m;
         }
     }
-    if (pr->verbose){
-        for (int i=1;i<pr->multiplierRate.size();i++) cout<<pr->multiplierRate[i]<<" ";
-    }
     bool val = without_constraint_active_set(pr,nodes);
     if (!val) return false;
     if (pr->ratePartition.size()>0) {
+        if (pr->verbose){
+            printf("ROUND 0 , objective function %.15e , rate %.15f , other_rates ",pr->objective,pr->rho);
+            for (int r=1; r<=pr->ratePartition.size(); r++) {
+                printf(" %.15f",pr->rho*pr->multiplierRate[r]);
+            }
+            cout<<endl;
+        }
         double old_phi = 0;
         double old_rho = 0;
         double* old_multi = new double[pr->ratePartition.size()+1];
@@ -979,6 +983,14 @@ bool without_constraint_multirates(Pr* pr,Node** nodes,bool reassign){
             for (int r=1; r<=pr->ratePartition.size(); r++) {
                 cont = cont || (pr->multiplierRate[r]>0 && abs((old_multi[r]*old_rho-pr->multiplierRate[r]*pr->rho)/pr->multiplierRate[r]/pr->rho)>=1e-5);
             }
+            if (pr->verbose){
+                printf("ROUND %d , objective function %.15e , rate %.15f , other_rates ",i,pr->objective,pr->rho);
+                for (int r=1; r<=pr->ratePartition.size(); r++) {
+                    printf(" %.15f",pr->rho*pr->multiplierRate[r]);
+                }
+                printf(", diff %.15f",abs((old_rho-pr->rho)/pr->rho));
+                cout<<endl;
+            }
             i++;
         } while (cont);
         for (int i=1; i<=pr->nbBranches; i++) {
@@ -1006,16 +1018,15 @@ bool with_constraint_multirates(Pr* pr,Node** nodes,bool reassign){
             nodes[r]->V = V[r]/m/m;
         }
     }
-    if (pr->verbose) {
-        for (int i=1;i<pr->multiplierRate.size();i++) cout<<pr->multiplierRate[i]<<" ";
-    }
     bool val = with_constraint_active_set(pr,nodes);
     if (pr->ratePartition.size()>0) {
-        /*printf("ROUND 0 , objective function %.15e , rate %.15f ",pr->objective,pr->rho);
-        for (int r=1; r<=pr->ratePartition.size(); r++) {
-            if (!nan[r]) printf(" %.15f ",pr->rho*pr->multiplierRate[r]);
+        if (pr->verbose){
+            printf("ROUND 0 , objective function %.15e , rate %.15f , other_rates ",pr->objective,pr->rho);
+            for (int r=1; r<=pr->ratePartition.size(); r++) {
+                printf(" %.15f",pr->rho*pr->multiplierRate[r]);
+            }
+            cout<<endl;
         }
-        cout<<endl;*/
         double old_phi = 0;
         double old_rho = 0;
         double* old_multi = new double[pr->ratePartition.size()+1];
@@ -1057,22 +1068,20 @@ bool with_constraint_multirates(Pr* pr,Node** nodes,bool reassign){
             for (int r=1; r<=pr->ratePartition.size(); r++) {
                 cont = cont || (pr->multiplierRate[r]>0 && abs((old_multi[r]*old_rho-pr->multiplierRate[r]*pr->rho)/pr->multiplierRate[r]/pr->rho)>=1e-5);
             }
-            /*printf("ROUND %d , objective function %.15e , rate %.15f ",i,pr->objective,pr->rho);
-            for (int r=1; r<=pr->ratePartition.size(); r++) {
-                if (!nan[r]) printf(" %.15f ",pr->rho*pr->multiplierRate[r]);
+            if (pr->verbose){
+                printf("ROUND %d , objective function %.15e , rate %.15f , other_rates ",i,pr->objective,pr->rho);
+                for (int r=1; r<=pr->ratePartition.size(); r++) {
+                    printf(" %.15f",pr->rho*pr->multiplierRate[r]);
+                }
+                printf(", diff %.15f",abs((old_rho-pr->rho)/pr->rho));
+                cout<<endl;
             }
-            cout<<endl;*/
-             i++;
+            i++;
         } while (cont);
         for (int r=1; r<=pr->nbBranches; r++) {
             nodes[r]->B = B[r];
             nodes[r]->V = V[r];
         }
-        /*printf("ROUND %d , objective function %.15e , rate %.15f ",i,pr->objective,pr->rho);
-        for (int r=1; r<=pr->ratePartition.size(); r++) {
-            if (pr->multiplierRate[r]>0) printf(" %.15f ",pr->rho*pr->multiplierRate[r]);
-        }
-        cout<<endl;*/
     }
     delete[] B;
     delete[] V;

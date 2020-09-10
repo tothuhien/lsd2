@@ -25,7 +25,7 @@ Pr* getOptions( int argc, char** argv )
 
 Pr* getCommandLine( int argc, char** argv)
 {
-    const string VERSION="v.1.8.8";
+    const string VERSION="v.1.8.9";
     Pr* opt = new Pr();
     int c;
     string s;
@@ -356,7 +356,7 @@ Pr* getInterface()
 
 void printInterface(ostream& in, Pr* opt)
 {
-    const string VERSION = "v.1.8.8";
+    const string VERSION = "v.1.8.9";
 
     in<<"\nLEAST-SQUARE METHODS TO ESTIMATE RATES AND DATES - "<<VERSION<<" \n\n";
     in<<"\nInput files:\n";
@@ -513,7 +513,7 @@ void printHelp( void )
     const string BOLD = "\033[00;01m";
     const string LINE = "\033[00;04m";
     const string FLAT = "\033[00;00m";
-    const string VERSION = "v.1.8.8";
+    const string VERSION = "v.1.8.9";
     
     cout<<BOLD<<"LSD: LEAST-SQUARES METHODS TO ESTIMATE RATES AND DATES - "<<VERSION<<"\n\n";
     cout<<BOLD<<"DESCRIPTION\n"
@@ -567,7 +567,7 @@ void printHelp( void )
     <<FLAT<<"\t" <<BOLD<<"-f " <<LINE<<"samplingNumberCI or bootstrapTreeFile\n"
     <<FLAT<<"\t   This option calculates the confidence intervals of the estimated rate and dates. If the bootstrap trees file is specified, then dating is \n"
     <<FLAT<<"\t   processed on each of these trees, and the 2.5th and 97.5th percentile of calculated rates and dates are reported as confidence intervals.\n"
-    <<FLAT<<"\t   Note that the bootstraps trees must have the exact topology as the original tree.\n"
+    <<FLAT<<"\t   If one of the bootstrap trees does not have the same topology as the original tree, then only confidence intervals of root dates are referred.\n"
     <<FLAT<<"\t   If there's no bootstrap trees, then we simulate a set of trees. In this case, the number of simulated trees should be specified. Those \n"
     <<FLAT<<"\t   trees have the same topology as the original one, and their branch lengths are generated as follow:\n"
     <<FLAT<<"\t          b_i = Poisson(B_i*seqLen)*lognormal(1,q)\n"

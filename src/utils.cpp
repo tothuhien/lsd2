@@ -3166,3 +3166,14 @@ bool checkTopology(Pr* pr,Node** nodes1, Node** nodes2){
     }
     return true;
 }
+
+/*bool checkTopology(Pr* pr,Node** nodes1, Node** nodes2){
+    int* tab = new tab[pr->nbBranches+1];
+    for (int i=pr->nbINodes;i<=pr->nbBranches;i++){
+        if (nodes1[i]->L != nodes2[i]->L) return false;
+    }
+    for (int i=1;i<=pr->nbBranches;i++){
+        if (nodes1[i]->P != nodes2[i]->P) return false;
+    }
+    return true;
+}*/
