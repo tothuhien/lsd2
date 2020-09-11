@@ -4,10 +4,11 @@
 
 bool calculateOutliers(Pr* & pr,Node** & nodes,double & median_rate){
     pr->outlier.clear();
-    if (pr->partitionFile!="") {
+    if (pr->partitionFile!="" || pr->splitExternal) {
         std::ostringstream oss;
-        oss<<"- Rate partition can not be included in estimating outliers.\n";
+        oss<<"- Multiple rates can not be included when estimating outliers.\n";
         pr->warningMessage.push_back(oss.str());
+        cout<<" Multiple rates can not be included when estimating outliers"<<endl;
     }
     cout<<"Calculating the outlier nodes with Zscore threshold "<<pr->e<<" (setable via option -e)..."<<endl;
     if (pr->estimate_root=="" || pr->estimate_root=="k"){
