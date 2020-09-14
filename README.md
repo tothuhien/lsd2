@@ -4,7 +4,7 @@
 
 - lsd2 is now integrated in [IQ-tree](http://www.iqtree.org)
 
-- For people who prefer R, an R-wrapper of lsd2 is developping here: https://github.com/tothuhien/Rlsd2
+- For people who prefer R, an R-wrapper of lsd2 can be found here: https://github.com/tothuhien/Rlsd2
 
 - Changing some default setting: Temporal constraint is now imposed by default without option -c. Variance is also used by default without applying -v 1. Outgroups are now by default kept in the tree, to remove them use option -G together with -g
 
