@@ -555,6 +555,8 @@ double monthDayToReal(int m,int d){
 
 double readDate(istream& f,string fn,Pr* pr,double& month,double& day){
     double y;
+    month=-1;
+    day=-1;
     int sign = 1;
     if (f >> y) {
         if (y<0) {
@@ -596,6 +598,8 @@ double readDate(istream& f,string fn,Pr* pr,double& month,double& day){
 }
 
 double readDate1(istream& f,string fn,char c,Pr* pr,double& month,double& day){
+    month=-1;
+    day=-1;
     string wd="";
     wd+=c;
     double y;
@@ -679,21 +683,31 @@ void readWholeDate(istream &dateFile,Pr* pr,int& type,double& v1,double& v2, dou
             if (c=='l' || c=='L'){
                 type='l';
                 v1=readDate(dateFile,"the input date",pr,m1,d1);
-                if (m1<0 && dateFormat!=3) dateFormat = 1;
-                else if (d1<0) dateFormat = 3;
+                if (v1 == (int) v1){
+                    if (m1<0 && dateFormat!=3) dateFormat = 1;
+                    else if (d1<0) dateFormat = 3;
+                }
             }
             else if (c=='u' || c=='U'){
                 type='u';
                 v1=readDate(dateFile,"the input date",pr,m1,d1);
-                if (m1<0 && dateFormat!=3) dateFormat = 1;
-                else if (d1<0) dateFormat = 3;
+                if (v1 == (int) v1){
+                    if (m1<0 && dateFormat!=3) dateFormat = 1;
+                    else if (d1<0) dateFormat = 3;
+                }
             }
             else if (c=='b' || c=='B'){
                 type='b';
                 v1=readDate(dateFile,"the input date",pr,m1,d1);
                 v2=readDate(dateFile,"the input date",pr,m2,d2);
-                if (m1<0 || m2<0) dateFormat = 1;
-                else if ((d1<0 || d2<0) && dateFormat!=3) dateFormat = 3;
+                if (v1 == (int) v1){
+                    if (m1<0 && dateFormat!=3) dateFormat = 1;
+                    else if (d1<0) dateFormat = 3;
+                }
+                if (v2 == (int) v2){
+                    if (m1<0 && dateFormat!=3) dateFormat = 1;
+                    else if (d1<0) dateFormat = 3;
+                }
                 if (v1>v2) {
                     double t=v1;
                     v1=v2;

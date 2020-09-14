@@ -633,7 +633,9 @@ bool with_constraint(Pr* pr,Node** &nodes,list<int> active_set,list<double>& ld)
             }
         }
         pr->rho = -b/(2*a);
-        if (pr->rho < pr->rho_min) pr->rho=pr->rho_min;
+        if (pr->rho < pr->rho_min) {
+            pr->rho=pr->rho_min;
+        }
         delete[] F;
         delete[] G;
     }
