@@ -280,8 +280,6 @@ double* sortTab(double* tab,int size);
 
 int maxDate(int month);
 
-bool outlierCheck(Pr* pr,Node** nodes);
-
 void calculate_tree_height(Pr* pr,Node** & nodes);
 
 void splitExternalBranches(Pr* pr,Node** nodes);

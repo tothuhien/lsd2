@@ -1877,10 +1877,12 @@ void cloneInternalNodes(Pr* pr,Node** nodes,Node** &nodes_new,int f){
     }
 }
 
-bool outlierCheck(Pr* pr,Node** nodes){
+/*bool outlierCheck(Pr* pr,Node** nodes){
     bool* out = new bool[pr->nbBranches+1];
     for (int i=0;i<=pr->nbBranches;i++) out[i]=false;
-    for (int i=0;i<pr->outlier.size();i++) out[pr->outlier[i]] = true;
+    for (int i=0;i<pr->outlier.size();i++){
+        out[pr->outlier[i]] = true;
+    }
     list<int> pos = postorder_polytomy(pr,nodes);
     for (list<int>::iterator iter=pos.begin();iter!=pos.end();iter++){
         int i = *iter;
@@ -1898,7 +1900,7 @@ bool outlierCheck(Pr* pr,Node** nodes){
     }
     delete[] out;
     return true;
-}
+}*/
 
 bool reroot_rootedtree(double& br,int r,int s10,int s20,Pr* pr,Node** nodes,Node** &nodes_new){
     cloneInternalNodes(pr,nodes,nodes_new,0);
@@ -1907,11 +1909,7 @@ bool reroot_rootedtree(double& br,int r,int s10,int s20,Pr* pr,Node** nodes,Node
         nodes_new[s10]->B=br;
         nodes_new[s20]->B=br;
         computeVarianceEstimateRoot(pr,nodes_new,br);
-        bool out = true;
-        if (pr->outlier.size()>0) {
-            out = outlierCheck(pr,nodes_new);
-        }
-        return initConstraint(pr,nodes_new) && out;
+        return initConstraint(pr,nodes_new);
     }
     else {
         nodes_new[0]->L="";
@@ -1953,11 +1951,7 @@ bool reroot_rootedtree(double& br,int r,int s10,int s20,Pr* pr,Node** nodes,Node
         nodes_new[r]->B=br;
         nodes_new[nodes[r]->P]->B=br;
         computeVarianceEstimateRoot(pr,nodes_new,br);
-        bool out = true;
-        if (pr->outlier.size()>0) {
-            out = outlierCheck(pr,nodes_new);
-        }
-        return initConstraintReRooted(pr, nodes_new,k,i) && out;
+        return initConstraintReRooted(pr, nodes_new,k,i);
     }
 }
 
