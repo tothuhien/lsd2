@@ -2,15 +2,17 @@
 #include "dating.h"
 #include "estimate_root.h"
 
-bool calculateOutliers(Pr* & pr,Node** & nodes,double & median_rate){
+bool calculateOutliers(Pr* & pr,Node** & nodes,double & median_rate,bool verbose){
     pr->outlier.clear();
-    if (pr->partitionFile!="" || pr->splitExternal) {
-        std::ostringstream oss;
-        oss<<"- Multiple rates can not be included when estimating outliers.\n";
-        pr->warningMessage.push_back(oss.str());
-        cout<<" Multiple rates can not be included when estimating outliers"<<endl;
+    if (verbose){
+        if (pr->partitionFile!="" || pr->splitExternal) {
+            std::ostringstream oss;
+            oss<<"- Multiple rates can not be included when estimating outliers.\n";
+            pr->warningMessage.push_back(oss.str());
+            cout<<" Multiple rates can not be included when estimating outliers"<<endl;
+        }
+        cout<<"Calculating the outlier nodes with Zscore threshold "<<pr->e<<" (setable via option -e)..."<<endl;
     }
-    cout<<"Calculating the outlier nodes with Zscore threshold "<<pr->e<<" (setable via option -e)..."<<endl;
     if (pr->estimate_root=="" || pr->estimate_root=="k"){
         bool givenRate = pr->givenRate[0];
         vector<double> dates_min;
@@ -46,7 +48,7 @@ bool calculateOutliers(Pr* & pr,Node** & nodes,double & median_rate){
                 ignoredNodes.push_back(i);
             }
         }
-        if (ignoredNodes.size()>0){
+        if (verbose && ignoredNodes.size()>0){
             cout<<"Ignore the nodes that only have upper/lower values in estimating outliers: ";
             std::ostringstream oss;
             oss<<" - The following nodes only have upper/lower values, so were ignored in estimating outliers: ";

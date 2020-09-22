@@ -77,11 +77,35 @@ int lsd::buildTimeTree( int argc, char** argv, InputOutputStream *inputOutput)
                 if (nodes[i]->B < minB) minB = nodes[i]->B;
             }
         }
-        if (opt->bootstraps_file==""){
-            collapseUnInformativeBranches(opt,nodes);
+        bool diffTopology = false;
+        if (io->inBootstrapTree){
+            streampos pos = (*(io->inBootstrapTree)).tellg();
+            io->inBootstrapTree->seekg(0);
+            int lineNb=getLineNumber(*(io->inBootstrapTree));
+            Pr* pr_bootstrap = new Pr(opt->nbINodes,opt->nbBranches);
+            pr_bootstrap->copy(opt);
+            opt->nbBootstrap = lineNb;
+            for (int k = 0; k< opt->nbBootstrap; k++){
+                int sk;
+                pr_bootstrap->rooted = false;
+                Node** nodes_bootstrap=tree2data(*(io->inBootstrapTree),pr_bootstrap,sk);
+                computeSuc_polytomy(pr_bootstrap,nodes_bootstrap);
+                if ((pr_bootstrap->nbINodes != opt->nbINodes) || (pr_bootstrap->nbBranches != opt->nbBranches) || !checkTopology(opt,nodes,nodes_bootstrap)){
+                    diffTopology = true;
+                    break;
+                }
+            }
+            (*(io->inBootstrapTree)).clear();
+            (*(io->inBootstrapTree)).seekg(pos);
+        }
+        if (diffTopology || !(io->inBootstrapTree)){
+            if (opt->rooted && opt->estimate_root!="" && opt->estimate_root!="k"){
+                rooted2unrooted(opt,nodes);
+            }
+            collapseUnInformativeBranches(opt,nodes,true);
         }
         if (!opt->rooted){
-            nodes = unrooted2rooted(opt,nodes);
+            unrooted2rooted(opt,nodes);
         }
         if (y==1){
             *(io->outTree1)<<"Begin trees;\n";
@@ -120,7 +144,7 @@ int lsd::buildTimeTree( int argc, char** argv, InputOutputStream *inputOutput)
             }
         }
         if (opt->estimate_root=="" || opt->estimate_root=="k") constraintConsistent = initConstraint(opt, nodes);
-        if (opt->e>0) calculateOutliers(opt,nodes,median_rate);
+        if (opt->e>0) calculateOutliers(opt,nodes,median_rate,true);
         if (opt->splitExternal) splitExternalBranches(opt,nodes);
         if (!opt->constraint){//LD without constraints
             if (!constraintConsistent){
@@ -131,7 +155,7 @@ int lsd::buildTimeTree( int argc, char** argv, InputOutputStream *inputOutput)
             if (opt->estimate_root==""){//keep the given root
                 cout<<"Dating without temporal constraints ..."<<endl;
                 without_constraint_multirates(opt,nodes,true);
-                output(br,y,io, opt,nodes,*(io->outResult),*(io->outTree1),*(io->outTree2),*(io->outTree3),r);
+                output(br,y,io, opt,nodes,*(io->outResult),*(io->outTree1),*(io->outTree2),*(io->outTree3),r,diffTopology);
             }
             else if (opt->estimate_root=="k"){
                 cout<<"Estimating the root position on the branch defined by given outgroups ..."<<endl;
@@ -145,7 +169,7 @@ int lsd::buildTimeTree( int argc, char** argv, InputOutputStream *inputOutput)
                 nodes[s2]->V=nodes[s1]->V;
                 constraintConsistent = without_constraint_active_set_lambda_multirates(br,opt,nodes,true);
                 if (constraintConsistent){
-                    output(br,y,io, opt,nodes,*(io->outResult),*(io->outTree1),*(io->outTree2),*(io->outTree3),r);
+                    output(br,y,io, opt,nodes,*(io->outResult),*(io->outTree1),*(io->outTree2),*(io->outTree3),r,diffTopology);
                 }
                 else{
                     myExit("There's conflict or not enough signal in the input temporal constraints.\n");
@@ -171,14 +195,14 @@ int lsd::buildTimeTree( int argc, char** argv, InputOutputStream *inputOutput)
                     }
                     reroot_rootedtree(br,r,s1,s2,opt,nodes,nodes_new);
                     without_constraint_active_set_lambda_multirates(br,opt,nodes_new,true);
-                    output(br,y,io, opt,nodes_new,*(io->outResult),*(io->outTree1),*(io->outTree2),*(io->outTree3),r);
+                    output(br,y,io, opt,nodes_new,*(io->outResult),*(io->outTree1),*(io->outTree2),*(io->outTree3),r,diffTopology);
                     for (int i=0;i<opt->nbBranches+1;i++) delete nodes_new[i];
                     delete[] nodes_new;
                 }
             }
         }
         else {//QPD with temporal constrains
-            imposeMinBlen(*(io->outResult),opt,nodes,minB);
+            imposeMinBlen(*(io->outResult),opt,nodes,minB,true);
             if (constraintConsistent || (opt->estimate_root!="" && opt->estimate_root!="k")){
                 if (constraintConsistent){
                     if (opt->estimate_root==""){//keep the given root
@@ -187,7 +211,7 @@ int lsd::buildTimeTree( int argc, char** argv, InputOutputStream *inputOutput)
                             constraintConsistent = with_constraint_multirates(opt,nodes,true);
                         }
                         if (constraintConsistent) {
-                            output(br,y,io, opt,nodes,*(io->outResult),*(io->outTree1),*(io->outTree2),*(io->outTree3),r);
+                            output(br,y,io, opt,nodes,*(io->outResult),*(io->outTree1),*(io->outTree2),*(io->outTree3),r,diffTopology);
                         }
                         else{
                             myExit("There's conflict or not enough signal in the input temporal constraints.\n");
@@ -207,7 +231,7 @@ int lsd::buildTimeTree( int argc, char** argv, InputOutputStream *inputOutput)
                             constraintConsistent = with_constraint_active_set_lambda_multirates(br,opt,nodes,true);
                         }
                         if (constraintConsistent) {
-                            output(br,y,io, opt,nodes,*(io->outResult),*(io->outTree1),*(io->outTree2),*(io->outTree3),r);
+                            output(br,y,io, opt,nodes,*(io->outResult),*(io->outTree1),*(io->outTree2),*(io->outTree3),r,diffTopology);
                         } else {
                             myExit("There's conflict or not enough signal in the input temporal constraints.\n");
                         }
@@ -236,7 +260,7 @@ int lsd::buildTimeTree( int argc, char** argv, InputOutputStream *inputOutput)
                         }
                         reroot_rootedtree(br,r,s1,s2,opt,nodes,nodes_new);
                         with_constraint_active_set_lambda_multirates(br,opt,nodes_new,true);
-                        output(br,y,io, opt,nodes_new,*(io->outResult),*(io->outTree1),*(io->outTree2),*(io->outTree3),r);
+                        output(br,y,io, opt,nodes_new,*(io->outResult),*(io->outTree1),*(io->outTree2),*(io->outTree3),r,diffTopology);
                         for (int i=0;i<opt->nbBranches+1;i++) delete nodes_new[i];
                         delete[] nodes_new;
                     }

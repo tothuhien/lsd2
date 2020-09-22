@@ -37,4 +37,4 @@ double regression_lambda(double br,double &lambda,Pr* pr, Node** nodes);
 
 void estimate_root_rtt(Pr* pr, Node** & nodes);
 
-void imposeMinBlen(ostream& result,Pr* pr, Node** nodes,double minB);
+void imposeMinBlen(ostream& result,Pr* pr, Node** nodes,double minB, bool verbose);

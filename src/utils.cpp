@@ -1215,7 +1215,36 @@ char read2P(istream f,string fn){
     return c;
 }
 
-Node** unrooted2rooted(Pr* & pr,Node** nodes){
+void unrooted2rooted(Pr* &pr,Node** nodes){
+    nodes[0] = new Node();
+    nodes[0]->P=-1;
+    int s = nodes[1]->suc[0];
+    double br=nodes[s]->B;
+    nodes[s]->B=br/2;
+    nodes[1]->B=br/2;
+    nodes[s]->P=0;
+    nodes[1]->P=0;
+    nodes[1]->suc.erase(nodes[1]->suc.begin());
+    nodes[0]->suc.push_back(1);
+    nodes[0]->suc.push_back(s);
+    pr->rooted = true;
+}
+
+void rooted2unrooted(Pr* &pr,Node** nodes){
+    int s1 = nodes[0]->suc[0];
+    int s2 = nodes[0]->suc[1];
+    if (s1 != 1){
+        s2 = s1;
+        s1 = 1;
+    }
+    nodes[s1]->P = -1;
+    nodes[s2]->P = s1;
+    nodes[s1]->suc.push_back(s2);
+    nodes[s2]->B = nodes[s2]->B + nodes[s1]->B;
+    pr->rooted = false;
+}
+
+/*Node** unrooted2rooted(Pr* & pr,Node** nodes){
     Node** nodes_new = new Node*[pr->nbBranches+1];
     for (int i=pr->nbINodes; i<=pr->nbBranches; i++) {
         nodes_new[i]=new Node();
@@ -1250,7 +1279,7 @@ Node** unrooted2rooted(Pr* & pr,Node** nodes){
     delete[] nodes;
     pr->rooted = true;
     return nodes_new;
-}
+}*/
 
 Node** unrooted2rootedS(Pr* &pr,Node** nodes,int s){//simplier version, use only for remove outgroup
     Node** nodes_new = new Node*[pr->nbBranches+1];
@@ -1955,6 +1984,68 @@ bool reroot_rootedtree(double& br,int r,int s10,int s20,Pr* pr,Node** nodes,Node
     }
 }
 
+bool reroot_rootedtree(double& br,int r,Pr* pr,Node** nodes){
+    Node** nodes_new = cloneLeaves(pr,nodes,0);
+    vector<int>::iterator iter=nodes[0]->suc.begin();
+    int s10=(*iter);
+    iter++;
+    int s20=(*iter);
+    for (int i=pr->nbINodes; i<=pr->nbBranches; i++) {
+        nodes_new[i]->status=nodes[i]->status;
+    }
+    cloneInternalNodes(pr,nodes,nodes_new,0);
+    if (r==s10 || r==s20){
+        br = nodes[s10]->B+nodes[s20]->B;
+        nodes_new[s10]->B=br;
+        nodes_new[s20]->B=br;
+        computeVarianceEstimateRoot(pr,nodes_new,br);
+        nodes = nodes_new;
+        return initConstraint(pr,nodes_new);
+    }
+    else {
+        nodes_new[0]->L="";
+        nodes_new[0]->P=-1;
+        nodes_new[r]->P=0;
+        nodes_new[nodes[r]->P]->P=0;
+        nodes_new[0]->suc.clear();
+        nodes_new[0]->suc.push_back(r);
+        nodes_new[0]->suc.push_back(nodes[r]->P);
+        int ii=r;
+        int i=nodes[r]->P;
+        int j=nodes[i]->P;
+        while (j!=0){
+            nodes_new[i]->suc.clear();
+            nodes_new[i]->suc.push_back(j);
+            for (vector<int>::iterator iter=nodes[i]->suc.begin(); iter!=nodes[i]->suc.end(); iter++) {
+                if (*iter!=ii) {
+                    nodes_new[i]->suc.push_back(*iter);
+                }
+            }
+            nodes_new[j]->P=i;
+            nodes_new[j]->B=nodes[i]->B;
+            ii=i;
+            i=j;
+            j=nodes[i]->P;
+        }
+        int k=s10;
+        if (k==i) k=s20;
+        nodes_new[k]->P=i;
+        nodes_new[i]->suc.clear();
+        nodes_new[i]->suc.push_back(k);
+        for (vector<int>::iterator iter=nodes[i]->suc.begin(); iter!=nodes[i]->suc.end(); iter++) {
+            if (*iter!=ii) {
+                nodes_new[i]->suc.push_back(*iter);
+            }
+        }
+        br=nodes[r]->B;
+        nodes_new[k]->B=nodes[i]->B+nodes[k]->B;
+        nodes_new[r]->B=br;
+        nodes_new[nodes[r]->P]->B=br;
+        computeVarianceEstimateRoot(pr,nodes_new,br);
+        nodes = nodes_new;
+        return initConstraintReRooted(pr, nodes_new,k,i);
+    }
+}
 
 bool reroot_rootedtree(double& br,int r,int s10,int s20,Pr* pr,Node** nodes,Node** &nodes_new,int* & P_ref,int* & tab){
     cloneInternalNodes(pr,nodes,nodes_new,0);
@@ -2435,6 +2526,31 @@ vector<int> preorder_polytomy(Pr* pr,Node** nodes){
         if (nodes[root]->P==-1) break;
     }
     return pre_polytomy(root,pr,nodes);
+}
+
+vector<int> pre_polytomy_withTips(int i,Pr* pr,Node** nodes){
+    vector<int> l;
+    l.push_back(i);
+    if (i>=pr->nbINodes){
+        return l;
+    }
+    else{
+        for (vector<int>::iterator iter = nodes[i]->suc.begin();iter!=nodes[i]->suc.end();iter++){
+            vector<int> l1 = pre_polytomy_withTips(*iter,pr,nodes);
+            for (vector<int>::iterator iter1=l1.begin();iter1!=l1.end();iter1++){
+                l.push_back(*iter1);
+            }
+        }
+        return l;
+    }
+}
+
+vector<int> preorder_polytomy_withTips(Pr* pr,Node** nodes){
+    int root=0;
+    for (root=0;root<=pr->nbBranches;root++){
+        if (nodes[root]->P==-1) break;
+    }
+    return pre_polytomy_withTips(root,pr,nodes);
 }
 
 list<int> down_polytomy(int i,Pr* pr,Node** nodes){
@@ -3115,7 +3231,6 @@ void collapseTreeReOrder(Pr* pr,Node** nodes,Pr* prReduced,Node** nodesReduced,i
             nodesReduced[tab[i]]->L=nodes[i]->L;
         }
     }
-    
     for (vector<Date*>::iterator iter=pr->internalConstraints.begin();iter!=pr->internalConstraints.end();iter++){
         Date* no = (*iter);
         if (no->mrca.size()==0){
@@ -3136,20 +3251,22 @@ void collapseTreeReOrder(Pr* pr,Node** nodes,Pr* prReduced,Node** nodesReduced,i
     }
 }
 
-void collapseUnInformativeBranches(Pr* &pr,Node** &nodes){
+void collapseUnInformativeBranches(Pr* &pr,Node** &nodes,bool verbose){
     Node** nodes_new = new Node*[pr->nbBranches+1];
     int* tab = new int[pr->nbBranches+1];
     bool useSupport = (pr->support>=0);
     int nbC = collapseTree(pr, nodes, nodes_new,tab, pr->nullblen,useSupport);//nbC is the number of internal nodes reduced
-    if (!useSupport) {
-        cout<<"Collapse "<<(pr->nbINodes - nbC)<<" (over "<<(pr->nbINodes - (!pr->rooted) -1 )<<") internal branches having branch length <= "<<pr->nullblen<<"\n (settable via option -l)"<<endl;
-    } else {
-        cout<<"Collapse "<<(pr->nbINodes - nbC)<<" (over "<<(pr->nbINodes - (!pr->rooted) -1 )<<") internal branches having branch length <= "<<pr->nullblen<<"\n (settable via option -l) or support value <= "<<pr->support<<"\n (settable via option -S)"<<endl;
-    }
-    if (  (double)(pr->nbINodes - nbC)/(pr->nbINodes - (!pr->rooted) -1) > 0.1){
-        ostringstream oss;
-        oss<<"- "<<(pr->nbINodes - nbC)*100/(double)(pr->nbINodes - (!pr->rooted) -1)<<"% internal branches were collapsed.\n";
-        pr->warningMessage.push_back(oss.str());
+    if (verbose){
+        if (!useSupport) {
+            cout<<"Collapse "<<(pr->nbINodes - nbC)<<" (over "<<(pr->nbINodes - (!pr->rooted) -1 )<<") internal branches having branch length <= "<<pr->nullblen<<"\n (settable via option -l)"<<endl;
+        } else {
+            cout<<"Collapse "<<(pr->nbINodes - nbC)<<" (over "<<(pr->nbINodes - (!pr->rooted) -1 )<<") internal branches having branch length <= "<<pr->nullblen<<"\n (settable via option -l) or support value <= "<<pr->support<<"\n (settable via option -S)"<<endl;
+        }
+        if (  (double)(pr->nbINodes - nbC)/(pr->nbINodes - (!pr->rooted) -1) > 0.1){
+            ostringstream oss;
+            oss<<"- "<<(pr->nbINodes - nbC)*100/(double)(pr->nbINodes - (!pr->rooted) -1)<<"% internal branches were collapsed.\n";
+            pr->warningMessage.push_back(oss.str());
+        }
     }
     Node** nodesReduced = new Node*[nbC+pr->nbBranches-pr->nbINodes+1];
     Pr* prReduced = new Pr(nbC,nbC+pr->nbBranches-pr->nbINodes);

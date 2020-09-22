@@ -1855,7 +1855,7 @@ bool with_constraint_active_set_lambda_multirates(double br,Pr* &pr,Node** &node
  return res;
  }*/
 
-void imposeMinBlen(ostream& file,Pr* pr, Node** nodes,double minB){
+void imposeMinBlen(ostream& file,Pr* pr, Node** nodes,double minB, bool verbose){
     double minblen = pr->minblen;
     double round_time = pr->round_time;
     if (pr->minblen < 0){
@@ -1897,14 +1897,16 @@ void imposeMinBlen(ostream& file,Pr* pr, Node** nodes,double minB){
     if (minblen == 0 || pr->minblen > 0 || (pr->inDateFile=="" && pr->inDateFormat!=2 && pr->round_time==-1)){//do not round
         if (pr->minblenL < 0) minblenL = minblen;
         else minblenL = pr->minblen;
-        if (minblen == minblenL){
-            cout<<"Minimum branch length of time scaled tree (settable via option -u and -U): "<<minblen<<endl;
-            file<<"Minimum branch length of time scaled tree (settable via option -u and -U): "<<minblen<<"\n";
-        } else {
-            cout<<"Minimum internal branches lengths of time scaled tree (settable via option -u): "<<minblen<<endl;
-            cout<<"Minimum external branches lengths of time scaled tree (settable via option -U): "<<minblenL<<endl;
-            file<<"Minimum internal branches lengths of time scaled tree (settable via option -u): "<<minblen<<"\n";
-            file<<"Minimum external branches lengths of time scaled tree (settable via option -U): "<<minblenL<<"\n";
+        if (verbose){
+            if (minblen == minblenL){
+                cout<<"Minimum branch length of time scaled tree (settable via option -u and -U): "<<minblen<<endl;
+                file<<"Minimum branch length of time scaled tree (settable via option -u and -U): "<<minblen<<"\n";
+            } else {
+                cout<<"Minimum internal branches lengths of time scaled tree (settable via option -u): "<<minblen<<endl;
+                cout<<"Minimum external branches lengths of time scaled tree (settable via option -U): "<<minblenL<<endl;
+                file<<"Minimum internal branches lengths of time scaled tree (settable via option -u): "<<minblen<<"\n";
+                file<<"Minimum external branches lengths of time scaled tree (settable via option -U): "<<minblenL<<"\n";
+            }
         }
     } else {//rounding
         if (round_time <0){
@@ -1927,15 +1929,19 @@ void imposeMinBlen(ostream& file,Pr* pr, Node** nodes,double minB){
         if (round_time==52) unit=" weeks";
         double minblenRound = round(round_time*minblen)/(double)round_time;
         if (pr->minblenL < 0){
-            cout<<"Minimum branch length of time scaled tree (settable via option -u and -U): "<<minblen<<",\n rounded to "<<minblenRound<<" ("<<round(round_time*minblen)<<unit<<"/"<<round_time<<") using factor "<<round_time<<" (settable via option -R)"<<endl;
-            file<<"Minimum branch length of time scaled tree (settable via option -u and -U): "<<minblen<<",\n rounded to "<<minblenRound<<" ("<<round(round_time*minblen)<<"/"<<round_time<<") using factor "<<round_time<<" (settable via option -R)\n";
+            if (verbose){
+                cout<<"Minimum branch length of time scaled tree (settable via option -u and -U): "<<minblen<<",\n rounded to "<<minblenRound<<" ("<<round(round_time*minblen)<<unit<<"/"<<round_time<<") using factor "<<round_time<<" (settable via option -R)"<<endl;
+                file<<"Minimum branch length of time scaled tree (settable via option -u and -U): "<<minblen<<",\n rounded to "<<minblenRound<<" ("<<round(round_time*minblen)<<"/"<<round_time<<") using factor "<<round_time<<" (settable via option -R)\n";
+            }
             minblen = minblenRound;
             minblenL = minblenRound;
         } else {
-            cout<<"Minimum internal branches lengths of time scaled tree (settable via option -u):\n "<<minblen<<", rounded to "<<minblenRound<<" ("<<round(round_time*minblen)<<"/"<<round_time<<") using factor "<<round_time<<" (settable via option -R)"<<endl;
-            cout<<"Minimum external branches lengths of time scaled tree was set to "<<pr->minblenL<<"\n (settable via option -U)"<<endl;
-            file<<"Minimum internal branches lengths of time scaled tree (settable via option -u):\n "<<minblen<<", rounded to "<<minblenRound<<" ("<<round(round_time*minblen)<<"/"<<round_time<<") using factor "<<round_time<<" (settable via option -R)\n";
-            file<<"Minimum external branches lengths of time scaled tree was set to "<<pr->minblenL<<"\n (settable via option -U)"<<endl;
+            if (verbose){
+                cout<<"Minimum internal branches lengths of time scaled tree (settable via option -u):\n "<<minblen<<", rounded to "<<minblenRound<<" ("<<round(round_time*minblen)<<"/"<<round_time<<") using factor "<<round_time<<" (settable via option -R)"<<endl;
+                cout<<"Minimum external branches lengths of time scaled tree was set to "<<pr->minblenL<<"\n (settable via option -U)"<<endl;
+                file<<"Minimum internal branches lengths of time scaled tree (settable via option -u):\n "<<minblen<<", rounded to "<<minblenRound<<" ("<<round(round_time*minblen)<<"/"<<round_time<<") using factor "<<round_time<<" (settable via option -R)\n";
+                file<<"Minimum external branches lengths of time scaled tree was set to "<<pr->minblenL<<"\n (settable via option -U)"<<endl;
+            }
             minblen = minblenRound;
             minblenL = pr->minblenL;
         }

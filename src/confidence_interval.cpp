@@ -114,7 +114,9 @@ void computeIC(double br,Pr* pr,Node** nodes,double* &T_left,double* &T_right,do
     double* T_sort = new double[pr->nbSampling];
     double* H_sort = new double[pr->nbSampling];
     double* HD_sort = new double[pr->nbSampling];
-    for (int i=0;i<=pr->nbBranches;i++){
+    vector<int> pre = preorder_polytomy_withTips(pr,nodes);
+    for (vector<int>::iterator iter=pre.begin();iter!=pre.end();iter++){
+        int i =  *iter;
         if (tab[i]!=-1) {
             for (int j=0;j<pr->nbSampling;j++) {
                 T_sort[j]=T_simul[j][tab[i]];
@@ -139,6 +141,13 @@ void computeIC(double br,Pr* pr,Node** nodes,double* &T_left,double* &T_right,do
             if (HD_left[i]>nodes[i]->HD) HD_left[i]=nodes[i]->HD;
             HD_right[i]=HD_sort[pr->nbSampling-int(0.025*pr->nbSampling)-1];
             if (HD_right[i]<nodes[i]->HD) HD_right[i]=nodes[i]->HD;
+        } else {
+            T_left[i] = T_left[nodes[i]->P];
+            T_right[i] = T_right[nodes[i]->P];
+            H_left[i] = H_left[nodes[i]->P];
+            H_right[i] = H_right[nodes[i]->P];
+            HD_left[i] = HD_left[nodes[i]->P];
+            HD_right[i] = HD_right[nodes[i]->P];
         }
     }
     double* other_rhos_simul_sort = new double[pr->nbSampling];
@@ -169,90 +178,121 @@ void computeIC(double br,Pr* pr,Node** nodes,double* &T_left,double* &T_right,do
     delete[] HD_simul;
 }
 
-bool computeIC_bootstraps(InputOutputStream *io, Pr* pr,Node** nodes,double* &T_left,double* &T_right,double* &H_left,double* &H_right,double* &HD_left,double* &HD_right,double &rho_left,double& rho_right,double* &other_rhos_left,double* &other_rhos_right,int r){
-    int lineNb=getLineNumber(*(io->inBootstrapTree));
-    pr->nbBootstrap = lineNb;
+bool computeIC_bootstraps(InputOutputStream *io, Pr* pr,Node** nodes,double* &T_left,double* &T_right,double* &H_left,double* &H_right,double* &HD_left,double* &HD_right,double &rho_left,double& rho_right,double* &other_rhos_left,double* &other_rhos_right,int r, bool diffTopology){
     double** T_bootstrap = new double*[pr->nbBootstrap];
     double** H_bootstrap = new double*[pr->nbBootstrap];
     double** HD_bootstrap = new double*[pr->nbBootstrap];
     double* rho_bootstrap = new double[pr->nbBootstrap];
     double** other_rhos_bootstrap  = new double*[pr->nbBootstrap];
-    double* minblen = new double[pr->nbBranches+1];
-    for (int i=0; i<= pr->nbBranches; i++){
-        minblen[i] = nodes[i]->minblen;
-    }
-    int original_nbInodes = pr->nbINodes;
-    int original_nbBranches = pr->nbBranches;
-    double original_objective = pr->objective;
     int s = 0;
     if (io->inOutgroup){
         extrait_outgroup(io, pr, true);
     }
     bool constraintConsistent=true;
-    bool sameTopology = true;
+    if (diffTopology){
+        cout<<"At least one bootstrap tree does not have the same topology as the input tree."<<endl;
+        std::ostringstream oss;
+        oss<<"- The bootstrap trees do not have the same topology as the input tree, so\nonly the confidence intervals of rates and root dates are calculated.\n";
+        pr->warningMessage.push_back(oss.str());
+    }
+    streampos pos = (*(io->inBootstrapTree)).tellg();
+    io->inBootstrapTree->seekg(0);
+    Pr* pr_bootstrap = new Pr(pr->nbINodes,pr->nbBranches);
+    pr_bootstrap->copy(pr);
+    double median_rate = pr->rho_min;
+    double br=0;
     for (int y = 0; y< pr->nbBootstrap; y++){
-        pr->internalConstraints.clear();
-        Node** nodes_bootstrap=tree2data(*(io->inBootstrapTree),pr,s);
-        readInputDate(io, pr,nodes_bootstrap,constraintConsistent);
-        computeSuc_polytomy(pr,nodes_bootstrap);
-        double br=0;
-        if (!pr->rooted){
-            nodes_bootstrap = unrooted2rooted(pr,nodes_bootstrap);
-            Node** nodes_new = cloneLeaves(pr,nodes_bootstrap,0);
-            vector<int>::iterator iter=nodes_bootstrap[0]->suc.begin();
-            int s1=(*iter);
-            iter++;
-            int s2=(*iter);
-            for (int i=pr->nbINodes; i<=pr->nbBranches; i++) {
-                nodes_new[i]->status=nodes_bootstrap[i]->status;
-            }
-            reroot_rootedtree(br,r,s1,s2,pr,nodes_bootstrap,nodes_new);
-            nodes_bootstrap = nodes_new;
-            nodes_bootstrap[s1]->V=variance(pr,br);
-            nodes_bootstrap[s2]->V=nodes_bootstrap[s1]->V;
-            for (int i=0;i<=pr->nbBranches;i++) delete nodes_new[i];
-            delete[] nodes_new;
-        }
+        pr_bootstrap->internalConstraints.clear();
+        pr_bootstrap->rooted = false;
+        Node** nodes_bootstrap=tree2data(*(io->inBootstrapTree),pr_bootstrap,s);
+        readInputDate(io, pr_bootstrap,nodes_bootstrap,constraintConsistent);
+        computeSuc_polytomy(pr_bootstrap,nodes_bootstrap);
         if (pr->c == -1){
-            pr->b = max(median_branch_lengths(pr,nodes_bootstrap),10./pr->seqLength);
+            pr_bootstrap->b = max(median_branch_lengths(pr_bootstrap,nodes_bootstrap),10./pr->seqLength);
         } else {
-            pr->b = pr->c;
+            pr_bootstrap->b = pr_bootstrap->c;
         }
-        if (pr->ratePartition.size()>0) assignRateGroupToTree(pr,nodes_bootstrap);
-        computeVariance(pr,nodes_bootstrap);
-        if (pr->splitExternal) splitExternalBranches(pr,nodes_bootstrap);
-        initConstraint(pr, nodes_bootstrap);
-        if (pr->e>0) remove_outlier_nodes(pr,nodes_bootstrap);
-        if ((original_nbInodes != pr->nbINodes) || (original_nbBranches != pr->nbBranches) || !checkTopology(pr,nodes,nodes_bootstrap)){
-            sameTopology = false;
+        if (diffTopology){
+            double minB = nodes_bootstrap[1]->B;
+            if (pr->minblen < 0){
+                for (int i=2; i <= pr_bootstrap->nbBranches; i++){
+                    if (nodes_bootstrap[i]->B < minB) minB = nodes_bootstrap[i]->B;
+                }
+            }
+            if (pr_bootstrap->rooted && pr_bootstrap->estimate_root!="" && pr_bootstrap->estimate_root!="k"){
+                rooted2unrooted(pr_bootstrap,nodes_bootstrap);
+            }
+            collapseUnInformativeBranches(pr_bootstrap,nodes_bootstrap,false);
+            if (!pr_bootstrap->rooted){
+                unrooted2rooted(pr_bootstrap,nodes_bootstrap);
+            }
+            computeVariance(pr_bootstrap,nodes_bootstrap);
+            if (pr->estimate_root=="" || pr->estimate_root=="k") constraintConsistent = initConstraint(pr_bootstrap, nodes_bootstrap);
+            if (pr->e>0) calculateOutliers(pr_bootstrap,nodes_bootstrap,median_rate,false);
+            if (pr->splitExternal) splitExternalBranches(pr_bootstrap,nodes_bootstrap);
+            if (pr->constraint) imposeMinBlen(*(io->outResult),pr_bootstrap,nodes_bootstrap,minB,false);
+        } else{
+            if (!pr_bootstrap->rooted){
+                unrooted2rooted(pr_bootstrap,nodes_bootstrap);
+                reroot_rootedtree(br,r,pr_bootstrap,nodes_bootstrap);
+            }
+            if (pr->ratePartition.size()>0) assignRateGroupToTree(pr,nodes_bootstrap);
+            computeVariance(pr_bootstrap,nodes_bootstrap);
+            if (pr->splitExternal) splitExternalBranches(pr_bootstrap,nodes_bootstrap);
+            initConstraint(pr_bootstrap, nodes_bootstrap);
+            if (pr->e>0) remove_outlier_nodes(pr,nodes_bootstrap);
+            if (pr->constraint){
+                for (int i=0; i<= pr_bootstrap->nbBranches;i++){
+                    nodes_bootstrap[i]->minblen = nodes[i]->minblen;
+                }
+            }
         }
         if (!pr->constraint){//LD without constraints
             if (pr->estimate_root==""){
-                without_constraint_multirates(pr,nodes_bootstrap,true);
+                without_constraint_multirates(pr_bootstrap,nodes_bootstrap,true);
             }
-            else {
-                without_constraint_active_set_lambda_multirates(br,pr,nodes_bootstrap,true);
+            else if (!diffTopology){
+                without_constraint_active_set_lambda_multirates(br,pr_bootstrap,nodes_bootstrap,true);
+            } else {
+                if (pr->estimate_root.compare("l")==0){
+                        r=estimate_root_without_constraint_local_rooted(pr_bootstrap,nodes_bootstrap);
+                } else{
+                        r=estimate_root_without_constraint_rooted(pr_bootstrap,nodes_bootstrap);
+                }
+                if (r>0){
+                    reroot_rootedtree(br,r,pr_bootstrap,nodes_bootstrap);
+                    without_constraint_active_set_lambda_multirates(br,pr_bootstrap,nodes_bootstrap,true);
+                }
             }
         } else {//QPD with temporal constrains
-            for (int i=0; i<= pr->nbBranches;i++){
-                nodes_bootstrap[i]->minblen = minblen[i];
-            }
             if (pr->estimate_root==""){
-                with_constraint_multirates(pr,nodes_bootstrap,true);
+                with_constraint_multirates(pr_bootstrap,nodes_bootstrap,true);
             }
-            else {
-                with_constraint_active_set_lambda_multirates(br,pr,nodes_bootstrap,true);
+            else  if (!diffTopology){
+                with_constraint_active_set_lambda_multirates(br,pr_bootstrap,nodes_bootstrap,true);
+            } else{
+                if (pr->estimate_root.compare("l")==0){
+                    r=estimate_root_with_constraint_local_rooted(pr_bootstrap,nodes_bootstrap);
+                } else if (pr->estimate_root.compare("a")==0){
+                    r=estimate_root_with_constraint_fast_rooted(pr_bootstrap,nodes_bootstrap);
+                } else{
+                    r=estimate_root_with_constraint_rooted(pr_bootstrap,nodes_bootstrap);
+                }
+                if (r>0){
+                    reroot_rootedtree(br,r,pr_bootstrap,nodes_bootstrap);
+                    with_constraint_active_set_lambda_multirates(br,pr_bootstrap,nodes_bootstrap,true);
+                }
             }
         }
         if (pr->verbose){
-            cout<<"Tree "<<y+1<<" rate: "<<pr->rho<<", rMRCA: "<<nodes_bootstrap[0]->D<<endl;
+            cout<<"Tree "<<y+1<<" rate: "<<pr_bootstrap->rho<<", tMRCA: "<<nodes_bootstrap[0]->D<<endl;
         }
-        if (sameTopology){
-            T_bootstrap[y] = new double[pr->nbBranches+1];
-            H_bootstrap[y] = new double[pr->nbBranches+1];
-            HD_bootstrap[y] = new double[pr->nbBranches+1];
-            calculate_tree_height(pr,nodes_bootstrap);
-            for (int i=0;i<=pr->nbBranches;i++){
+        if (!diffTopology){
+            T_bootstrap[y] = new double[pr_bootstrap->nbBranches+1];
+            H_bootstrap[y] = new double[pr_bootstrap->nbBranches+1];
+            HD_bootstrap[y] = new double[pr_bootstrap->nbBranches+1];
+            calculate_tree_height(pr_bootstrap,nodes_bootstrap);
+            for (int i=0;i<=pr_bootstrap->nbBranches;i++){
                 T_bootstrap[y][i] = nodes_bootstrap[i]->D;
                 H_bootstrap[y][i] = nodes_bootstrap[i]->H;
                 HD_bootstrap[y][i] = nodes_bootstrap[i]->HD;
@@ -261,22 +301,17 @@ bool computeIC_bootstraps(InputOutputStream *io, Pr* pr,Node** nodes,double* &T_
             T_bootstrap[y] = new double[1];
             T_bootstrap[y][0] = nodes_bootstrap[0]->D;
         }
-        rho_bootstrap[y] = pr->rho;
+        rho_bootstrap[y] = pr_bootstrap->rho;
         other_rhos_bootstrap[y] = new double[pr->ratePartition.size()];
         for (int g=1; g<=pr->ratePartition.size(); g++) {
-            other_rhos_bootstrap[y][g-1] = pr->rho*pr->multiplierRate[g];
+            other_rhos_bootstrap[y][g-1] = pr_bootstrap->rho*pr_bootstrap->multiplierRate[g];
         }
-        for (int i=0;i<=pr->nbBranches;i++) delete nodes_bootstrap[i];
+        for (int i=0;i<=pr_bootstrap->nbBranches;i++) delete nodes_bootstrap[i];
         delete[] nodes_bootstrap;
     }
-    pr->objective = original_objective;
-    if (!sameTopology){
-        cout<<"At least one bootstrap trees do not have the same topology as the input tree."<<endl;
-        std::ostringstream oss;
-        oss<<"- The bootstrap trees do not have the same topology as the input tree, so just the confidence intervals of rates and root dates are calculated\n";
-        pr->warningMessage.push_back(oss.str());
-    }
-    if (sameTopology){
+    (*(io->inBootstrapTree)).clear();
+    (*(io->inBootstrapTree)).seekg(pos);
+    if (!diffTopology){
         double* T_sort = new double[pr->nbBootstrap];
         double* H_sort = new double[pr->nbBootstrap];
         double* HD_sort = new double[pr->nbBootstrap];
@@ -339,7 +374,7 @@ bool computeIC_bootstraps(InputOutputStream *io, Pr* pr,Node** nodes,double* &T_
     delete[] rho_bootstrap;
     delete[] other_rhos_bootstrap_sort;
     delete[] other_rhos_bootstrap;
-    if (sameTopology){
+    if (!diffTopology){
         for (int i=0;i<pr->nbBootstrap;i++){
             delete[] H_bootstrap[i];
             delete[] HD_bootstrap[i];
@@ -351,10 +386,11 @@ bool computeIC_bootstraps(InputOutputStream *io, Pr* pr,Node** nodes,double* &T_
     delete[] T_bootstrap;
     delete[] H_bootstrap;
     delete[] HD_bootstrap;
-    return sameTopology;
+    delete pr_bootstrap;
+    return diffTopology;
 }
 
-void output(double br,int y, InputOutputStream *io, Pr* pr,Node** nodes,ostream& f,ostream& tree1,ostream& tree2,ostream& tree3,int r){
+void output(double br,int y, InputOutputStream *io, Pr* pr,Node** nodes,ostream& f,ostream& tree1,ostream& tree2,ostream& tree3,int r, bool diffTopology){
     if (!pr->constraint && pr->ci) {
         std::ostringstream oss;
         oss<<"- Confidence intervals are not warranted under non-constraint mode.\n";
@@ -433,7 +469,7 @@ void output(double br,int y, InputOutputStream *io, Pr* pr,Node** nodes,ostream&
         }
         if (pr->ratePartition.size()==0) {
             std::ostringstream oss;
-            oss<<" rate "<<pr->rho<<", tMRCA "<<tMRCA.str()<<" objective function "<<pr->objective<<"\n";
+            oss<<" rate "<<pr->rho<<", tMRCA "<<tMRCA.str()<<", objective function "<<pr->objective<<"\n";
             pr->resultMessage.push_back(oss.str());
         } else if (pr->splitExternal){
             std::ostringstream oss;
@@ -511,13 +547,12 @@ void output(double br,int y, InputOutputStream *io, Pr* pr,Node** nodes,ostream&
         double rho_left,rho_right;
         double* other_rhos_left = new double[pr->ratePartition.size()+1];
         double* other_rhos_right = new double[pr->ratePartition.size()+1];
-        bool sameTopology = true;
         if (pr->bootstraps_file==""){
             cout<<"Computing confidence intervals using sequence length "<<pr->seqLength<<" and a lognormal\n relaxed clock with mean 1, standard deviation "<<pr->q<<" (settable via option -q)"<<endl;
             computeIC(br,pr,nodes,T_min,T_max,H_min,H_max,HD_min,HD_max,rho_left,rho_right,other_rhos_left,other_rhos_right);
         } else {
             cout<<"Computing confidence intervals using input bootstrap trees ..."<<endl;
-            sameTopology = computeIC_bootstraps(io,pr,nodes,T_min,T_max,H_min,H_max,HD_min,HD_max,rho_left,rho_right,other_rhos_left,other_rhos_right,r);
+            computeIC_bootstraps(io,pr,nodes,T_min,T_max,H_min,H_max,HD_min,HD_max,rho_left,rho_right,other_rhos_left,other_rhos_right,r,diffTopology);
         }
         std::ostringstream oss;
         oss<<"- Results with confidence intervals:\n";
@@ -567,7 +602,7 @@ void output(double br,int y, InputOutputStream *io, Pr* pr,Node** nodes,ostream&
         
         tree1<<"tree "<<y<<" = ";
         tree2<<"tree "<<y<<" = ";
-        if (sameTopology){
+        if (!diffTopology){
             tree1<<nexusIC(0,pr,nodes,T_min,T_max,H_min,H_max).c_str();
             tree2<<nexusICDate(0,pr,nodes,T_min,T_max,HD_min,HD_max).c_str();
         } else{
@@ -603,5 +638,4 @@ void output(double br,int y, InputOutputStream *io, Pr* pr,Node** nodes,ostream&
         f<<string(pr->resultMessage[i]).c_str();
         cout<<string(pr->resultMessage[i]).c_str();
     }
-    
 }

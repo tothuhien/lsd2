@@ -2,7 +2,7 @@
 
 using namespace std;
 
-bool calculateOutliers(Pr* & pr,Node** & nodes,double& median_rate);
+bool calculateOutliers(Pr* & pr,Node** & nodes,double& median_rate,bool verbose);
 bool remove_one_tip(Pr* pr,Node** nodes,int t,int* &tab);
 void shift_node_id(Pr* &pr,Node** &nodes,int* &tab);
 bool remove_outlier_nodes(Pr* &pr,Node** &nodes);
