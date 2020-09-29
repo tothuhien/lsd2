@@ -3157,6 +3157,9 @@ int collapseTree(Pr* pr,Node** nodes,Node** nodes_new,int* &tab, double toCollap
         }
     }
     int cc = root+1;//number of internal nodes reduced
+    if (!pr->rooted){
+        tab[0]=0;
+    }
     tab[root]=root;
     if (pr->removeOutgroup == false && pr->fnOutgroup!=""){
         for (vector<int>::iterator iter = nodes[root]->suc.begin(); iter != nodes[root]->suc.end();iter++){
