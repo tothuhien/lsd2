@@ -71,7 +71,7 @@ int lsd::buildTimeTree( int argc, char** argv, InputOutputStream *inputOutput)
             opt->warningMessage.push_back(oss.str());
         }
         computeSuc_polytomy(opt,nodes);
-        double minB = nodes[1]->B;
+        double minB = nodes[(!opt->rooted)+1]->B;
         if (opt->minblen < 0){
             for (int i=2; i <= opt->nbBranches; i++){
                 if (nodes[i]->B < minB) minB = nodes[i]->B;
