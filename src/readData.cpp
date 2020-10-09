@@ -447,7 +447,7 @@ void extrait_outgroup(InputOutputStream *io, Pr* pr, bool useBootstrapTree){
                 w << newick(p_r, p_r,pr, nodes_new,nbTips).c_str();
             }
             if ((nbTips+outgroups.size()) != (pr->nbBranches+1 - pr->nbINodes)){
-                cerr<<"Error: The outgroups do not form a monophyletic in the tree "<<y+1<<endl;
+                cerr<<"The outgroups do not form a monophyletic in the tree "<<y+1<<endl;
                 exit(EXIT_FAILURE);
             }
             if (!pr->removeOutgroup) {

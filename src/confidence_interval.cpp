@@ -495,7 +495,21 @@ void output(double br,int y, InputOutputStream *io, Pr* pr,Node** nodes,ostream&
             pr->resultMessage.push_back(oss.str());
         }
     }
-    
+    //Write input trees out after all pre-process steps (collapse branches, remove outgroups, rooting, remove outliers etc)
+    if (pr->verbose){
+        std::ostringstream oss;
+        oss<<"- Evolution distance & date of each node:\n";
+        oss<<"Node  Branch_length Branch_elapsed_time   RttDistance NodeDate\n";
+        double* r2t = rtt(pr,nodes);
+        for (int i=0;i<=pr->nbBranches;i++){
+            if (i<pr->nbINodes) oss<<"node_"<<i<<"   ";
+            else oss<<nodes[i]->L<<"    ";
+            if (i==0) oss<<"NA  NA  ";
+            else oss<<nodes[i]->B<<" "<<pr->rho*(nodes[i]->D-nodes[nodes[i]->P]->D)<<"   ";
+            oss<<r2t[i]<<"    "<<nodes[i]->D<<"\n";
+        }
+        pr->resultMessage.push_back(oss.str());
+    }
     //Replace branche length by time-scaled lengths
     if (pr->ratePartition.size()==0){
         for (int i=1;i<=pr->nbBranches;i++){

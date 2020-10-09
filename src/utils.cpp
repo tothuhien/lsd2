@@ -3305,3 +3305,17 @@ bool checkTopology(Pr* pr,Node** nodes1, Node** nodes2){
     }
     return true;
 }*/
+
+double* rtt(Pr* pr,Node** nodes){
+    double* r2t = new double[pr->nbBranches+1];
+    for (int i=0;i<=pr->nbBranches;i++){
+        double r=0;
+        int j=i;
+        while (j!=0){
+            r+=nodes[j]->B;
+            j=nodes[j]->P;
+        }
+        r2t[i]=r;
+    }
+    return r2t;
+}
