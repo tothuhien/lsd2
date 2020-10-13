@@ -143,7 +143,9 @@ int lsd::buildTimeTree( int argc, char** argv, InputOutputStream *inputOutput)
                 opt->givenRate[0] = false;
             }
         }
-        if (opt->estimate_root=="" || opt->estimate_root=="k") constraintConsistent = initConstraint(opt, nodes);
+        if (opt->estimate_root=="" || opt->estimate_root=="k"){
+            constraintConsistent = initConstraint(opt, nodes);
+        }
         if (opt->e>0) calculateOutliers(opt,nodes,median_rate,true);
         if (opt->splitExternal) splitExternalBranches(opt,nodes);
         if (!opt->constraint){//LD without constraints
@@ -159,7 +161,6 @@ int lsd::buildTimeTree( int argc, char** argv, InputOutputStream *inputOutput)
             }
             else if (opt->estimate_root=="k"){
                 cout<<"Estimating the root position on the branch defined by given outgroups ..."<<endl;
-                double br=0;
                 vector<int>::iterator iter=nodes[0]->suc.begin();
                 int s1=(*iter);
                 iter++;
@@ -218,9 +219,9 @@ int lsd::buildTimeTree( int argc, char** argv, InputOutputStream *inputOutput)
                         }
                     }
                     else if (opt->estimate_root=="k"){
+                        
                         if (constraintConsistent){
                             cout<<"Estimating the root position on the branch defined by given outgroups ..."<<endl;
-                            double br=0;
                             vector<int>::iterator iter=nodes[0]->suc.begin();
                             int s1=(*iter);
                             iter++;
