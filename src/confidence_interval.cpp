@@ -413,7 +413,7 @@ void output(double br,int y, InputOutputStream *io, Pr* pr,Node** nodes,ostream&
         std::ostringstream oss;
         oss<<"- Dating results:\n";
         if (pr->multiplierRate[0]!=-1){
-            oss<<" rate internalBranches "<<pr->rho<<", ";
+            oss<<" rate internal Branches "<<pr->rho<<", ";
         }
         for (int i=1; i<=pr->ratePartition.size(); i++) {
             if (pr->multiplierRate[i]>0)
@@ -592,7 +592,7 @@ void output(double br,int y, InputOutputStream *io, Pr* pr,Node** nodes,ostream&
         } else if (pr->splitExternal){
             std::ostringstream oss;
             if (pr->multiplierRate[0]!=-1){
-                oss<<" rate internalBranches "<<pr->rho<<" ["<<rho_left<<"; "<<rho_right<<"], ";
+                oss<<" rate internal Branches "<<pr->rho<<" ["<<rho_left<<"; "<<rho_right<<"], ";
             }
             for (int i=1; i<=pr->ratePartition.size(); i++) {
                 if (pr->multiplierRate[i]>0) oss<<"rate "<<pr->ratePartition[i-1]->name.c_str()<<" "<<pr->rho*pr->multiplierRate[i]<<" ["<<other_rhos_left[i]<<"; "<<other_rhos_right[i]<<"], ";

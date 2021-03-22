@@ -263,11 +263,11 @@ void readInputDate(InputOutputStream* io, Pr* pr,Node** &nodes,bool& constraintC
         if (!tipHaveTime[i]) w3=w3+" "+nodes[i]->L;
     }
     delete[] tipHaveTime;
-    if (w1!=""){
+    /*if (w1!=""){
         std::ostringstream oss;
         oss<<"- The nodes"+w1+" in the input date file are not present in the input tree.\n";
         pr->warningMessage.push_back(oss.str());
-    }
+    }*/
     if (w2!=""){
         std::ostringstream oss;
         oss<<"- The nodes"+w2+" have more than one temporal constraint.\n";
