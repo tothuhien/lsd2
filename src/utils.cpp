@@ -1625,99 +1625,6 @@ void desactiveLimit(Node* no){
     if (upper(no)) no->status-=2+8;
 }
 
-bool integrateConstrainL(Date* d1,Node* n2){//n1 is an ancestor of n2
-    if (n2->type=='n') {
-        if (d1->type=='l' || d1->type=='b') {
-            n2->type='l';
-            n2->lower=d1->lower;
-        }
-        if (d1->type=='p') {
-            n2->type='l';
-            n2->lower=d1->date;
-        }
-    }
-    if (n2->type=='l' || n2->type=='b'){
-        if (d1->type=='l' || d1->type=='b') {
-            n2->lower=max(d1->lower,n2->lower);
-        }
-        if (d1->type=='p') {
-            n2->lower=max(n2->lower,d1->date);
-        }
-    }
-    if (n2->type=='u' || n2->type=='b'){
-        if (d1->type=='l' || d1->type=='b') {
-            if (d1->lower>n2->upper) {
-                return false;
-            }
-            n2->type='b';
-            n2->lower=d1->lower;
-        }
-        if (d1->type=='u' || d1->type=='b') {
-            n2->upper=min(d1->upper,n2->upper);
-        }
-        if (d1->type=='p') {
-            if (d1->date>n2->upper) {
-                return false;
-            }
-            n2->lower=d1->date;
-            n2->type='b';
-        }
-    }
-    return true;
-}
-
-bool integrateConstrainU(Date* d1,Node* n2){//n1 is a child of n2
-    if (n2->type=='n') {
-        if (d1->type=='u' || d1->type=='b') {
-            n2->type='u';
-            n2->upper=d1->upper;
-        }
-        if (d1->type=='p') {
-            n2->type='u';
-            n2->upper=d1->date;
-        }
-    }
-    if (n2->type=='u' || n2->type=='b'){
-        if (d1->type=='u' || d1->type=='b') {
-            n2->upper=min(d1->upper,n2->upper);
-        }
-        if (d1->type=='p') {
-            n2->upper=max(n2->upper,d1->date);
-        }
-    }
-    if (n2->type=='l' || n2->type=='b'){
-        if (d1->type=='u' || d1->type=='b') {
-            if (d1->upper<n2->lower) {
-                return false;
-            }
-            else if (d1->upper==n2->lower){
-                n2->type='p';
-                n2->D=n2->lower;
-            }
-            else{
-                n2->type='b';
-                n2->upper=d1->upper;
-            }
-        }
-        if (d1->type=='p') {
-            if (d1->date<n2->lower) {
-                return false;
-            }
-            else if (d1->date==n2->lower){
-                n2->type='p';
-                n2->D=n2->lower;
-                n2->status=8;
-            }
-            else{
-                n2->upper=d1->date;
-                n2->type='b';
-            }
-            
-        }
-    }
-    return true;
-}
-
 bool initConstraintReRooted(Pr* pr,Node** nodes,int r,int p_r){
     bool constraintConsistent=true;
     for (int i=0;i<pr->nbINodes;i++){
@@ -1729,10 +1636,6 @@ bool initConstraintReRooted(Pr* pr,Node** nodes,int r,int p_r){
         int k=-1;
         if (no->mrca.size()==0){
             k=no->id;
-            if (k==0){
-                if (!integrateConstrainL(no,nodes[r])) return false;//or swap r and p_r
-                if (!integrateConstrainU(no,nodes[p_r])) return false;
-            }
         }
         else{
             k=mrca(nodes,(*iter)->mrca);
