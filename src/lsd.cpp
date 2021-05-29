@@ -127,6 +127,10 @@ int lsd::buildTimeTree( int argc, char** argv, InputOutputStream *inputOutput)
             string line;
             if( getline(*(io->inRate), line)) {
                 vector<double> all_rates = read_double_from_line(line);
+                if (all_rates.size()==0){
+                    cerr<<"Error from the input rate file, expect a real number"<<endl;
+                    exit(EXIT_FAILURE);
+                }
                 opt->rho = all_rates[0];
                 if (all_rates.size() > 1){
                     int i = 1;
