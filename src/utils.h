@@ -325,4 +325,7 @@ bool checkTopology(Pr* pr,Node** nodes1, Node** nodes2);
 
 double* rtt(Pr* pr,Node** nodes);
 
+void starting_pointLower(Pr* pr,Node** nodes,list<int> & active_set);
+
+void starting_pointUpper(Pr* pr,Node** nodes,list<int> & active_set);
 #endif

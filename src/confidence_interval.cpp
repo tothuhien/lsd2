@@ -65,6 +65,8 @@ void computeIC(double br,Pr* pr,Node** nodes,double* &T_left,double* &T_right,do
     double** H_simul = new double*[pr->nbSampling];
     double** HD_simul = new double*[pr->nbSampling];
     double* rho_simul = new double[pr->nbSampling];
+    double* rho_lower = new double[pr->nbSampling];
+    double* rho_upper = new double[pr->nbSampling];
     vector<double>* other_rhos_simul = new vector<double>[pr->nbSampling];
     std::poisson_distribution<int> distribution(br*pr->seqLength);
     double* tipDates = new double[prReduced->nbBranches - prReduced->nbINodes + 1];
@@ -72,6 +74,7 @@ void computeIC(double br,Pr* pr,Node** nodes,double* &T_left,double* &T_right,do
         tipDates[i] = nodesReduced[i + prReduced->nbINodes]->D;
     }
     computeNewVariance(prReduced,nodesReduced);
+    bool unique = true;
     for (int r=0;r<pr->nbSampling;r++){
         for (int j=0;j<=prReduced->nbBranches;j++){
             nodesReduced[j]->B=B_simul[r][j];
@@ -85,6 +88,9 @@ void computeIC(double br,Pr* pr,Node** nodes,double* &T_left,double* &T_right,do
         }
         if (pr->constraint) with_constraint_multirates(prReduced,nodesReduced,false);
         else without_constraint_multirates(prReduced,nodesReduced,false);
+        rho_lower[r]  = prReduced->rhoLower;
+        rho_upper[r] = prReduced->rhoUpper;
+        if (prReduced->rhoLower != 0 && prReduced->rhoUpper!=0) unique  = false;
         T_simul[r]=new double[prReduced->nbBranches+1];
         for (int j=0;j<=prReduced->nbBranches;j++) T_simul[r][j]=nodesReduced[j]->D;
         rho_simul[r]=prReduced->rho;
@@ -106,67 +112,141 @@ void computeIC(double br,Pr* pr,Node** nodes,double* &T_left,double* &T_right,do
         delete nodesReduced[i];
     }
     delete[] nodesReduced;
-    sort(rho_simul,pr->nbSampling);
-    rho_left=rho_simul[int(0.025*pr->nbSampling)];
-    rho_right=rho_simul[pr->nbSampling-int(0.025*pr->nbSampling)-1];
-    if (pr->rho<rho_left) rho_left=pr->rho;
-    if (pr->rho>rho_right) rho_right=pr->rho;
-    double* T_sort = new double[pr->nbSampling];
-    double* H_sort = new double[pr->nbSampling];
-    double* HD_sort = new double[pr->nbSampling];
-    vector<int> pre = preorder_polytomy_withTips(pr,nodes);
-    for (vector<int>::iterator iter=pre.begin();iter!=pre.end();iter++){
-        int i =  *iter;
-        if (tab[i]!=-1) {
-            for (int j=0;j<pr->nbSampling;j++) {
-                T_sort[j]=T_simul[j][tab[i]];
-                H_sort[j]=H_simul[j][tab[i]];
-                HD_sort[j]=HD_simul[j][tab[i]];
+    if (unique){
+        sort(rho_simul,pr->nbSampling);
+        rho_left=rho_simul[int(0.025*pr->nbSampling)];
+        rho_right=rho_simul[pr->nbSampling-int(0.025*pr->nbSampling)-1];
+        if (pr->rho<rho_left) rho_left=pr->rho;
+        if (pr->rho>rho_right) rho_right=pr->rho;
+        double* T_sort = new double[pr->nbSampling];
+        double* H_sort = new double[pr->nbSampling];
+        double* HD_sort = new double[pr->nbSampling];
+        vector<int> pre = preorder_polytomy_withTips(pr,nodes);
+        for (vector<int>::iterator iter=pre.begin();iter!=pre.end();iter++){
+            int i =  *iter;
+            if (tab[i]!=-1) {
+                for (int j=0;j<pr->nbSampling;j++) {
+                    T_sort[j]=T_simul[j][tab[i]];
+                    H_sort[j]=H_simul[j][tab[i]];
+                    HD_sort[j]=HD_simul[j][tab[i]];
+                }
+                sort(T_sort,pr->nbSampling);
+                sort(H_sort,pr->nbSampling);
+                sort(HD_sort,pr->nbSampling);
+                
+                T_left[i]=T_sort[int(0.025*pr->nbSampling)];
+                if (T_left[i]>nodes[i]->D) T_left[i]=nodes[i]->D;
+                T_right[i]=T_sort[pr->nbSampling-int(0.025*pr->nbSampling)-1];
+                if (T_right[i]<nodes[i]->D) T_right[i]=nodes[i]->D;
+                
+                H_left[i]=H_sort[int(0.025*pr->nbSampling)];
+                if (H_left[i]>nodes[i]->H) H_left[i]=nodes[i]->H;
+                H_right[i]=H_sort[pr->nbSampling-int(0.025*pr->nbSampling)-1];
+                if (H_right[i]<nodes[i]->H) H_right[i]=nodes[i]->H;
+                
+                HD_left[i]=HD_sort[int(0.025*pr->nbSampling)];
+                if (HD_left[i]>nodes[i]->HD) HD_left[i]=nodes[i]->HD;
+                HD_right[i]=HD_sort[pr->nbSampling-int(0.025*pr->nbSampling)-1];
+                if (HD_right[i]<nodes[i]->HD) HD_right[i]=nodes[i]->HD;
+            } else {
+                T_left[i] = T_left[nodes[i]->P];
+                T_right[i] = T_right[nodes[i]->P];
+                H_left[i] = H_left[nodes[i]->P];
+                H_right[i] = H_right[nodes[i]->P];
+                HD_left[i] = HD_left[nodes[i]->P];
+                HD_right[i] = HD_right[nodes[i]->P];
             }
-            sort(T_sort,pr->nbSampling);
-            sort(H_sort,pr->nbSampling);
-            sort(HD_sort,pr->nbSampling);
-            
-            T_left[i]=T_sort[int(0.025*pr->nbSampling)];
-            if (T_left[i]>nodes[i]->D) T_left[i]=nodes[i]->D;
-            T_right[i]=T_sort[pr->nbSampling-int(0.025*pr->nbSampling)-1];
-            if (T_right[i]<nodes[i]->D) T_right[i]=nodes[i]->D;
-            
-            H_left[i]=H_sort[int(0.025*pr->nbSampling)];
-            if (H_left[i]>nodes[i]->H) H_left[i]=nodes[i]->H;
-            H_right[i]=H_sort[pr->nbSampling-int(0.025*pr->nbSampling)-1];
-            if (H_right[i]<nodes[i]->H) H_right[i]=nodes[i]->H;
-            
-            HD_left[i]=HD_sort[int(0.025*pr->nbSampling)];
-            if (HD_left[i]>nodes[i]->HD) HD_left[i]=nodes[i]->HD;
-            HD_right[i]=HD_sort[pr->nbSampling-int(0.025*pr->nbSampling)-1];
-            if (HD_right[i]<nodes[i]->HD) HD_right[i]=nodes[i]->HD;
-        } else {
-            T_left[i] = T_left[nodes[i]->P];
-            T_right[i] = T_right[nodes[i]->P];
-            H_left[i] = H_left[nodes[i]->P];
-            H_right[i] = H_right[nodes[i]->P];
-            HD_left[i] = HD_left[nodes[i]->P];
-            HD_right[i] = HD_right[nodes[i]->P];
         }
-    }
-    double* other_rhos_simul_sort = new double[pr->nbSampling];
-    for (int g=1;g<=pr->ratePartition.size();g++){
-        for (int r=0;r<pr->nbSampling;r++) {
-            other_rhos_simul_sort[r]=other_rhos_simul[r][g-1];
+        delete[] T_sort;
+        delete[] H_sort;
+        delete[] HD_sort;
+        double* other_rhos_simul_sort = new double[pr->nbSampling];
+        for (int g=1;g<=pr->ratePartition.size();g++){
+            for (int r=0;r<pr->nbSampling;r++) {
+                other_rhos_simul_sort[r]=other_rhos_simul[r][g-1];
+            }
+            sort(other_rhos_simul_sort,pr->nbSampling);
+            other_rhos_left[g]=other_rhos_simul_sort[int(0.025*pr->nbSampling)];
+            if (other_rhos_left[g]>pr->rho*pr->multiplierRate[g]) other_rhos_left[g]=pr->rho*pr->multiplierRate[g];
+            other_rhos_right[g]=other_rhos_simul_sort[pr->nbSampling-int(0.025*pr->nbSampling)-1];
+            if (other_rhos_right[g]<pr->rho*pr->multiplierRate[g]) other_rhos_right[g]=pr->rho*pr->multiplierRate[g];
         }
-        sort(other_rhos_simul_sort,pr->nbSampling);
-        other_rhos_left[g]=other_rhos_simul_sort[int(0.025*pr->nbSampling)];
-        if (other_rhos_left[g]>pr->rho*pr->multiplierRate[g]) other_rhos_left[g]=pr->rho*pr->multiplierRate[g];
-        other_rhos_right[g]=other_rhos_simul_sort[pr->nbSampling-int(0.025*pr->nbSampling)-1];
-        if (other_rhos_right[g]<pr->rho*pr->multiplierRate[g]) other_rhos_right[g]=pr->rho*pr->multiplierRate[g];
+        delete[] other_rhos_simul_sort;
+    } else {
+        double* rho_simul_2 = new double[2*pr->nbSampling];
+        for (int i=0;i<pr->nbSampling;i++){
+            rho_simul_2[i] = rho_lower[i];
+            rho_simul_2[2*pr->nbSampling-i-1] = rho_upper[i];
+        }
+        sort(rho_simul_2,2*pr->nbSampling);
+        rho_left=rho_simul_2[int(0.025*pr->nbSampling*2)];
+        rho_right=rho_simul_2[2*pr->nbSampling-int(0.025*pr->nbSampling*2)-1];
+        if (pr->rho<rho_left) rho_left=pr->rho;
+        if (pr->rho>rho_right) rho_right=pr->rho;
+        double* T_sort = new double[2*pr->nbSampling];
+        double* H_sort = new double[2*pr->nbSampling];
+        double* HD_sort = new double[2*pr->nbSampling];
+        vector<int> pre = preorder_polytomy_withTips(pr,nodes);
+        for (vector<int>::iterator iter=pre.begin();iter!=pre.end();iter++){
+            int i =  *iter;
+            if (tab[i]!=-1) {
+                for (int j=0;j<pr->nbSampling;j++) {
+                    T_sort[j]=T_simul[j][tab[i]]*rho_simul[j] / rho_lower[j];
+                    T_sort[2*pr->nbSampling-j-1]=T_simul[j][tab[i]]*rho_simul[j] / rho_upper[j];
+                    H_sort[j]=H_simul[j][tab[i]]*rho_simul[j] / rho_lower[j];
+                    H_sort[2*pr->nbSampling-j-1]=H_simul[j][tab[i]]*rho_simul[j] / rho_upper[j];
+                    HD_sort[j]=HD_simul[j][tab[i]]*rho_simul[j] /  rho_lower[j];
+                    HD_sort[2*pr->nbSampling-j-1]=HD_simul[j][tab[i]]*rho_simul[j] /  rho_upper[j];
+                }
+                sort(T_sort,2*pr->nbSampling);
+                sort(H_sort,2*pr->nbSampling);
+                sort(HD_sort,2*pr->nbSampling);
+                
+                T_left[i]=T_sort[int(0.025*pr->nbSampling*2)];
+                if (T_left[i]>nodes[i]->D*pr->rho/pr->rhoUpper) T_left[i]=nodes[i]->D*pr->rho/pr->rhoUpper;
+                T_right[i]=T_sort[2*pr->nbSampling-int(0.025*pr->nbSampling*2)-1];
+                if (T_right[i]<nodes[i]->D*pr->rho/pr->rhoLower) T_right[i]=nodes[i]->D*pr->rho/pr->rhoLower;
+                
+                H_left[i]=H_sort[int(0.025*pr->nbSampling*2)];
+                if (H_left[i]>nodes[i]->H*pr->rho/pr->rhoUpper) H_left[i]=nodes[i]->H*pr->rho/pr->rhoUpper;
+                H_right[i]=H_sort[2*pr->nbSampling-int(0.025*pr->nbSampling*2)-1];
+                if (H_right[i]<nodes[i]->H*pr->rho/pr->rhoLower) H_right[i]=nodes[i]->H*pr->rho/pr->rhoLower;
+                
+                HD_left[i]=HD_sort[int(0.025*pr->nbSampling*2)];
+                if (HD_left[i]>nodes[i]->HD*pr->rho/pr->rhoUpper) HD_left[i]=nodes[i]->HD*pr->rho/pr->rhoUpper;
+                HD_right[i]=HD_sort[2*pr->nbSampling-int(0.025*pr->nbSampling*2)-1];
+                if (HD_right[i]<nodes[i]->HD*pr->rho/pr->rhoLower) HD_right[i]=nodes[i]->HD*pr->rho/pr->rhoLower;
+                
+            } else {
+                T_left[i] = T_left[nodes[i]->P];
+                T_right[i] = T_right[nodes[i]->P];
+                H_left[i] = H_left[nodes[i]->P];
+                H_right[i] = H_right[nodes[i]->P];
+                HD_left[i] = HD_left[nodes[i]->P];
+                HD_right[i] = HD_right[nodes[i]->P];
+            }
+        }
+        delete[] T_sort;
+        delete[] H_sort;
+        delete[] HD_sort;
+        delete[] rho_simul_2;
+        double* other_rhos_simul_sort = new double[2*pr->nbSampling];
+        for (int g=1;g<=pr->ratePartition.size();g++){
+            for (int r=0;r<2*pr->nbSampling;r++) {
+                other_rhos_simul_sort[r]=other_rhos_simul[r][g-1]*pr->rho/pr->rhoLower;
+                other_rhos_simul_sort[2*pr->nbSampling-r-1]=other_rhos_simul[r][g-1]*pr->rho/pr->rhoUpper;
+            }
+            sort(other_rhos_simul_sort,2*pr->nbSampling);
+            other_rhos_left[g]=other_rhos_simul_sort[int(0.025*pr->nbSampling*2)];
+            if (other_rhos_left[g]>pr->rhoLower*pr->multiplierRate[g]) other_rhos_left[g]=pr->rhoLower*pr->multiplierRate[g];
+            other_rhos_right[g]=other_rhos_simul_sort[2*pr->nbSampling-int(0.025*pr->nbSampling*2)-1];
+            if (other_rhos_right[g]<pr->rhoUpper*pr->multiplierRate[g]) other_rhos_right[g]=pr->rhoUpper*pr->multiplierRate[g];
+        }
+        delete[] other_rhos_simul_sort;
     }
     delete[] tab;
-    delete[] rho_simul;
-    delete[] T_sort;
-    delete[] H_sort;
-    delete[] HD_sort;
-    delete[] other_rhos_simul_sort;
+    delete[] rho_lower;
+    delete[] rho_upper;
     delete[] other_rhos_simul;
     for (int i=0;i<pr->nbSampling;i++){
         delete[] T_simul[i];
@@ -183,6 +263,8 @@ bool computeIC_bootstraps(InputOutputStream *io, Pr* pr,Node** nodes,double* &T_
     double** H_bootstrap = new double*[pr->nbBootstrap];
     double** HD_bootstrap = new double*[pr->nbBootstrap];
     double* rho_bootstrap = new double[pr->nbBootstrap];
+    double* rho_lower = new double[pr->nbBootstrap];
+    double* rho_upper = new double[pr->nbBootstrap];
     double** other_rhos_bootstrap  = new double*[pr->nbBootstrap];
     int s = 0;
     if (io->inOutgroup){
@@ -201,6 +283,7 @@ bool computeIC_bootstraps(InputOutputStream *io, Pr* pr,Node** nodes,double* &T_
     pr_bootstrap->copy(pr);
     double median_rate = pr->rho_min;
     double br=0;
+    bool unique = true;
     for (int y = 0; y< pr->nbBootstrap; y++){
         pr_bootstrap->internalConstraints.clear();
         pr_bootstrap->rooted = false;
@@ -252,16 +335,16 @@ bool computeIC_bootstraps(InputOutputStream *io, Pr* pr,Node** nodes,double* &T_
                 without_constraint_multirates(pr_bootstrap,nodes_bootstrap,true);
             }
             else if (!diffTopology){
-                without_constraint_active_set_lambda_multirates(br,pr_bootstrap,nodes_bootstrap,true);
+                without_constraint_active_set_lambda_multirates(true,br,pr_bootstrap,nodes_bootstrap,true);
             } else {
                 if (pr->estimate_root.compare("l")==0){
-                        r=estimate_root_without_constraint_local_rooted(pr_bootstrap,nodes_bootstrap);
+                    r=estimate_root_without_constraint_local_rooted(pr_bootstrap,nodes_bootstrap);
                 } else{
-                        r=estimate_root_without_constraint_rooted(pr_bootstrap,nodes_bootstrap);
+                    r=estimate_root_without_constraint_rooted(pr_bootstrap,nodes_bootstrap);
                 }
                 if (r>0){
                     reroot_rootedtree(br,r,pr_bootstrap,nodes_bootstrap);
-                    without_constraint_active_set_lambda_multirates(br,pr_bootstrap,nodes_bootstrap,true);
+                    without_constraint_active_set_lambda_multirates(true,br,pr_bootstrap,nodes_bootstrap,true);
                 }
             }
         } else {//QPD with temporal constrains
@@ -269,7 +352,7 @@ bool computeIC_bootstraps(InputOutputStream *io, Pr* pr,Node** nodes,double* &T_
                 with_constraint_multirates(pr_bootstrap,nodes_bootstrap,true);
             }
             else  if (!diffTopology){
-                with_constraint_active_set_lambda_multirates(br,pr_bootstrap,nodes_bootstrap,true);
+                with_constraint_active_set_lambda_multirates(true,br,pr_bootstrap,nodes_bootstrap,true);
             } else{
                 if (pr->estimate_root.compare("l")==0){
                     r=estimate_root_with_constraint_local_rooted(pr_bootstrap,nodes_bootstrap);
@@ -280,10 +363,11 @@ bool computeIC_bootstraps(InputOutputStream *io, Pr* pr,Node** nodes,double* &T_
                 }
                 if (r>0){
                     reroot_rootedtree(br,r,pr_bootstrap,nodes_bootstrap);
-                    with_constraint_active_set_lambda_multirates(br,pr_bootstrap,nodes_bootstrap,true);
+                    with_constraint_active_set_lambda_multirates(true,br,pr_bootstrap,nodes_bootstrap,true);
                 }
             }
         }
+        if (pr->rhoLower != 0 && pr->rhoUpper!=0) unique  = false;
         if (pr->verbose){
             cout<<"Tree "<<y+1<<" rate: "<<pr_bootstrap->rho<<", tMRCA: "<<nodes_bootstrap[0]->D<<endl;
         }
@@ -302,6 +386,8 @@ bool computeIC_bootstraps(InputOutputStream *io, Pr* pr,Node** nodes,double* &T_
             T_bootstrap[y][0] = nodes_bootstrap[0]->D;
         }
         rho_bootstrap[y] = pr_bootstrap->rho;
+        rho_lower[r]  = pr->rhoLower;
+        rho_upper[r] = pr->rhoUpper;
         other_rhos_bootstrap[y] = new double[pr->ratePartition.size()];
         for (int g=1; g<=pr->ratePartition.size(); g++) {
             other_rhos_bootstrap[y][g-1] = pr_bootstrap->rho*pr_bootstrap->multiplierRate[g];
@@ -311,68 +397,141 @@ bool computeIC_bootstraps(InputOutputStream *io, Pr* pr,Node** nodes,double* &T_
     }
     (*(io->inBootstrapTree)).clear();
     (*(io->inBootstrapTree)).seekg(pos);
-    if (!diffTopology){
-        double* T_sort = new double[pr->nbBootstrap];
-        double* H_sort = new double[pr->nbBootstrap];
-        double* HD_sort = new double[pr->nbBootstrap];
-        for (int i=0;i<=pr->nbBranches;i++){
-            for (int j=0;j<pr->nbBootstrap;j++) {
-                T_sort[j]=T_bootstrap[j][i];
-                H_sort[j]=H_bootstrap[j][i];
-                HD_sort[j]=HD_bootstrap[j][i];
+    if (unique){
+        if (!diffTopology){
+            double* T_sort = new double[pr->nbBootstrap];
+            double* H_sort = new double[pr->nbBootstrap];
+            double* HD_sort = new double[pr->nbBootstrap];
+            for (int i=0;i<=pr->nbBranches;i++){
+                for (int j=0;j<pr->nbBootstrap;j++) {
+                    T_sort[j]=T_bootstrap[j][i];
+                    H_sort[j]=H_bootstrap[j][i];
+                    HD_sort[j]=HD_bootstrap[j][i];
+                }
+                sort(T_sort,pr->nbBootstrap);
+                sort(H_sort,pr->nbBootstrap);
+                sort(HD_sort,pr->nbBootstrap);
+                T_left[i]=T_sort[int(0.025*pr->nbBootstrap)];
+                if (T_left[i]>nodes[i]->D) T_left[i]=nodes[i]->D;
+                T_right[i]=T_sort[pr->nbBootstrap-int(0.025*pr->nbBootstrap)-1];
+                if (T_right[i]<nodes[i]->D) T_right[i]=nodes[i]->D;
+                
+                H_left[i]=H_sort[int(0.025*pr->nbBootstrap)];
+                if (H_left[i]>nodes[i]->H) H_left[i]=nodes[i]->H;
+                H_right[i]=H_sort[pr->nbBootstrap-int(0.025*pr->nbBootstrap)-1];
+                if (H_right[i]<nodes[i]->H) H_right[i]=nodes[i]->H;
+                
+                HD_left[i]=HD_sort[int(0.025*pr->nbBootstrap)];
+                if (HD_left[i]>nodes[i]->HD) HD_left[i]=nodes[i]->HD;
+                HD_right[i]=HD_sort[pr->nbBootstrap-int(0.025*pr->nbBootstrap)-1];
+                if (HD_right[i]<nodes[i]->HD) HD_right[i]=nodes[i]->HD;
+            }
+            delete[] T_sort;
+            delete[] H_sort;
+            delete[] HD_sort;
+        } else{
+            double* T_sort = new double[pr->nbBootstrap];
+            for (int i=0; i<pr->nbBootstrap; i++){
+                T_sort[i] = T_bootstrap[i][0];
             }
             sort(T_sort,pr->nbBootstrap);
-            sort(H_sort,pr->nbBootstrap);
-            sort(HD_sort,pr->nbBootstrap);
-            
-            T_left[i]=T_sort[int(0.025*pr->nbBootstrap)];
-            if (T_left[i]>nodes[i]->D) T_left[i]=nodes[i]->D;
-            T_right[i]=T_sort[pr->nbBootstrap-int(0.025*pr->nbBootstrap)-1];
-            if (T_right[i]<nodes[i]->D) T_right[i]=nodes[i]->D;
-            
-            H_left[i]=H_sort[int(0.025*pr->nbBootstrap)];
-            if (H_left[i]>nodes[i]->H) H_left[i]=nodes[i]->H;
-            H_right[i]=H_sort[pr->nbBootstrap-int(0.025*pr->nbBootstrap)-1];
-            if (H_right[i]<nodes[i]->H) H_right[i]=nodes[i]->H;
-            
-            HD_left[i]=HD_sort[int(0.025*pr->nbBootstrap)];
-            if (HD_left[i]>nodes[i]->HD) HD_left[i]=nodes[i]->HD;
-            HD_right[i]=HD_sort[pr->nbBootstrap-int(0.025*pr->nbBootstrap)-1];
-            if (HD_right[i]<nodes[i]->HD) HD_right[i]=nodes[i]->HD;
+            T_left[0]=T_sort[int(0.025*pr->nbBootstrap)];
+            if (T_left[0]>nodes[0]->D) T_left[0]=nodes[0]->D;
+            T_right[0]=T_sort[pr->nbBootstrap-int(0.025*pr->nbBootstrap)-1];
+            if (T_right[0]<nodes[0]->D) T_right[0]=nodes[0]->D;
+            delete[] T_sort;
         }
-        delete[] T_sort;
-        delete[] H_sort;
-        delete[] HD_sort;
-    } else{
-        double* T_sort = new double[pr->nbBootstrap];
+        sort(rho_bootstrap,pr->nbBootstrap);
+        rho_left=rho_bootstrap[int(0.025*pr->nbBootstrap)];
+        rho_right=rho_bootstrap[pr->nbSampling-int(0.025*pr->nbBootstrap)-1];
+        if (pr->rho<rho_left) rho_left=pr->rho;
+        if (pr->rho>rho_right) rho_right=pr->rho;
+        double* other_rhos_bootstrap_sort = new double[pr->nbBootstrap];
+        for (int g=1;g<=pr->ratePartition.size();g++){
+            for (int r=0;r<pr->nbBootstrap;r++) {
+                other_rhos_bootstrap_sort[r]=other_rhos_bootstrap[r][g-1];
+            }
+            sort(other_rhos_bootstrap_sort,pr->nbBootstrap);
+            other_rhos_left[g]=other_rhos_bootstrap_sort[int(0.025*pr->nbBootstrap)];
+            if (other_rhos_left[g]>pr->rho*pr->multiplierRate[g]) other_rhos_left[g]=pr->rho*pr->multiplierRate[g];
+            other_rhos_right[g]=other_rhos_bootstrap_sort[pr->nbBootstrap-int(0.025*pr->nbSampling)-1];
+            if (other_rhos_right[g]<pr->rho*pr->multiplierRate[g]) other_rhos_right[g]=pr->rho*pr->multiplierRate[g];
+        }
+    } else {
+        if (!diffTopology){
+            double* T_sort = new double[2*pr->nbBootstrap];
+            double* H_sort = new double[2*pr->nbBootstrap];
+            double* HD_sort = new double[2*pr->nbBootstrap];
+            for (int i=0;i<=pr->nbBranches;i++){
+                for (int j=0;j<pr->nbBootstrap;j++) {
+                    T_sort[j]=T_bootstrap[j][i]*rho_bootstrap[j] / rho_lower[j];
+                    T_sort[2*pr->nbBootstrap-j-1]=T_bootstrap[j][i]*rho_bootstrap[j] / rho_upper[j];
+                    H_sort[j]=H_bootstrap[j][i]*rho_bootstrap[j] / rho_lower[j];
+                    H_sort[2*pr->nbBootstrap-j-1]=H_bootstrap[j][i]*rho_bootstrap[j] / rho_upper[j];
+                    HD_sort[j]=HD_bootstrap[j][i]*rho_bootstrap[j] / rho_lower[j];
+                    HD_sort[2*pr->nbBootstrap-j-1]=HD_bootstrap[j][i]*rho_bootstrap[j] / rho_upper[j];
+                }
+                sort(T_sort,2*pr->nbBootstrap);
+                sort(H_sort,2*pr->nbBootstrap);
+                sort(HD_sort,2*pr->nbBootstrap);
+    
+                T_left[i]=T_sort[int(0.025*pr->nbBootstrap*2)];
+                if (T_left[i]>nodes[i]->D) T_left[i]=nodes[i]->D;
+                T_right[i]=T_sort[2*pr->nbBootstrap-int(0.025*pr->nbBootstrap*2)-1];
+                if (T_right[i]<nodes[i]->D) T_right[i]=nodes[i]->D;
+                
+                H_left[i]=H_sort[int(0.025*pr->nbBootstrap*2)];
+                if (H_left[i]>nodes[i]->H) H_left[i]=nodes[i]->H;
+                H_right[i]=H_sort[2*pr->nbBootstrap-int(0.025*pr->nbBootstrap*2)-1];
+                if (H_right[i]<nodes[i]->H) H_right[i]=nodes[i]->H;
+                
+                HD_left[i]=HD_sort[int(0.025*pr->nbBootstrap*2)];
+                if (HD_left[i]>nodes[i]->HD) HD_left[i]=nodes[i]->HD;
+                HD_right[i]=HD_sort[2*pr->nbBootstrap-int(0.025*pr->nbBootstrap*2)-1];
+                if (HD_right[i]<nodes[i]->HD) HD_right[i]=nodes[i]->HD;
+            }
+            delete[] T_sort;
+            delete[] H_sort;
+            delete[] HD_sort;
+        } else{
+            double* T_sort = new double[pr->nbBootstrap*2];
+            for (int i=0; i<pr->nbBootstrap; i++){
+                T_sort[i] = T_bootstrap[i][0]*rho_bootstrap[i] / rho_lower[i];
+                T_sort[2*pr->nbBootstrap-i-1] = T_bootstrap[i][0]*rho_bootstrap[i] / rho_upper[i];
+            }
+            sort(T_sort,2*pr->nbBootstrap);
+            T_left[0]=T_sort[int(0.025*pr->nbBootstrap*2)];
+            if (T_left[0]>nodes[0]->D) T_left[0]=nodes[0]->D;
+            T_right[0]=T_sort[2*pr->nbBootstrap-int(0.025*pr->nbBootstrap*2)-1];
+            if (T_right[0]<nodes[0]->D) T_right[0]=nodes[0]->D;
+            delete[] T_sort;
+        }
+        double* rho_sort = new double[2*pr->nbBootstrap];
         for (int i=0; i<pr->nbBootstrap; i++){
-            T_sort[i] = T_bootstrap[i][0];
+            rho_sort[i] = rho_lower[i];
+            rho_sort[2*pr->nbBootstrap-i-1] = rho_upper[i];
         }
-        sort(T_sort,pr->nbBootstrap);
-        T_left[0]=T_sort[int(0.025*pr->nbBootstrap)];
-        if (T_left[0]>nodes[0]->D) T_left[0]=nodes[0]->D;
-        T_right[0]=T_sort[pr->nbBootstrap-int(0.025*pr->nbBootstrap)-1];
-        if (T_right[0]<nodes[0]->D) T_right[0]=nodes[0]->D;
-        delete[] T_sort;
-    }
-    sort(rho_bootstrap,pr->nbBootstrap);
-    rho_left=rho_bootstrap[int(0.025*pr->nbBootstrap)];
-    rho_right=rho_bootstrap[pr->nbSampling-int(0.025*pr->nbBootstrap)-1];
-    if (pr->rho<rho_left) rho_left=pr->rho;
-    if (pr->rho>rho_right) rho_right=pr->rho;
-    double* other_rhos_bootstrap_sort = new double[pr->nbBootstrap];
-    for (int g=1;g<=pr->ratePartition.size();g++){
-        for (int r=0;r<pr->nbBootstrap;r++) {
-            other_rhos_bootstrap_sort[r]=other_rhos_bootstrap[r][g-1];
+        sort(rho_sort,2*pr->nbBootstrap);
+        rho_left=rho_sort[int(0.025*pr->nbBootstrap*2)];
+        rho_right=rho_sort[2*pr->nbSampling-int(0.025*pr->nbBootstrap*2)-1];
+        if (pr->rho<rho_left) rho_left=pr->rho;
+        if (pr->rho>rho_right) rho_right=pr->rho;
+        double* other_rhos_bootstrap_sort = new double[2*pr->nbBootstrap];
+        for (int g=1;g<=pr->ratePartition.size();g++){
+            for (int r=0;r<pr->nbBootstrap;r++) {
+                other_rhos_bootstrap_sort[r]=other_rhos_bootstrap[r][g-1]*rho_bootstrap[r] / rho_lower[r];
+                other_rhos_bootstrap_sort[2*pr->nbBootstrap-r-1]=other_rhos_bootstrap[r][g-1]*rho_bootstrap[r] / rho_upper[r];
+            }
+            sort(other_rhos_bootstrap_sort,2*pr->nbBootstrap);
+            other_rhos_left[g]=other_rhos_bootstrap_sort[int(0.025*pr->nbBootstrap*2)];
+            if (other_rhos_left[g]>pr->rhoLower*pr->multiplierRate[g]) other_rhos_left[g]=pr->rhoLower*pr->multiplierRate[g];
+            other_rhos_right[g]=other_rhos_bootstrap_sort[2*pr->nbBootstrap-int(0.025*pr->nbSampling*2)-1];
+            if (other_rhos_right[g]<pr->rhoUpper*pr->multiplierRate[g]) other_rhos_right[g]=pr->rhoUpper*pr->multiplierRate[g];
         }
-        sort(other_rhos_bootstrap_sort,pr->nbBootstrap);
-        other_rhos_left[g]=other_rhos_bootstrap_sort[int(0.025*pr->nbBootstrap)];
-        if (other_rhos_left[g]>pr->rho*pr->multiplierRate[g]) other_rhos_left[g]=pr->rho*pr->multiplierRate[g];
-        other_rhos_right[g]=other_rhos_bootstrap_sort[pr->nbBootstrap-int(0.025*pr->nbSampling)-1];
-        if (other_rhos_right[g]<pr->rho*pr->multiplierRate[g]) other_rhos_right[g]=pr->rho*pr->multiplierRate[g];
+        delete[] rho_sort;
+        delete[] other_rhos_bootstrap_sort;
     }
     delete[] rho_bootstrap;
-    delete[] other_rhos_bootstrap_sort;
     delete[] other_rhos_bootstrap;
     if (!diffTopology){
         for (int i=0;i<pr->nbBootstrap;i++){
@@ -390,51 +549,69 @@ bool computeIC_bootstraps(InputOutputStream *io, Pr* pr,Node** nodes,double* &T_
     return diffTopology;
 }
 
-void output(double br,int y, InputOutputStream *io, Pr* pr,Node** nodes,ostream& f,ostream& tree1,ostream& tree2,ostream& tree3,int r, bool diffTopology){
+void output(double br,int y, InputOutputStream *io, Pr* pr,Node** nodes,ostream& f,ostream& tree2,ostream& tree3,int r, bool diffTopology){
     if (!pr->constraint && pr->ci) {
         std::ostringstream oss;
         oss<<"- Confidence intervals are not warranted under non-constraint mode.\n";
         pr->warningMessage.push_back(oss.str());
     }
-    ostringstream tMRCA;
+    if (pr->rhoLower != pr->rhoUpper){
+        std::ostringstream oss;
+        oss<<"- There's not enough input date information to have a unique solution. \n";
+        if  (pr->rhoUpper == 0){
+            oss<<"The reported rate & dates results are only the lower solution. For any coefficient \n";
+            oss<<"k>=1, there's a corresponding solution where the rate is multiplied by k \n";
+            oss<<"and the date of any node is divided by k from the lower solution.\n";
+        } else if (pr->rhoLower == 0) {
+            oss<<"The reported rate & dates results are only the upper solution. For any coefficient \n";
+            oss<<"k<=1, there's a corresponding solution where the rate is multiplied by k \n";
+            oss<<"and the date of any node is divided by k form the upper solution.\n";
+        } else {
+            oss<<"The reported rate & dates results are only the lower and upper solution. \n";
+            oss<<"The output date tree reports the average date from the 2 boundaries for any node.\n";
+            if (!pr->ci) oss<<"And the 2 boundaries are writen as confidence interval of every node.\n";
+            oss<<"For any coefficient k such that 1 <= k <= upper_rate/lower_rate, there is a \n";
+            oss<<"corresponding solution where the rate is multiplied by k and the date of any node \n";
+            oss<<"is divided by k from the lower solution.\n";
+        }
+        pr->warningMessage.push_back(oss.str());
+    }
+    ostringstream tMRCA,tMRCALower, tMRCAUpper;
     if (pr->outDateFormat==2){
         tMRCA<<realToYearMonthDay(nodes[0]->D);
+        if (pr->rhoLower != 0) tMRCALower<<realToYearMonthDay(nodes[0]->D*pr->rho/pr->rhoLower);
+        if (pr->rhoUpper != 0) tMRCAUpper<<realToYearMonthDay(nodes[0]->D*pr->rho/pr->rhoUpper);
     } else if (pr->outDateFormat==3){
         tMRCA<<realToYearMonth(nodes[0]->D);
+        if (pr->rhoLower != 0) tMRCALower<<realToYearMonth(nodes[0]->D*pr->rho/pr->rhoLower);
+        if (pr->rhoUpper != 0) tMRCAUpper<<realToYearMonth(nodes[0]->D*pr->rho/pr->rhoUpper);
     } else {
         tMRCA<<nodes[0]->D;
+        if (pr->rhoLower != 0) tMRCALower<<nodes[0]->D*pr->rho/pr->rhoLower;
+        if (pr->rhoUpper != 0) tMRCAUpper<<nodes[0]->D*pr->rho/pr->rhoUpper;
     }
+    std::ostringstream oss;
+    oss<<"- Dating results:\n";
     if (pr->ratePartition.size()==0) {
-        std::ostringstream oss;
-        oss<<"- Dating results:\n";
-        oss<<" rate "<<pr->rho<<", tMRCA "<<tMRCA.str()<<" , objective function "<<pr->objective<<"\n";
-        pr->resultMessage.push_back(oss.str());
-    } else if (pr->splitExternal){
-        std::ostringstream oss;
-        oss<<"- Dating results:\n";
+        if (pr->rhoLower  == pr->rhoUpper) oss<<" rate "<<pr->rho<<", ";
+        else if (pr->rhoLower ==  0) oss<<" rate NA:"<<pr->rhoUpper<<", ";
+        else if (pr->rhoUpper == 0) oss<<" rate "<<pr->rhoLower<<":NA, ";
+        else oss<<" rate "<<pr->rhoLower<<":"<<pr->rhoUpper<<", ";
+    } else {
         if (pr->multiplierRate[0]!=-1){
-            oss<<" rate internal Branches "<<pr->rho<<", ";
+            if (pr->splitExternal) oss<<" rate internal Branches "<<pr->rho<<", ";
+            else oss<<" rate "<<pr->rho<<", ";
         }
         for (int i=1; i<=pr->ratePartition.size(); i++) {
             if (pr->multiplierRate[i]>0)
                 oss<<"rate "<<pr->ratePartition[i-1]->name.c_str()<<" "<<pr->rho*pr->multiplierRate[i]<<", ";
         }
-        oss<<"tMRCA "<<tMRCA.str()<<", objective function "<<pr->objective<<"\n";
-        pr->resultMessage.push_back(oss.str());
-    } else{
-        std::ostringstream oss;
-        oss<<"- Dating results:\n";
-        if (pr->multiplierRate[0]!=-1){
-            oss<<" rate "<<pr->rho<<", ";
-        }
-        for (int i=1; i<=pr->ratePartition.size(); i++) {
-            if (pr->multiplierRate[i]>0)
-                oss<<"rate "<<pr->ratePartition[i-1]->name.c_str()<<" "<<pr->rho*pr->multiplierRate[i]<<", ";
-        }
-        oss<<"tMRCA "<<tMRCA.str()<<", objective function "<<pr->objective<<"\n";
-        pr->resultMessage.push_back(oss.str());
     }
-    
+    if (pr->rhoLower  == pr->rhoUpper) oss<<"tMRCA "<<tMRCA.str()<<" , objective function "<<pr->objective<<"\n";
+    else if (pr->rhoLower ==  0) oss<<"tMRCA NA:"<<tMRCAUpper.str()<<" , objective function "<<pr->objective<<"\n";
+    else if (pr->rhoUpper == 0) oss<<"tMRCA "<<tMRCALower.str()<<":NA , objective function "<<pr->objective<<"\n";
+    else oss<<"tMRCA "<<tMRCALower.str()<<":"<<tMRCAUpper.str()<<" , objective function "<<pr->objective<<"\n";
+    pr->resultMessage.push_back(oss.str());
     //variance = 2
     if (pr->variance==2){
         cout<<"Re-estimating using variances based on the branch lengths of the first run ...\n";
@@ -450,50 +627,48 @@ void output(double br,int y, InputOutputStream *io, Pr* pr,Node** nodes,ostream&
         else{
             computeNewVarianceEstimateRoot(pr,nodes);
             if (pr->constraint){
-                with_constraint_active_set_lambda_multirates(br,pr, nodes,true);
+                with_constraint_active_set_lambda_multirates(true,br,pr, nodes,true);
             }
             else{
-                without_constraint_active_set_lambda_multirates(br,pr, nodes,true);
+                without_constraint_active_set_lambda_multirates(true,br,pr, nodes,true);
             }
         }
         std::ostringstream oss;
         oss<<"- Results of the second run with variances based on results of the first run:\n";
-        pr->resultMessage.push_back(oss.str());
-        ostringstream tMRCA;
+        ostringstream tMRCA,tMRCALower, tMRCAUpper;
         if (pr->outDateFormat==2){
             tMRCA<<realToYearMonthDay(nodes[0]->D);
+            if (pr->rhoLower != 0) tMRCALower<<realToYearMonthDay(nodes[0]->D*pr->rho/pr->rhoLower);
+            if (pr->rhoUpper != 0) tMRCAUpper<<realToYearMonthDay(nodes[0]->D*pr->rho/pr->rhoUpper);
         } else if (pr->outDateFormat==3){
             tMRCA<<realToYearMonth(nodes[0]->D);
+            if (pr->rhoLower != 0) tMRCALower<<realToYearMonth(nodes[0]->D*pr->rho/pr->rhoLower);
+            if (pr->rhoUpper != 0) tMRCAUpper<<realToYearMonth(nodes[0]->D*pr->rho/pr->rhoUpper);
         } else {
             tMRCA<<nodes[0]->D;
+            if (pr->rhoLower != 0) tMRCALower<<nodes[0]->D*pr->rho/pr->rhoLower;
+            if (pr->rhoUpper != 0) tMRCAUpper<<nodes[0]->D*pr->rho/pr->rhoUpper;
         }
         if (pr->ratePartition.size()==0) {
-            std::ostringstream oss;
-            oss<<" rate "<<pr->rho<<", tMRCA "<<tMRCA.str()<<", objective function "<<pr->objective<<"\n";
-            pr->resultMessage.push_back(oss.str());
-        } else if (pr->splitExternal){
-            std::ostringstream oss;
+            if (pr->rhoLower  == pr->rhoUpper) oss<<" rate "<<pr->rho<<", ";
+            else if (pr->rhoLower ==  0) oss<<" rate NA:"<<pr->rhoUpper<<", ";
+            else if (pr->rhoUpper == 0) oss<<" rate "<<pr->rhoLower<<":NA, ";
+            else oss<<" rate "<<pr->rhoLower<<":"<<pr->rhoUpper<<", ";
+        } else {
             if (pr->multiplierRate[0]!=-1){
-                oss<<" rate internal Branches "<<pr->rho<<", ";
+                if (pr->splitExternal) oss<<" rate internal Branches "<<pr->rho<<", ";
+                else oss<<" rate "<<pr->rho<<", ";
             }
             for (int i=1; i<=pr->ratePartition.size(); i++) {
                 if (pr->multiplierRate[i]>0)
                     oss<<"rate "<<pr->ratePartition[i-1]->name.c_str()<<" "<<pr->rho*pr->multiplierRate[i]<<", ";
             }
-            oss<<"tMRCA "<<tMRCA.str()<<", objective function "<<pr->objective<<"\n";
-            pr->resultMessage.push_back(oss.str());
-        } else{
-            std::ostringstream oss;
-            if (pr->multiplierRate[0]!=-1){
-                oss<<" rate "<<pr->rho<<", ";
-            }
-            for (int i=1; i<=pr->ratePartition.size(); i++) {
-                if (pr->multiplierRate[i]>0)
-                    oss<<"rate "<<pr->ratePartition[i-1]->name.c_str()<<" "<<pr->rho*pr->multiplierRate[i]<<", ";
-            }
-            oss<<"tMRCA "<<tMRCA.str()<<", objective function "<<pr->objective<<"\n";
-            pr->resultMessage.push_back(oss.str());
         }
+        if (pr->rhoLower  == pr->rhoUpper) oss<<"tMRCA "<<tMRCA.str()<<" , objective function "<<pr->objective<<"\n";
+        else if (pr->rhoLower ==  0) oss<<"tMRCA NA:"<<tMRCAUpper.str()<<" , objective function "<<pr->objective<<"\n";
+        else if (pr->rhoUpper == 0) oss<<"tMRCA "<<tMRCALower.str()<<":NA , objective function "<<pr->objective<<"\n";
+        else oss<<"tMRCA "<<tMRCALower.str()<<":"<<tMRCAUpper.str()<<" , objective function "<<pr->objective<<"\n";
+        pr->resultMessage.push_back(oss.str());
     }
     //Write input trees out after all pre-process steps (collapse branches, remove outgroups, rooting, remove outliers etc)
     if (pr->verbose){
@@ -545,13 +720,27 @@ void output(double br,int y, InputOutputStream *io, Pr* pr,Node** nodes,ostream&
     calculate_tree_height(pr,nodes);
     //Calculate confidence intervals
     if (!pr->ci){
-        tree1<<"tree "<<y<<" = ";
-        tree1<<nexus(0,pr,nodes).c_str();
         tree2<<"tree "<<y<<" = ";
-        tree2<<nexusDate(0,pr,nodes).c_str();int n=0;
+        if (pr->rhoLower != pr->rhoUpper && pr->rhoLower !=0 && pr->rhoUpper !=0){
+            double* T_min=new double[pr->nbBranches+1];
+            double* T_max=new double[pr->nbBranches+1];
+            double* HD_min=new double[pr->nbBranches+1];
+            double* HD_max=new double[pr->nbBranches+1];
+            for (int j=0;j<=pr->nbBranches;j++){
+                T_min[j] = nodes[j]->D * pr->rho / pr->rhoLower;
+                HD_min[j] = nodes[j]->HD * pr->rho / pr->rhoLower;
+                T_max[j] = nodes[j]->D * pr->rho / pr->rhoUpper;
+                HD_max[j] = nodes[j]->HD * pr->rho / pr->rhoUpper;
+                nodes[j]->D = (T_min[j]+T_max[j])/2;
+            }
+            tree2<<nexusICDate(0,pr,nodes,T_min,T_max,HD_min,HD_max).c_str();
+        } else {
+            tree2<<nexusDate(0,pr,nodes).c_str();
+        }
+        int n=0;
         tree3<<newick(0,0,pr,nodes,n).c_str();
     }
-    else{
+    else if (pr->haveUnique || (pr->haveLower && pr->haveUpper)){
         double* T_min = new double[pr->nbBranches+1];
         double* T_max = new double[pr->nbBranches+1];
         double* H_min = new double[pr->nbBranches+1];
@@ -570,57 +759,57 @@ void output(double br,int y, InputOutputStream *io, Pr* pr,Node** nodes,ostream&
         }
         std::ostringstream oss;
         oss<<"- Results with confidence intervals:\n";
-        pr->resultMessage.push_back(oss.str());
-        ostringstream tMRCA,tmin,tmax;
+        ostringstream tMRCA,tMRCALower, tMRCAUpper,tmin,tmax;
         if (pr->outDateFormat==2){
             tMRCA<<realToYearMonthDay(nodes[0]->D);
+            if (pr->rhoLower != 0) tMRCALower<<realToYearMonthDay(nodes[0]->D*pr->rho/pr->rhoLower);
+            if (pr->rhoUpper != 0) tMRCAUpper<<realToYearMonthDay(nodes[0]->D*pr->rho/pr->rhoUpper);
             tmin<<realToYearMonthDay(T_min[0]);
             tmax<<realToYearMonthDay(T_max[0]);
         } else if (pr->outDateFormat==3){
             tMRCA<<realToYearMonth(nodes[0]->D);
+            if (pr->rhoLower != 0) tMRCALower<<realToYearMonth(nodes[0]->D*pr->rho/pr->rhoLower);
+            if (pr->rhoUpper != 0) tMRCAUpper<<realToYearMonth(nodes[0]->D*pr->rho/pr->rhoUpper);
             tmin<<realToYearMonth(T_min[0]);
             tmax<<realToYearMonth(T_max[0]);
         } else {
             tMRCA<<nodes[0]->D;
+            if (pr->rhoLower != 0) tMRCALower<<nodes[0]->D*pr->rho/pr->rhoLower;
+            if (pr->rhoUpper != 0) tMRCAUpper<<nodes[0]->D*pr->rho/pr->rhoUpper;
             tmin<<T_min[0];
             tmax<<T_max[0];
         }
-        if (pr->ratePartition.size()==0) {
-            std::ostringstream oss;
-            oss<<" rate "<<pr->rho<<" ["<<rho_left<<"; "<<rho_right<<"], tMRCA "<<tMRCA.str()<<" ["<<tmin.str()<<"; "<<tmax.str()<<"], objective function "<<pr->objective<<"\n";
-            pr->resultMessage.push_back(oss.str());
-        } else if (pr->splitExternal){
-            std::ostringstream oss;
-            if (pr->multiplierRate[0]!=-1){
-                oss<<" rate internal Branches "<<pr->rho<<" ["<<rho_left<<"; "<<rho_right<<"], ";
-            }
+        if (pr->ratePartition.size()==0 || !pr->splitExternal) oss<<" rate ";
+        else oss<<" rate internal Branches ";
+        if (pr->rhoLower  == pr->rhoUpper){
+            oss<<pr->rho<<" ["<<rho_left<<"; "<<rho_right<<"], ";
             for (int i=1; i<=pr->ratePartition.size(); i++) {
                 if (pr->multiplierRate[i]>0) oss<<"rate "<<pr->ratePartition[i-1]->name.c_str()<<" "<<pr->rho*pr->multiplierRate[i]<<" ["<<other_rhos_left[i]<<"; "<<other_rhos_right[i]<<"], ";
             }
-            oss<<"tMRCA "<<tMRCA.str()<<" ["<<tmin.str()<<"; "<<tmax.str()<<"], objective function "<<pr->objective<<"\n";
-            pr->resultMessage.push_back(oss.str());
         } else{
-            std::ostringstream oss;
-            if (pr->multiplierRate[0]!=-1){
-                oss<<" rate "<<pr->rho<<" ["<<rho_left<<"; "<<rho_right<<"], ";
-            }
+            oss<<pr->rhoLower<<":"<<pr->rhoUpper<<" ["<<rho_left<<"; "<<rho_right<<"], ";
             for (int i=1; i<=pr->ratePartition.size(); i++) {
-                if (pr->multiplierRate[i]>0) oss<<"rate "<<pr->ratePartition[i-1]->name.c_str()<<" "<<pr->rho*pr->multiplierRate[i]<<" ["<<other_rhos_left[i]<<"; "<<other_rhos_right[i]<<"], ";
+                if (pr->multiplierRate[i]>0) oss<<"rate "<<pr->ratePartition[i-1]->name.c_str()<<" "<<pr->rhoLower*pr->multiplierRate[i]<<":"<<pr->rhoUpper*pr->multiplierRate[i]<<" ["<<other_rhos_left[i]<<"; "<<other_rhos_right[i]<<"], ";
             }
-            oss<<"tMRCA "<<tMRCA.str()<<" ["<<tmin.str()<<"; "<<tmax.str()<<"], objective function "<<pr->objective<<"\n";
-            pr->resultMessage.push_back(oss.str());
         }
+        if (pr->rhoLower  == pr->rhoUpper){
+            oss<<"tMRCA "<<tMRCA.str()<<" ["<<tmin.str()<<"; "<<tmax.str()<<"], objective function "<<pr->objective<<"\n";
+        } else{
+            oss<<"tMRCA "<<tMRCALower.str()<<":"<<tMRCAUpper.str()<<" ["<<tmin.str()<<"; "<<tmax.str()<<"], objective function "<<pr->objective<<"\n";
+        }
+        pr->resultMessage.push_back(oss.str());
         
         delete[] other_rhos_left;
         delete[] other_rhos_right;
         
-        tree1<<"tree "<<y<<" = ";
         tree2<<"tree "<<y<<" = ";
         if (!diffTopology){
-            tree1<<nexusIC(0,pr,nodes,T_min,T_max,H_min,H_max).c_str();
+            for (int j=0;j<=pr->nbBranches;j++){
+                nodes[j]->D = (nodes[j]->D * pr->rho)*(1 / pr->rhoLower + 1/ pr->rhoUpper)/2;
+            }
             tree2<<nexusICDate(0,pr,nodes,T_min,T_max,HD_min,HD_max).c_str();
         } else{
-            tree1<<nexus(0,pr,nodes).c_str();
+            nodes[0]->D = (nodes[0]->D * pr->rho)*(1 / pr->rhoLower + 1 / pr->rhoUpper)/2;
             tree2<<nexusDate(0,pr,nodes).c_str();
         }
         int n=0;
@@ -638,16 +827,16 @@ void output(double br,int y, InputOutputStream *io, Pr* pr,Node** nodes,ostream&
         pr->warningMessage.push_back(oss.str());
     }
     if ((pr->warningMessage).size()>0){
-        f<<"*WARNINGS:\n";
-        cout<<"*WARNINGS:\n";
+        f<<"\n*WARNINGS:\n";
+        cout<<"\n*WARNINGS:\n";
         for (int i=0;i<pr->warningMessage.size();i++){
             f<<string(pr->warningMessage[i]).c_str();
             cout<<string(pr->warningMessage[i]).c_str();
         }
         
     }
-    f<<"*RESULTS:\n";
-    cout<<"*RESULTS:\n";
+    f<<"\n*RESULTS:\n";
+    cout<<"\n*RESULTS:\n";
     for (int i=0;i<pr->resultMessage.size();i++){
         f<<string(pr->resultMessage[i]).c_str();
         cout<<string(pr->resultMessage[i]).c_str();

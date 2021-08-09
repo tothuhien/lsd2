@@ -206,13 +206,6 @@ InputOutputFile::InputOutputFile(Pr *opt) : InputOutputStream() {
         exit(EXIT_FAILURE);
     }
     
-    ofstream *tree1_file = new ofstream(opt->treeFile1);
-    outTree1 = tree1_file;
-    if (!tree1_file->is_open()) {
-        cerr << "Error: can not create the output tree file " << opt->treeFile1 << endl;
-        exit(EXIT_FAILURE);
-    }
-    
     ofstream *tree2_file = new ofstream(opt->treeFile2);
     outTree2 = tree2_file;
     if (!tree2_file->is_open()) {
@@ -3222,4 +3215,38 @@ double* rtt(Pr* pr,Node** nodes){
         r2t[i]=r;
     }
     return r2t;
+}
+
+void starting_pointLower(Pr* pr,Node** nodes,list<int> & active_set){
+    for (int i =0;i<=pr->nbBranches;i++) {
+        //if (nodes[i]->type!='p') {
+        if (nodes[i]->type=='l' || nodes[i]->type=='b') {
+            activeLower(nodes[i]);
+            nodes[i]->D=nodes[i]->lower;
+            active_set.push_back(-i);
+        }
+        /*   else if (nodes[i]->type=='u') {
+         activeUpper(nodes[i]);
+         nodes[i]->D=nodes[i]->upper;
+         active_set.push_back(-i);
+         }
+         }*/
+    }
+}
+
+void starting_pointUpper(Pr* pr,Node** nodes,list<int> & active_set){
+    for (int i =0;i<=pr->nbBranches;i++) {
+        //if (nodes[i]->type!='p') {
+        if (nodes[i]->type=='u' || nodes[i]->type=='b') {
+            activeUpper(nodes[i]);
+            nodes[i]->D=nodes[i]->upper;
+            active_set.push_back(-i);
+        }
+        /* else if (nodes[i]->type=='l') {
+         activeLower(nodes[i]);
+         nodes[i]->D=nodes[i]->lower;
+         active_set.push_back(-i);
+         }
+         }*/
+    }
 }

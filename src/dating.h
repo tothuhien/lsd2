@@ -22,17 +22,17 @@ list<double> computeLambda(list<int> active_set,Pr* pr,Node** nodes);
 bool remove_ne_lambda(list<double> & lambda,list<int> & active_set,int& as);
 
 
-bool without_constraint_active_set(Pr* pr,Node** nodes);
+bool without_constraint_active_set(Pr* pr,Node** nodes,int whichStartingPoint);
 
 bool conditionsQP(list<double>& ldLagrange,Pr* pr,Node** nodes);
 
 //bool temporalConstraintsConsistent(Pr* pr,Node** nodes);
 
-bool starting_pointQP(Pr* pr,Node** nodes,list<int>& active_set);
+bool starting_pointQP(Pr* pr,Node** nodes,list<int>& active_set,int whichStartingPoint);
 
 bool with_constraint(Pr* pr,Node** &nodes,list<int> active_set,list<double>& lambda);
 
-bool with_constraint_active_set(Pr* pr,Node** &nodes);
+bool with_constraint_active_set(Pr* pr,Node** &nodes,int whichStartingPoint);
 
 void calculateMultiplier(Pr* pr,Node** nodes);
 

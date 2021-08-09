@@ -134,6 +134,8 @@ void readInputDate(InputOutputStream* io, Pr* pr,Node** &nodes,bool& constraintC
     double d1=-1;
     double d2=-1;
     bool* tipHaveTime = new bool[pr->nbBranches+1];
+    int nbUniqueDate = 0;
+    double uniqueDate = 0;
     for (int i=pr->nbINodes; i<= pr->nbBranches; i++) tipHaveTime[i]=false;
     if (io->inDate){
         io->inDate->seekg(0);
@@ -195,6 +197,25 @@ void readInputDate(InputOutputStream* io, Pr* pr,Node** &nodes,bool& constraintC
                     delete newdate;
                     constraintConsistent=constraintConsistent && bl;
                 }
+                if (type == 'b'){
+                    pr->haveLower = true;
+                    pr->haveUpper = true;
+                }
+                if (type == 'l'){
+                    pr->haveLower = true;
+                }
+                if (type == 'u'){
+                    pr->haveUpper = true;
+                }
+                if (type == 'p'){
+                    if (nbUniqueDate==0 || (nbUniqueDate==1 && uniqueDate!=v1)){
+                        uniqueDate = v1;
+                        nbUniqueDate++;
+                    }
+                    if (nbUniqueDate>1){
+                        pr->haveUnique = true;
+                    }
+                }
             }
             else{
                 w1=w1+" "+s;
@@ -215,6 +236,25 @@ void readInputDate(InputOutputStream* io, Pr* pr,Node** &nodes,bool& constraintC
         d2Save.push_back(d2);
         Date* newdate = new Date("",type,v1,v2,0);
         pr->internalConstraints.push_back(newdate);
+        if (type == 'b'){
+            pr->haveLower = true;
+            pr->haveUpper = true;
+        }
+        if (type == 'l'){
+            pr->haveLower = true;
+        }
+        if (type == 'u'){
+            pr->haveUpper = true;
+        }
+        if (type == 'p'){
+            if (nbUniqueDate==0 || (nbUniqueDate==1 && uniqueDate!=v1)){
+                uniqueDate = v1;
+                nbUniqueDate++;
+            }
+            if (nbUniqueDate>1){
+                pr->haveUnique = true;
+            }
+        }
     }
     if (pr->LEAVES != ""){
         istream *leaves = new istringstream(pr->LEAVES);
@@ -232,7 +272,25 @@ void readInputDate(InputOutputStream* io, Pr* pr,Node** &nodes,bool& constraintC
             m2Save.push_back(m2);
             d1Save.push_back(d1);
             d2Save.push_back(d2);
-            
+        }
+        if (type == 'b'){
+            pr->haveLower = true;
+            pr->haveUpper = true;
+        }
+        if (type == 'l'){
+            pr->haveLower = true;
+        }
+        if (type == 'u'){
+            pr->haveUpper = true;
+        }
+        if (type == 'p'){
+            if (nbUniqueDate==0 || (nbUniqueDate==1 && uniqueDate!=v1)){
+                uniqueDate = v1;
+                nbUniqueDate++;
+            }
+            if (nbUniqueDate>1){
+                pr->haveUnique = true;
+            }
         }
     }
     if (pr->inDateFormat == 2 && dateFormat != 2){//the general day format is year-month-day but there're some only year or year-month

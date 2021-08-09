@@ -358,9 +358,11 @@ bool without_constraint_lambda(double br,Pr* &par,Node** &nodes,list<int> active
     }
 }
 
-bool without_constraint_active_set_lambda(double br,Pr* &pr,Node** &nodes){
+bool without_constraint_active_set_lambda(double br,Pr* &pr,Node** &nodes,int whichStartingPoint){
     initialize_status(pr,nodes);
     list<int> active_set;
+    if (whichStartingPoint==-1) starting_pointLower(pr,nodes,active_set);
+    if (whichStartingPoint==1) starting_pointUpper(pr,nodes,active_set);
     for (vector<int>::iterator iter=nodes[0]->suc.begin(); iter!=nodes[0]->suc.end(); iter++) {
         nodes[*iter]->B=br/2.;
     }
@@ -426,8 +428,8 @@ bool without_constraint_active_set_lambda(double br,Pr* &pr,Node** &nodes){
         nb_iter++;
     }
     /*if (nb_iter>1000){
-        for (int i=0;i<=pr->nbBranches;i++) nodes[i]->D=D_old[i];
-    }*/
+     for (int i=0;i<=pr->nbBranches;i++) nodes[i]->D=D_old[i];
+     }*/
     delete[] D_old;
     delete[] dir;
     return val;
@@ -943,53 +945,53 @@ bool with_constraint_lambda(double br,Pr* &pr,Node** &nodes,list<int> active_set
             ld.push_back(lambda[i]);
         }
         /*
-        double sr=(2*nodes[0]->D-nodes[r]->D-nodes[p_r]->D)*(br-pr->rho*(nodes[r]->D+nodes[p_r]->D-2*nodes[0]->D))/2/nodes[r]->V;
-        for (int i=0; i<=pr->nbBranches; i++) {
-            if (i>0 && i!=r && i!=p_r){
-                sr+=(nodes[nodes[i]->P]->D-nodes[i]->D)*(nodes[i]->B-pr->rho*(nodes[i]->D-nodes[nodes[i]->P]->D))/nodes[i]->V;
-            }
-            if (nodes[i]->type!='p') {
-                double s=0;
-                if (tc(nodes[i])) {
-                    s -= lambda[as[i]];
-                }
-                if (lower(nodes[i])){
-                    s -= lambda[as[i+pr->nbBranches+1]];
-                }
-                if (upper(nodes[i])){
-                    s += lambda[as[i+pr->nbBranches+1]];
-                }
-                if (i==0){
-                    s += 2*pr->rho*(br - pr->rho*(nodes[r]->D + nodes[p_r]->D - 2*nodes[0]->D))/nodes[r]->V;
-                    if (tc(nodes[r])) s+=lambda[as[r]];
-                    if (tc(nodes[p_r])) s+=lambda[as[p_r]];
-                } else if (i==r || i==p_r){
-                    s -= pr->rho*(br - pr->rho*(nodes[r]->D + nodes[p_r]->D - 2*nodes[0]->D))/nodes[i]->V;
-                    for (vector<int>::iterator iter=nodes[i]->suc.begin(); iter!=nodes[i]->suc.end(); iter++) {
-                        int s1=*iter;
-                        s += 2*pr->rho*(nodes[s1]->B - pr->rho*nodes[s1]->D + pr->rho*nodes[i]->D)/nodes[s1]->V;
-                        if (tc(nodes[s1])) {
-                            s+=lambda[as[s1]];
-                        }
-                    }
-                } else{
-                    s -= 2*pr->rho*(nodes[i]->B-pr->rho*(nodes[i]->D-nodes[nodes[i]->P]->D))/nodes[i]->V;
-                    for (vector<int>::iterator iter=nodes[i]->suc.begin(); iter!=nodes[i]->suc.end(); iter++) {
-                        int s1=*iter;
-                        s+=2*pr->rho*(nodes[s1]->B-pr->rho*nodes[s1]->D+pr->rho*nodes[i]->D)/nodes[s1]->V;
-                        if (tc(nodes[s1])) {
-                            s+=lambda[as[s1]];
-                        }
-                    }
-                }
-                if (abs(s)>1e-8) {
-                    cout<<"TEST PROBLEM "<<i<<" "<<s<<endl;
-                }
-            }
-        }
-        if (abs(sr)>1e-6 && pr->rho!=pr->rho_min) {
-            cout<<"TEST PROBLEM rho "<<sr<<endl;
-        }*/
+         double sr=(2*nodes[0]->D-nodes[r]->D-nodes[p_r]->D)*(br-pr->rho*(nodes[r]->D+nodes[p_r]->D-2*nodes[0]->D))/2/nodes[r]->V;
+         for (int i=0; i<=pr->nbBranches; i++) {
+         if (i>0 && i!=r && i!=p_r){
+         sr+=(nodes[nodes[i]->P]->D-nodes[i]->D)*(nodes[i]->B-pr->rho*(nodes[i]->D-nodes[nodes[i]->P]->D))/nodes[i]->V;
+         }
+         if (nodes[i]->type!='p') {
+         double s=0;
+         if (tc(nodes[i])) {
+         s -= lambda[as[i]];
+         }
+         if (lower(nodes[i])){
+         s -= lambda[as[i+pr->nbBranches+1]];
+         }
+         if (upper(nodes[i])){
+         s += lambda[as[i+pr->nbBranches+1]];
+         }
+         if (i==0){
+         s += 2*pr->rho*(br - pr->rho*(nodes[r]->D + nodes[p_r]->D - 2*nodes[0]->D))/nodes[r]->V;
+         if (tc(nodes[r])) s+=lambda[as[r]];
+         if (tc(nodes[p_r])) s+=lambda[as[p_r]];
+         } else if (i==r || i==p_r){
+         s -= pr->rho*(br - pr->rho*(nodes[r]->D + nodes[p_r]->D - 2*nodes[0]->D))/nodes[i]->V;
+         for (vector<int>::iterator iter=nodes[i]->suc.begin(); iter!=nodes[i]->suc.end(); iter++) {
+         int s1=*iter;
+         s += 2*pr->rho*(nodes[s1]->B - pr->rho*nodes[s1]->D + pr->rho*nodes[i]->D)/nodes[s1]->V;
+         if (tc(nodes[s1])) {
+         s+=lambda[as[s1]];
+         }
+         }
+         } else{
+         s -= 2*pr->rho*(nodes[i]->B-pr->rho*(nodes[i]->D-nodes[nodes[i]->P]->D))/nodes[i]->V;
+         for (vector<int>::iterator iter=nodes[i]->suc.begin(); iter!=nodes[i]->suc.end(); iter++) {
+         int s1=*iter;
+         s+=2*pr->rho*(nodes[s1]->B-pr->rho*nodes[s1]->D+pr->rho*nodes[i]->D)/nodes[s1]->V;
+         if (tc(nodes[s1])) {
+         s+=lambda[as[s1]];
+         }
+         }
+         }
+         if (abs(s)>1e-8) {
+         cout<<"TEST PROBLEM "<<i<<" "<<s<<endl;
+         }
+         }
+         }
+         if (abs(sr)>1e-6 && pr->rho!=pr->rho_min) {
+         cout<<"TEST PROBLEM rho "<<sr<<endl;
+         }*/
         delete[] Pre;
         delete[] Suc;
         delete[] feuilles;
@@ -1001,12 +1003,39 @@ bool with_constraint_lambda(double br,Pr* &pr,Node** &nodes,list<int> active_set
     }
 }
 
-bool with_constraint_active_set_lambda(double br,Pr* &pr,Node** &nodes){
+bool without_constraint_active_set_lambda(bool all,double br,Pr* &pr,Node** &nodes){
+    bool val = false;
+    if (pr->haveUnique) {
+        val = without_constraint_active_set_lambda(br,pr,nodes,0);
+    }
+    if (!val){
+        bool valL = false;
+        bool valU = false;
+        if (pr->haveLower){
+            valL = without_constraint_active_set_lambda(br,pr,nodes,-1);
+            if (valL){
+                pr->rhoLower = pr->rho;
+                val = true;
+            }
+        }
+        if (!pr->haveLower || (all && pr->haveUpper)){
+            valU = without_constraint_active_set_lambda(br,pr,nodes,1);
+            if (valU){
+                pr->rhoUpper = pr->rho;
+                val = true;
+            }
+        }
+    }
+    return val;
+}
+
+
+bool with_constraint_active_set_lambda(double br,Pr* &pr,Node** &nodes,int whichStartingPoint){
     for (vector<int>::iterator iter=nodes[0]->suc.begin(); iter!=nodes[0]->suc.end(); iter++) {
         nodes[*iter]->B=br/2.;
     }
     list<int> active_set;
-    bool consistent = starting_pointQP(pr,nodes,active_set);
+    bool consistent = starting_pointQP(pr,nodes,active_set,whichStartingPoint);
     if (consistent){
         list<double> lambda;
         double* dir = new double[pr->nbBranches+1];
@@ -1083,8 +1112,8 @@ bool with_constraint_active_set_lambda(double br,Pr* &pr,Node** &nodes){
             nb_iter++;
         }
         /*if (nb_iter>1000){
-            for (int i=0;i<=pr->nbBranches;i++) nodes[i]->D=D_old[i];
-        }*/
+         for (int i=0;i<=pr->nbBranches;i++) nodes[i]->D=D_old[i];
+         }*/
         delete[] D_old;
         delete[] dir;
         return val;
@@ -1092,6 +1121,31 @@ bool with_constraint_active_set_lambda(double br,Pr* &pr,Node** &nodes){
     else return false;
 }
 
+bool with_constraint_active_set_lambda(bool all,double br,Pr* &pr,Node** &nodes){
+    bool val = false;
+    if (pr->haveUnique) {
+        val = with_constraint_active_set_lambda(br,pr,nodes,0);
+    }
+    if (!val){
+        bool valL = false;
+        bool valU = false;
+        if (pr->haveLower){
+            valL = with_constraint_active_set_lambda(br,pr,nodes,-1);
+            if (valL){
+                pr->rhoLower = pr->rho;
+                val = true;
+            }
+        }
+        if (!pr->haveLower || (all && pr->haveUpper)){
+            valU = with_constraint_active_set_lambda(br,pr,nodes,1);
+            if (valU){
+                pr->rhoUpper = pr->rho;
+                val = true;
+            }
+        }
+    }
+    return val;
+}
 
 int estimate_root_without_constraint_local_rooted(Pr* &pr,Node** &nodes){
     //P: rooted tree, recherche la nouvelle racine autour de l'ancien racine.
@@ -1116,7 +1170,7 @@ int estimate_root_without_constraint_local_rooted(Pr* &pr,Node** &nodes){
         for (int i=pr->nbINodes;i<=pr->nbBranches;i++){
             if (nodes_new[i]->type=='p') nodes_new[i]->D = originalD[i];
         }
-        bool consistent=without_constraint_active_set_lambda_multirates(br,pr,nodes_new,true);
+        bool consistent=without_constraint_active_set_lambda_multirates(false,br,pr,nodes_new,true);
         if (consistent) {
             cv[s1]=pr->objective;
             if (pr->verbose){
@@ -1158,7 +1212,7 @@ int estimate_root_without_constraint_local_rooted(Pr* &pr,Node** &nodes){
             for (int i=pr->nbINodes;i<=pr->nbBranches;i++){
                 if (nodes_new[i]->type=='p') nodes_new[i]->D = originalD[i];
             }
-            bool consistent=without_constraint_active_set_lambda_multirates(br,pr,nodes_new,true);
+            bool consistent=without_constraint_active_set_lambda_multirates(false,br,pr,nodes_new,true);
             if (consistent) {
                 cv[i]=pr->objective;
                 if (pr->verbose){
@@ -1236,7 +1290,7 @@ int estimate_root_without_constraint_rooted(Pr* &pr,Node** &nodes){
         for (int i=pr->nbINodes;i<=pr->nbBranches;i++){
             if (nodes_new[i]->type=='p') nodes_new[i]->D = originalD[i];
         }
-        bool consistent=without_constraint_active_set_lambda_multirates(br,pr,nodes_new,true);
+        bool consistent=without_constraint_active_set_lambda_multirates(false,br,pr,nodes_new,true);
         if (consistent) {
             phi1=pr->objective;
             if (pr->verbose){
@@ -1266,7 +1320,7 @@ int estimate_root_without_constraint_rooted(Pr* &pr,Node** &nodes){
             for (int i=pr->nbINodes;i<=pr->nbBranches;i++){
                 if (nodes_new[i]->type=='p') nodes_new[i]->D = originalD[i];
             }
-            bool consistent=without_constraint_active_set_lambda_multirates(br,pr,nodes_new,true);
+            bool consistent=without_constraint_active_set_lambda_multirates(false,br,pr,nodes_new,true);
             if (consistent) {
                 phi=pr->objective;
                 if (pr->verbose){
@@ -1326,7 +1380,7 @@ int estimate_root_with_constraint_local_rooted(Pr* &pr,Node** &nodes){
     for (int i=0;i<=pr->nbBranches;i++) originalD.push_back(nodes[i]->D);
     bool bl = reroot_rootedtree(br,s1,s1,s2,pr,nodes,nodes_new);
     if (bl){
-        bool consistent=with_constraint_active_set_lambda_multirates(br,pr,nodes_new,true);
+        bool consistent=with_constraint_active_set_lambda_multirates(false,br,pr,nodes_new,true);
         if (consistent){
             cv[s1]=pr->objective;
             if (pr->verbose){
@@ -1368,7 +1422,7 @@ int estimate_root_with_constraint_local_rooted(Pr* &pr,Node** &nodes){
             for (int i=pr->nbINodes;i<=pr->nbBranches;i++){
                 if (nodes_new[i]->type=='p') nodes_new[i]->D = originalD[i];
             }
-            bool consistent=with_constraint_active_set_lambda_multirates(br,pr,nodes_new,true);
+            bool consistent=with_constraint_active_set_lambda_multirates(false,br,pr,nodes_new,true);
             if (consistent){
                 cv[i]=pr->objective;
                 if (pr->verbose){
@@ -1454,7 +1508,7 @@ int estimate_root_with_constraint_fast_rooted(Pr* &pr,Node** &nodes){
             for (int i=pr->nbINodes;i<=pr->nbBranches;i++){
                 if (nodes_new[i]->type=='p') nodes_new[i]->D = originalD[i];
             }
-            bool consistent=with_constraint_active_set_lambda_multirates(br,pr,nodes_new,true);
+            bool consistent=with_constraint_active_set_lambda_multirates(false,br,pr,nodes_new,true);
             if (consistent){
                 cv[r]=pr->objective;
                 if (pr->verbose){
@@ -1498,7 +1552,7 @@ int estimate_root_with_constraint_fast_rooted(Pr* &pr,Node** &nodes){
                 for (int i=pr->nbINodes;i<=pr->nbBranches;i++){
                     if (nodes_new[i]->type=='p') nodes_new[i]->D = originalD[i];
                 }
-                bool consistent=with_constraint_active_set_lambda_multirates(br,pr,nodes_new,true);
+                bool consistent=with_constraint_active_set_lambda_multirates(false,br,pr,nodes_new,true);
                 if (consistent){
                     cv[e]=pr->objective;
                     if (pr->verbose){
@@ -1576,7 +1630,7 @@ int estimate_root_with_constraint_rooted(Pr* &pr,Node** &nodes){
         for (int i=pr->nbINodes;i<=pr->nbBranches;i++){
             if (nodes_new[i]->type=='p') nodes_new[i]->D = originalD[i];
         }
-        bool consistent=with_constraint_active_set_lambda_multirates(br,pr,nodes_new,true);
+        bool consistent=with_constraint_active_set_lambda_multirates(false,br,pr,nodes_new,true);
         if (consistent){
             if (pr->verbose) cout<<"objective function: "<<pr->objective<<", rate: "<<pr->rho<<"\n";
             r=y;
@@ -1603,7 +1657,7 @@ int estimate_root_with_constraint_rooted(Pr* &pr,Node** &nodes){
             for (int i=pr->nbINodes;i<=pr->nbBranches;i++){
                 if (nodes_new[i]->type=='p') nodes_new[i]->D = originalD[i];
             }
-            bool consistent=with_constraint_active_set_lambda_multirates(br,pr,nodes_new,true);
+            bool consistent=with_constraint_active_set_lambda_multirates(false,br,pr,nodes_new,true);
             if (consistent){
                 phi=pr->objective;
                 if (pr->verbose) {
@@ -1674,7 +1728,7 @@ void calculateMultiplier_lambda(int r,int p_r,double br,Pr* &pr,Node** &nodes,bo
     }
 }
 
-bool without_constraint_active_set_lambda_multirates(double br,Pr* &pr,Node** &nodes,bool reassign){
+bool without_constraint_active_set_lambda_multirates(bool all,double br,Pr* &pr,Node** &nodes,bool reassign){
     vector<int>::iterator iter=nodes[0]->suc.begin();
     int r=(*iter);//r=r1
     iter++;
@@ -1697,7 +1751,8 @@ bool without_constraint_active_set_lambda_multirates(double br,Pr* &pr,Node** &n
         }
         br = br/pr->multiplierRate[nodes[r]->rateGroup];
     }
-    bool consistent = without_constraint_active_set_lambda(br,pr,nodes);
+    bool val = without_constraint_active_set_lambda(all,br,pr,nodes);
+    if (!val) return false;
     if (pr->ratePartition.size()>0) {
         vector<int>::iterator iter=nodes[0]->suc.begin();
         bool* nan = new bool[pr->ratePartition.size()+1];
@@ -1728,13 +1783,19 @@ bool without_constraint_active_set_lambda_multirates(double br,Pr* &pr,Node** &n
                 nodes[j]->B = B[j]/m;
                 nodes[j]->V = V[j]/m/m;
             }
-            consistent = without_constraint_active_set_lambda(br,pr,nodes);
+            val = without_constraint_active_set_lambda(false,br,pr,nodes);
             cont = abs((old_rho-pr->rho)/pr->rho) >= 1e-5;
             for (int j=1; j<=pr->ratePartition.size(); j++) {
                 cont = cont || (abs((old_multi[j]*old_rho-pr->multiplierRate[j]*pr->rho)/pr->multiplierRate[j]/pr->rho)>=1e-5);
             }
             i++;
         } while (cont);
+        if (!pr->haveUnique && (!pr->haveLower || pr->haveUpper)){
+            val = without_constraint_active_set_lambda(br,pr,nodes,1);
+            if (val){
+                pr->rhoUpper = pr->rho;
+            }
+        }
         br = Br;
         for (int j=1; j<=pr->nbBranches; j++) {
             nodes[j]->B = B[j];
@@ -1743,10 +1804,10 @@ bool without_constraint_active_set_lambda_multirates(double br,Pr* &pr,Node** &n
     }
     delete[] B;
     delete[] V;
-    return consistent;
+    return val;
 }
 
-bool with_constraint_active_set_lambda_multirates(double br,Pr* &pr,Node** &nodes,bool reassign){
+bool with_constraint_active_set_lambda_multirates(bool all,double br,Pr* &pr,Node** &nodes,bool reassign){
     vector<int>::iterator iter=nodes[0]->suc.begin();
     int r=(*iter);//r=r1
     iter++;
@@ -1769,7 +1830,8 @@ bool with_constraint_active_set_lambda_multirates(double br,Pr* &pr,Node** &node
         }
         br = br/pr->multiplierRate[nodes[r]->rateGroup];
     }
-    bool consistent = with_constraint_active_set_lambda(br,pr,nodes);
+    bool val = with_constraint_active_set_lambda(all,br,pr,nodes);
+    if (!val) return false;
     if (pr->ratePartition.size()>0) {
         double* B = new double[pr->nbBranches+1];
         double* V = new double[pr->nbBranches+1];
@@ -1806,13 +1868,19 @@ bool with_constraint_active_set_lambda_multirates(double br,Pr* &pr,Node** &node
                 nodes[j]->B = B[j]/m;
                 nodes[j]->V = V[j]/m/m;
             }
-            consistent = with_constraint_active_set_lambda(br,pr,nodes);
+            val = with_constraint_active_set_lambda(false,br,pr,nodes);
             cont = abs((old_rho-pr->rho)/pr->rho) >= 1e-5;
             for (int j=1; j<=pr->ratePartition.size(); j++) {
                 cont = cont || (abs((old_multi[j]*old_rho-pr->multiplierRate[j]*pr->rho)/pr->multiplierRate[j]/pr->rho)>=1e-5);
             }
             i++;
         } while (cont);
+        if (!pr->haveUnique && (!pr->haveLower || pr->haveUpper)){
+            val = with_constraint_active_set_lambda(br,pr,nodes,1);
+            if (val){
+                pr->rhoUpper = pr->rho;
+            }
+        }
         br = Br;
         for (int j=1; j<=pr->nbBranches; j++) {
             nodes[j]->B = B[j];
@@ -1821,7 +1889,7 @@ bool with_constraint_active_set_lambda_multirates(double br,Pr* &pr,Node** &node
     }
     delete[] B;
     delete[] V;
-    return consistent;
+    return val;
 }
 
 /*double* Rtt_lambda(double br,double &L,Pr* pr, Node** nodes){
@@ -1870,7 +1938,7 @@ void imposeMinBlen(ostream& file,Pr* pr, Node** nodes,double minB, bool verbose)
                 br=nodes[s1]->B+nodes[s2]->B;
                 nodes[s1]->V=variance(pr,br);
                 nodes[s2]->V=nodes[s1]->V;
-                without_constraint_active_set_lambda_multirates(br,pr,nodes,true);
+                without_constraint_active_set_lambda_multirates(true,br,pr,nodes,true);
             } else {
                 int r=0;
                 if (pr->estimate_root.compare("l")==0){
@@ -1886,11 +1954,18 @@ void imposeMinBlen(ostream& file,Pr* pr, Node** nodes,double minB, bool verbose)
                     nodes_new[i]->status=nodes[i]->status;
                 }
                 reroot_rootedtree(br,r,s1,s2,pr,nodes,nodes_new);
-                without_constraint_active_set_lambda_multirates(br,pr,nodes_new,true);
+                without_constraint_active_set_lambda_multirates(true,br,pr,nodes_new,true);
                 for (int i=0;i<pr->nbBranches+1;i++) delete nodes_new[i];
                 delete[] nodes_new;
             }
-            minblen = minB/pr->rho;
+            if (pr->rhoLower != pr->rhoUpper){
+                ostringstream oss;
+                oss<<"- Cannot estimate minimum branch length, set minimum branch length to 0.\n";
+                pr->warningMessage.push_back(oss.str());
+                minblen = 0;
+            } else{
+                minblen = minB/pr->rho;
+            }
         }
     }
     double minblenL = minblen;
