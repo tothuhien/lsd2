@@ -557,22 +557,37 @@ void output(double br,int y, InputOutputStream *io, Pr* pr,Node** nodes,ostream&
     }
     if (pr->rhoLower != pr->rhoUpper){
         std::ostringstream oss;
+        double tip_date = 0;
+        for (int i=pr->nbINodes;i<=pr->nbBranches;i++){
+            if (nodes[i]->type=='p'){
+                tip_date=nodes[i]->D;
+                break;
+            }
+        }
         oss<<"- There's not enough input date information to have a unique solution. \n";
         if  (pr->rhoUpper == 0){
-            oss<<"The reported rate & dates results are only the lower solution. For any coefficient \n";
-            oss<<"k>=1, there's a corresponding solution where the rate is multiplied by k \n";
-            oss<<"and the date of any node is divided by k from the lower solution.\n";
+            oss<<"The reported results show the lower solution: lower_rate and lower_dates.\n";
+            oss<<"For any coefficient k>=1, there's a corresponding solution where the rate is lower_rate*k,\n";
+            oss<<"and the date of any node i is lower_dates[i]/k";
+            if (tip_date!=0) oss<<"+"<<tip_date<<"*(k-1)/k\n";
+            else oss<<"\n";
         } else if (pr->rhoLower == 0) {
-            oss<<"The reported rate & dates results are only the upper solution. For any coefficient \n";
-            oss<<"k<=1, there's a corresponding solution where the rate is multiplied by k \n";
-            oss<<"and the date of any node is divided by k form the upper solution.\n";
+            oss<<"The reported results show the upper solution: upper_rate and upper_dates.\n";
+            oss<<"For any coefficient k<=1, there's a corresponding solution where the rate is upper_rate*k,\n";
+            oss<<"and the date of any node i is upper_dates[i]/k";
+            if (tip_date!=0) oss<<"+"<<tip_date<<"*(k-1)/k\n";
+            else oss<<"\n";
         } else {
-            oss<<"The reported rate & dates results are only the lower and upper solution. \n";
-            oss<<"The output date tree reports the average date from the 2 boundaries for any node.\n";
-            if (!pr->ci) oss<<"And the 2 boundaries are writen as confidence interval of every node.\n";
+            oss<<"The reported results show the lower and upper solutions: lower_rate:upper_rate,\n";
+            oss<<"lower_dates:upper_dates. The output date tree reports the average date from the 2 \n";
+            oss<<"boundaries for any node. ";
+            if (!pr->ci) oss<<"And the 2 boundaries are writen as confidence interval.\n";
+            else oss<<"\n";
             oss<<"For any coefficient k such that 1 <= k <= upper_rate/lower_rate, there is a \n";
-            oss<<"corresponding solution where the rate is multiplied by k and the date of any node \n";
-            oss<<"is divided by k from the lower solution.\n";
+            oss<<"corresponding solution where the rate is lower_rate*k and the date of any node i is\n";
+            oss<<"lower_dates[i]/k";
+            if (tip_date!=0) oss<<"+"<<tip_date<<"*(k-1)/k\n";
+            else oss<<"\n";
         }
         pr->warningMessage.push_back(oss.str());
     }

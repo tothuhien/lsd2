@@ -54,6 +54,11 @@ bool without_constraint_lambda(double br,Pr* &par,Node** &nodes,list<int> active
         double *W= new double[par->nbINodes];
         double *C = new double[par->nbINodes];
         double *X = new double[par->nbINodes];//nodes[i]->D=W[i].T[a(i)]+C[i]+X[i]/par->rho
+        for (int i=0;i<par->nbINodes;i++){
+            W[i]=0;
+            C[i]=0;
+            X[i]=0;
+        }
         for (list<int>::iterator iter=pos.begin();iter!=pos.end();iter++){
             int i =  *iter;
             if (leaf(nodes[i])) {
@@ -124,8 +129,8 @@ bool without_constraint_lambda(double br,Pr* &par,Node** &nodes,list<int> active
                         wtemp=-1/nodes[r]->V;
                     }
                     for (vector<int>::iterator iter = nodes[i]->suc.begin();iter!=nodes[i]->suc.end();iter++){
-                        //if (leaf(nodes[*iter])) {
-                        if (*iter >= par->nbINodes) {
+                        if (leaf(nodes[*iter])) {
+                        //if (*iter >= par->nbINodes) {
                             coefs+=1/nodes[*iter]->V;
                             ctemp+=nodes[*iter]->D/nodes[*iter]->V;
                             xtemp-=nodes[*iter]->B/nodes[*iter]->V;
@@ -136,15 +141,13 @@ bool without_constraint_lambda(double br,Pr* &par,Node** &nodes,list<int> active
                             xtemp+=(X[*iter]-nodes[*iter]->B)/nodes[*iter]->V;
                         }
                     }
-                    if (coefs==0) {
+                    if (abs(coefs)<=1e-10) {
                         return false;
                     }
                     C[i]=ctemp/coefs;
                     X[i]=xtemp/coefs;
                     W[i]=wtemp/coefs;
                 }
-                
-                
                 else{
                     int p = nodes[i]->P;
                     double coefs=1./nodes[i]->V;
@@ -162,7 +165,6 @@ bool without_constraint_lambda(double br,Pr* &par,Node** &nodes,list<int> active
                             ctemp+=C[*iter]/nodes[*iter]->V;
                             xtemp+=(X[*iter]-nodes[*iter]->B)/nodes[*iter]->V;
                         }
-                        
                     }
                     if (!leaf(nodes[p])){
                         W[i]=wtemp/coefs;
@@ -523,7 +525,7 @@ bool with_constraint_lambda(double br,Pr* &pr,Node** &nodes,list<int> active_set
                                 xtemp+=(X[*iter]-nodes[*iter]->B)/nodes[*iter]->V;
                             }
                         }
-                        if (coefs==0) {
+                        if (abs(coefs)<=1e-10) {
                             return false;
                         }
                         C[i]=ctemp/coefs;
@@ -670,7 +672,7 @@ bool with_constraint_lambda(double br,Pr* &pr,Node** &nodes,list<int> active_set
                                 xtemp+=(X[*iter]-nodes[*iter]->B)/nodes[*iter]->V;
                             }
                         }
-                        if (coefs==0) {
+                        if (abs(coefs)<=1e-10) {
                             return false;
                         }
                         C[i]=ctemp/coefs;
@@ -1184,11 +1186,11 @@ int estimate_root_without_constraint_local_rooted(Pr* &pr,Node** &nodes){
             }
         }
         else{
-            if (pr->verbose) cout<<"Ignoring due to conflict in the input temporal constraints.\n";
+            if (pr->verbose) cout<<"Ignoring due to conflict or not enough information in the input temporal constraints.\n";
         }
     }
     else{
-        if (pr->verbose) cout<<"Ignoring due to conflict in the input temporal constraints.\n";
+        if (pr->verbose) cout<<"Ignoring due to conflict or not enough information in the input temporal constraints.\n";
     }
     list<int> next;
     if (s1<pr->nbINodes){
@@ -1233,7 +1235,7 @@ int estimate_root_without_constraint_local_rooted(Pr* &pr,Node** &nodes){
                 }
             }
             else{
-                if (pr->verbose) cout<<"Ignoring due to conflict in the input temporal constraints.\n";
+                if (pr->verbose) cout<<"Ignoring due to conflict or not enough information in the input temporal constraints.\n";
                 if (i<pr->nbINodes){
                     for (vector<int>::iterator iter=nodes[i]->suc.begin(); iter!=nodes[i]->suc.end(); iter++) {
                         next.push_back(*iter);
@@ -1242,7 +1244,7 @@ int estimate_root_without_constraint_local_rooted(Pr* &pr,Node** &nodes){
             }
         }
         else{
-            if (pr->verbose) cout<<"Ignoring due to conflict in the input temporal constraints.\n";
+            if (pr->verbose) cout<<"Ignoring due to conflict or not enough information in the input temporal constraints.\n";
             if (i<pr->nbINodes){
                 for (vector<int>::iterator iter=nodes[i]->suc.begin(); iter!=nodes[i]->suc.end(); iter++) {
                     next.push_back(*iter);
@@ -1252,7 +1254,7 @@ int estimate_root_without_constraint_local_rooted(Pr* &pr,Node** &nodes){
         next.remove(i);
     }
     if (r==0) {
-        myExit("There's conflict in the input temporal constraints.\n");
+        myExit("There's conflict or not enough information in the input temporal constraints.\n");
     }
     if (pr->verbose) {
         if (r==s1 || r==s2) cout<<"The new root is on the original branch."<<endl;
@@ -1302,11 +1304,11 @@ int estimate_root_without_constraint_rooted(Pr* &pr,Node** &nodes){
             }
         }
         else{
-            if (pr->verbose) cout<<"Ignoring due to conflict in the input temporal constraints.\n";
+            if (pr->verbose) cout<<"Ignoring due to conflict or not enough information in the input temporal constraints.\n";
         }
     }
     else{
-        if (pr->verbose) cout<<"Ignoring due to conflict in the input temporal constraints.\n";
+        if (pr->verbose) cout<<"Ignoring due to conflict or not enough information in the input temporal constraints.\n";
     }
     y++;
     double phi;
@@ -1335,16 +1337,16 @@ int estimate_root_without_constraint_rooted(Pr* &pr,Node** &nodes){
                 }
             }
             else{
-                if (pr->verbose) cout<<"Ignoring due to conflict in the input temporal constraints.\n";
+                if (pr->verbose) cout<<"Ignoring due to conflict or not enough information in the input temporal constraints.\n";
             }
         }
         else{
-            if (pr->verbose) cout<<"Ignoring due to conflict in the input temporal constraints.\n";
+            if (pr->verbose) cout<<"Ignoring due to conflict or not enough information in the input temporal constraints.\n";
         }
         y++;
     }
     if (r==0) {
-        myExit("There's conflict in the input temporal constraints.\n");
+        myExit("There's conflict or not enough information in the input temporal constraints.\n");
     }
     if (pr->verbose) {
         if (r==s1 || r==s2) cout<<"The new root is on the original branch."<<endl;
@@ -1394,11 +1396,11 @@ int estimate_root_with_constraint_local_rooted(Pr* &pr,Node** &nodes){
             }
         }
         else{
-            if (pr->verbose) cout<<"Ignoring due to conflict in the input temporal constraints.\n";
+            if (pr->verbose) cout<<"Ignoring due to conflict or not enough information in the input temporal constraints.\n";
         }
     }
     else{
-        if (pr->verbose) cout<<"Ignoring due to conflict in the input temporal constraints.\n";
+        if (pr->verbose) cout<<"Ignoring due to conflict or not enough information in the input temporal constraints.\n";
     }
     list<int> next;
     if (s1<pr->nbINodes){
@@ -1443,7 +1445,7 @@ int estimate_root_with_constraint_local_rooted(Pr* &pr,Node** &nodes){
                 }
             }
             else{
-                if (pr->verbose) cout<<"Ignoring due to conflict in the input temporal constraints.\n";
+                if (pr->verbose) cout<<"Ignoring due to conflict or not enough information in the input temporal constraints.\n";
                 if (i<pr->nbINodes){
                     for (vector<int>::iterator iter=nodes[i]->suc.begin(); iter!=nodes[i]->suc.end(); iter++) {
                         next.push_back(*iter);
@@ -1452,7 +1454,7 @@ int estimate_root_with_constraint_local_rooted(Pr* &pr,Node** &nodes){
             }
         }
         else{
-            if (pr->verbose) cout<<"Ignoring due to conflict in the input temporal constraints.\n";
+            if (pr->verbose) cout<<"Ignoring due to conflict or not enough information in the input temporal constraints.\n";
             if (i<pr->nbINodes){
                 for (vector<int>::iterator iter=nodes[i]->suc.begin(); iter!=nodes[i]->suc.end(); iter++) {
                     next.push_back(*iter);
@@ -1462,7 +1464,7 @@ int estimate_root_with_constraint_local_rooted(Pr* &pr,Node** &nodes){
         next.remove(i);
     }
     if (r==0) {
-        myExit("There's conflict in the input temporal constraints.\n");
+        myExit("There's conflict or not enough information in the input temporal constraints.\n");
     }
     if (pr->verbose) {
         if (r==s1 || r==s2) cout<<"The new root is on the original branch."<<endl;
@@ -1520,11 +1522,11 @@ int estimate_root_with_constraint_fast_rooted(Pr* &pr,Node** &nodes){
                 }
             }
             else{
-                if (pr->verbose) cout<<"Ignoring due to conflict in the input temporal constraints.\n";
+                if (pr->verbose) cout<<"Ignoring due to conflict or not enough information in the input temporal constraints.\n";
             }
         }
         else{
-            if (pr->verbose) cout<<"Ignoring due to conflict in the input temporal constraints.\n";
+            if (pr->verbose) cout<<"Ignoring due to conflict or not enough information in the input temporal constraints.\n";
         }
         list<int> next;
         int* Suc1_ref = new int[pr->nbINodes];
@@ -1572,7 +1574,7 @@ int estimate_root_with_constraint_fast_rooted(Pr* &pr,Node** &nodes){
                     }
                 }
                 else{
-                    if (pr->verbose) cout<<"Ignoring due to conflict in the input temporal constraints.\n";
+                    if (pr->verbose) cout<<"Ignoring due to conflict or not enough information in the input temporal constraints.\n";
                     if (i<pr->nbINodes){
                         next.push_back(Suc1_ref[i]);
                         next.push_back(Suc2_ref[i]);
@@ -1580,7 +1582,7 @@ int estimate_root_with_constraint_fast_rooted(Pr* &pr,Node** &nodes){
                 }
             }
             else{
-                if (pr->verbose) cout<<"Ignoring due to conflict in the input temporal constraints.\n";
+                if (pr->verbose) cout<<"Ignoring due to conflict or not enough information in the input temporal constraints.\n";
                 if (i<pr->nbINodes){
                     next.push_back(Suc1_ref[i]);
                     next.push_back(Suc2_ref[i]);
@@ -1640,11 +1642,11 @@ int estimate_root_with_constraint_rooted(Pr* &pr,Node** &nodes){
             }
         }
         else{
-            if (pr->verbose) cout<<"Ignoring due to conflict in the input temporal constraints.\n";
+            if (pr->verbose) cout<<"Ignoring due to conflict or not enough information in the input temporal constraints.\n";
         }
     }
     else{
-        if (pr->verbose) cout<<"Ignoring due to conflict in the input temporal constraints.\n";
+        if (pr->verbose) cout<<"Ignoring due to conflict or not enough information in the input temporal constraints.\n";
     }
     y++;
     while (y<=pr->nbBranches){
@@ -1672,16 +1674,16 @@ int estimate_root_with_constraint_rooted(Pr* &pr,Node** &nodes){
                 }
             }
             else{
-                if (pr->verbose) cout<<"Ignoring due to conflict in the input temporal constraints.\n";
+                if (pr->verbose) cout<<"Ignoring due to conflict or not enough information in the input temporal constraints.\n";
             }
         }
         else{
-            if (pr->verbose) cout<<"Ignoring due to conflict in the input temporal constraints.\n";
+            if (pr->verbose) cout<<"Ignoring due to conflict or not enough information in the input temporal constraints.\n";
         }
         y++;
     }
     if (r==0) {
-        myExit("There's conflict in the input temporal constraints.\n");
+        myExit("There's conflict or not enough information in the input temporal constraints.\n");
     }
     if (pr->verbose) {
         if (r==s1 || r==s2) cout<<"The new root is on the original branch."<<endl;
