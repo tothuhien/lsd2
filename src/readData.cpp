@@ -136,6 +136,7 @@ void readInputDate(InputOutputStream* io, Pr* pr,Node** &nodes,bool& constraintC
     bool* tipHaveTime = new bool[pr->nbBranches+1];
     int nbUniqueDate = 0;
     double uniqueDate = 0;
+    double minINodeDate = 0;
     for (int i=pr->nbINodes; i<= pr->nbBranches; i++) tipHaveTime[i]=false;
     if (io->inDate){
         io->inDate->seekg(0);
@@ -216,6 +217,14 @@ void readInputDate(InputOutputStream* io, Pr* pr,Node** &nodes,bool& constraintC
                         pr->haveUnique = true;
                     }
                 }
+                if (k<pr->nbINodes){
+                    if (type=='p' || type=='l'){
+                        if (minINodeDate > v1) minINodeDate = v1;
+                    } else if (type == 'b'){
+                        if (minINodeDate > v1) minINodeDate = v1;
+                        if (minINodeDate > v2) minINodeDate = v2;
+                    }
+                }
             }
             else{
                 w1=w1+" "+s;
@@ -292,6 +301,19 @@ void readInputDate(InputOutputStream* io, Pr* pr,Node** &nodes,bool& constraintC
                 pr->haveUnique = true;
             }
         }
+    }
+    if (nbUniqueDate==0){
+        std::ostringstream oss;
+        oss<<"- There's not any input tip dates, so all tip dates are automatically set to 0.\n";
+        for (int i=pr->nbINodes;i<=pr->nbBranches;i++){
+            nodes[i]->type = 'p';
+            nodes[i]->D = 0;
+        }
+        if (minINodeDate <0){
+            cerr<<"Error: ancestral dates have to be smaller than tips date (0). Hence, for example, set -20 for a calibration of 20 my ago."<<endl;
+            exit(EXIT_FAILURE);
+        }
+        pr->warningMessage.push_back(oss.str());
     }
     if (pr->inDateFormat == 2 && dateFormat != 2){//the general day format is year-month-day but there're some only year or year-month
         int ii = 0;

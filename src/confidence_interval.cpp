@@ -819,12 +819,16 @@ void output(double br,int y, InputOutputStream *io, Pr* pr,Node** nodes,ostream&
         
         tree2<<"tree "<<y<<" = ";
         if (!diffTopology){
-            for (int j=0;j<=pr->nbBranches;j++){
-                nodes[j]->D = (nodes[j]->D * pr->rho)*(1 / pr->rhoLower + 1/ pr->rhoUpper)/2;
+            if (pr->rhoLower!=0 && pr->rhoUpper!=0){
+                for (int j=0;j<=pr->nbBranches;j++){
+                    nodes[j]->D = (nodes[j]->D * pr->rho)*(1 / pr->rhoLower + 1/ pr->rhoUpper)/2;
+                }    
             }
             tree2<<nexusICDate(0,pr,nodes,T_min,T_max,HD_min,HD_max).c_str();
         } else{
-            nodes[0]->D = (nodes[0]->D * pr->rho)*(1 / pr->rhoLower + 1 / pr->rhoUpper)/2;
+            if (pr->rhoLower!=0 && pr->rhoUpper!=0){
+                nodes[0]->D = (nodes[0]->D * pr->rho)*(1 / pr->rhoLower + 1 / pr->rhoUpper)/2;
+            }
             tree2<<nexusDate(0,pr,nodes).c_str();
         }
         int n=0;
