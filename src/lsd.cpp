@@ -102,6 +102,9 @@ int lsd::buildTimeTree( int argc, char** argv, InputOutputStream *inputOutput)
                 rooted2unrooted(opt,nodes);
             }
             collapseUnInformativeBranches(opt,nodes,true);
+            opt->internalConstraints.clear();
+            readInputDate(io, opt,nodes,constraintConsistent);
+            initConstraint(opt, nodes);
         }
         if (!opt->rooted){
             unrooted2rooted(opt,nodes);

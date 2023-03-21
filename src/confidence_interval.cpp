@@ -17,7 +17,7 @@
 #include "confidence_interval.h"
 
 
-void computeIC(double br,Pr* pr,Node** nodes,double* &T_left,double* &T_right,double* &H_left,double* &H_right,double* &HD_left,double* &HD_right,double &rho_left,double& rho_right,double* &other_rhos_left,double* &other_rhos_right){
+void computeIC(InputOutputStream *io, double br,Pr* pr,Node** nodes,double* &T_left,double* &T_right,double* &H_left,double* &H_right,double* &HD_left,double* &HD_right,double &rho_left,double& rho_right,double* &other_rhos_left,double* &other_rhos_right){
     Node** nodes_new = new Node*[pr->nbBranches+1];
     int* tab = new int[pr->nbBranches+1];
     bool useSupport = false;
@@ -26,6 +26,9 @@ void computeIC(double br,Pr* pr,Node** nodes,double* &T_left,double* &T_right,do
     Pr* prReduced = new Pr(nbC,nbC+pr->nbBranches-pr->nbINodes);
     prReduced->copy(pr);
     collapseTreeReOrder( pr, nodes_new, prReduced, nodesReduced,tab);
+    prReduced->internalConstraints.clear();
+    bool constraintConsistent;
+    readInputDate(io, prReduced,nodesReduced,constraintConsistent);
     initConstraint(prReduced, nodesReduced);
     for (int i=0;i<pr->nbBranches+1;i++){
         delete nodes_new[i];
@@ -37,7 +40,6 @@ void computeIC(double br,Pr* pr,Node** nodes,double* &T_left,double* &T_right,do
         B_simul[i]=new double[prReduced->nbBranches+1];
     }
     std::default_random_engine generator;
-    
     double minB=nodesReduced[1]->B;
     for (int i=2;i<=prReduced->nbBranches;i++){
         if (nodesReduced[i]->B<minB && nodesReduced[i]->B>0) {
@@ -306,6 +308,9 @@ bool computeIC_bootstraps(InputOutputStream *io, Pr* pr,Node** nodes,double* &T_
                 rooted2unrooted(pr_bootstrap,nodes_bootstrap);
             }
             collapseUnInformativeBranches(pr_bootstrap,nodes_bootstrap,false);
+            pr_bootstrap->internalConstraints.clear();
+            readInputDate(io, pr_bootstrap,nodes_bootstrap,constraintConsistent);
+            initConstraint(pr_bootstrap, nodes_bootstrap);
             if (!pr_bootstrap->rooted){
                 unrooted2rooted(pr_bootstrap,nodes_bootstrap);
             }
@@ -767,7 +772,7 @@ void output(double br,int y, InputOutputStream *io, Pr* pr,Node** nodes,ostream&
         double* other_rhos_right = new double[pr->ratePartition.size()+1];
         if (pr->bootstraps_file==""){
             cout<<"Computing confidence intervals using sequence length "<<pr->seqLength<<" and a lognormal\n relaxed clock with mean 1, standard deviation "<<pr->q<<" (settable via option -q)"<<endl;
-            computeIC(br,pr,nodes,T_min,T_max,H_min,H_max,HD_min,HD_max,rho_left,rho_right,other_rhos_left,other_rhos_right);
+            computeIC(io,br,pr,nodes,T_min,T_max,H_min,H_max,HD_min,HD_max,rho_left,rho_right,other_rhos_left,other_rhos_right);
         } else {
             cout<<"Computing confidence intervals using input bootstrap trees ..."<<endl;
             computeIC_bootstraps(io,pr,nodes,T_min,T_max,H_min,H_max,HD_min,HD_max,rho_left,rho_right,other_rhos_left,other_rhos_right,r,diffTopology);

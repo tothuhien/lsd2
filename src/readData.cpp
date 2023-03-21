@@ -138,6 +138,7 @@ void readInputDate(InputOutputStream* io, Pr* pr,Node** &nodes,bool& constraintC
     double uniqueDate = 0;
     double minINodeDate = 0;
     for (int i=pr->nbINodes; i<= pr->nbBranches; i++) tipHaveTime[i]=false;
+    for (int i=0;i<= pr->nbBranches;i++)  nodes[i]->type='n';
     if (io->inDate){
         io->inDate->seekg(0);
         int lineNb=getLineNumber(*(io->inDate));

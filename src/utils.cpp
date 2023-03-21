@@ -3003,11 +3003,12 @@ double median_branch_lengths(Pr* pr,Node** nodes){
     return median(bl);
 }
 
-void collapse(int i,int j,Pr* pr,Node** nodes,Node** nodes_new,int &cc,int* &tab, double toCollapse, bool useSupport, double* support){
+void collapse(int i,int j,Pr* pr,Node** nodes,Node** nodes_new, int &cc,int* &tab, double toCollapse, bool useSupport, double* support){
     for (vector<int>::iterator iter=nodes[j]->suc.begin(); iter!=nodes[j]->suc.end(); iter++) {
         int s= *iter;
         if (s<pr->nbINodes && (abs(nodes[s]->B) <= toCollapse  || (useSupport && support[s]<= pr->support))) {
             tab[s]=-1;
+            
             collapse(i,s, pr, nodes, nodes_new, cc,tab,toCollapse,useSupport,support);
         }
         else{
@@ -3131,6 +3132,8 @@ void collapseTreeReOrder(Pr* pr,Node** nodes,Pr* prReduced,Node** nodesReduced,i
             nodesReduced[tab[i]]->L=nodes[i]->L;
         }
     }
+    // TO FIX 
+    /*
     for (vector<Date*>::iterator iter=pr->internalConstraints.begin();iter!=pr->internalConstraints.end();iter++){
         Date* no = (*iter);
         if (no->mrca.size()==0){
@@ -3143,7 +3146,7 @@ void collapseTreeReOrder(Pr* pr,Node** nodes,Pr* prReduced,Node** nodesReduced,i
             }
             no->mrca = new_mrca;
         }
-    }
+    }*/
     if (pr->ratePartition.size()>0) {
         for (int i=root;i<=pr->nbBranches;i++){
             if (tab[i]!=-1) nodesReduced[tab[i]]->rateGroup = nodes[i]->rateGroup;
