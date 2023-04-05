@@ -3114,6 +3114,7 @@ int collapseTree(Pr* pr,Node** nodes,Node** nodes_new,int* &tab, double toCollap
 
 void collapseTreeReOrder(Pr* pr,Node** nodes,Pr* prReduced,Node** nodesReduced,int* &tab){
     int root = (int)(!pr->rooted);
+    nodesReduced[0]=new Node();
     nodesReduced[root]=new Node();
     nodesReduced[root]->P=-1;
     nodesReduced[root]->type=nodes[root]->type;
