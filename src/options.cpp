@@ -25,7 +25,7 @@ Pr* getOptions( int argc, char** argv )
 
 Pr* getCommandLine( int argc, char** argv)
 {
-    const string VERSION="v.2.4";
+    const string VERSION="v.2.4.1";
     Pr* opt = new Pr();
     int c;
     string s;
@@ -354,7 +354,7 @@ Pr* getInterface()
 
 void printInterface(ostream& in, Pr* opt)
 {
-    const string VERSION = "v.2.4";
+    const string VERSION = "v.2.4.1";
 
     in<<"\nLEAST-SQUARE METHODS TO ESTIMATE RATES AND DATES - "<<VERSION<<" \n\n";
     in<<"\nInput files:\n";
@@ -511,7 +511,7 @@ void printHelp( void )
     const string BOLD = "\033[00;01m";
     const string LINE = "\033[00;04m";
     const string FLAT = "\033[00;00m";
-    const string VERSION = "v.2.4";
+    const string VERSION = "v.2.4.1";
     
     cout<<BOLD<<"LSD: LEAST-SQUARES METHODS TO ESTIMATE RATES AND DATES - "<<VERSION<<"\n\n";
     cout<<BOLD<<"DESCRIPTION\n"
