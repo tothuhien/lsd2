@@ -252,7 +252,7 @@ bool without_constraint_lambda(double br,Pr* &par,Node** &nodes,list<int> active
             }
             double delta = b*b-4*a*c;
             par->rho=(-b+sqrt(delta))/2/a;
-            if (delta<0 || par->rho<par->rho_min) par->rho=par->rho_min;
+            if (delta<0 || par->rho<par->rho_min || a==0) par->rho=par->rho_min;
             delete[] F;
             delete[] G;
         }
@@ -786,7 +786,7 @@ bool with_constraint_lambda(double br,Pr* &pr,Node** &nodes,list<int> active_set
                 }
             }
             pr->rho = -b/2/a;
-            if (pr->rho < pr->rho_min) pr->rho=pr->rho_min;
+            if (pr->rho < pr->rho_min || a==0) pr->rho=pr->rho_min;
             delete[] F;
             delete[] G;
         }
