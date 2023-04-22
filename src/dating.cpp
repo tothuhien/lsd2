@@ -383,7 +383,7 @@ bool starting_pointQP(Pr* pr,Node** nodes,list<int> &active_set,int whichStartin
                     return false;
                 }
                 else if (nodes[s]->type == 'b'){
-                    if ((nodes[s]->upper - lowerX[i] - nodes[s]->minblen) >= 0){
+                    if ((nodes[s]->upper - lowerX[i] - nodes[s]->minblen) >= 1e-14){
                         if ((nodes[s]->lower - lowerX[i] - nodes[s]->minblen) <-1e-14 ){
                             lowerX[s] = lowerX[i] + nodes[s]->minblen;
                             nodes[s]->lower = lowerX[i] + nodes[s]->minblen;
