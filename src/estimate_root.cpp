@@ -2247,6 +2247,10 @@ int estimate_root_rtt_residual(Pr* pr, Node** &nodes, int forcedBranch, bool ver
     bool found = false;
     for (size_t k = 0; k < candidates.size(); k++) {
         int i = candidates[k];
+        // Skip branches with no dated tip on one side (e.g. leading to an undated tip): there the RSS is
+        // constant along the branch (all distances shift together) and ties with the adjacent node, so
+        // rounding could put the root next to an undated tip. TreeTime excludes them too (bad_branch).
+        if (down[i].n == 0 || out[i].n == 0) continue;
         RttCandidate c;
         if (rttBestOnBranch(down[i], out[i], nodes[i]->B, N, Ctt, fixedSlope, mu, c)) {
             c.node = i;
