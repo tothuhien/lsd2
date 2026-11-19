@@ -30,6 +30,7 @@ typedef struct Pr
     string fnOutgroup;
     string rate;           //le fichier contient les taux en entree
     string estimate_root;    //Method to estimate root
+    bool rttRoot;            //Root by root-to-tip regression, residual minimisation (-r rtt)
     bool rooted;
     bool constraint;       //Impose the constraints or not
     int variance;         //Use the variances or not
@@ -97,6 +98,7 @@ typedef struct Pr
         nbBootstrap = pr->nbBootstrap;
         rate=pr->rate;
         estimate_root = pr->estimate_root;
+        rttRoot = pr->rttRoot;
         rooted=pr->rooted;
         constraint=pr->constraint;
         variance=pr->variance;
@@ -156,6 +158,7 @@ typedef struct Pr
         MRCA="";
         LEAVES="";
         estimate_root = "";
+        rttRoot = false;
         constraint = true;
         variance = 1;
         minblen = 0;

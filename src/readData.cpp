@@ -105,7 +105,7 @@ Node** tree2data(istream& tree,Pr* pr,int & s){
     delete internal_nodes[0];
     delete leaves[0];
     if (!pr->rooted){
-        if (pr->estimate_root=="" && pr->fnOutgroup=="") {
+        if (pr->estimate_root=="" && !pr->rttRoot && pr->fnOutgroup=="") {
             cerr<<"The input trees are not rooted, use either option -g to specify the outgroups file or -r to estimate the root"<<endl;
             exit(EXIT_FAILURE);
         }

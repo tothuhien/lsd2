@@ -304,7 +304,7 @@ bool computeIC_bootstraps(InputOutputStream *io, Pr* pr,Node** nodes,double* &T_
                     if (nodes_bootstrap[i]->B < minB) minB = nodes_bootstrap[i]->B;
                 }
             }
-            if (pr_bootstrap->rooted && pr_bootstrap->estimate_root!="" && pr_bootstrap->estimate_root!="k"){
+            if (pr_bootstrap->rooted && ((pr_bootstrap->estimate_root!="" && pr_bootstrap->estimate_root!="k") || pr->rttRoot)){
                 rooted2unrooted(pr_bootstrap,nodes_bootstrap);
             }
             collapseUnInformativeBranches(pr_bootstrap,nodes_bootstrap,false);
@@ -315,6 +315,7 @@ bool computeIC_bootstraps(InputOutputStream *io, Pr* pr,Node** nodes,double* &T_
                 unrooted2rooted(pr_bootstrap,nodes_bootstrap);
             }
             computeVariance(pr_bootstrap,nodes_bootstrap);
+            if (pr->rttRoot) estimate_root_rtt_residual(pr_bootstrap,nodes_bootstrap,-1,false);
             if (pr->estimate_root=="" || pr->estimate_root=="k") constraintConsistent = initConstraint(pr_bootstrap, nodes_bootstrap);
             if (pr->e>0) calculateOutliers(pr_bootstrap,nodes_bootstrap,median_rate,false);
             if (pr->splitExternal) splitExternalBranches(pr_bootstrap,nodes_bootstrap);
@@ -322,8 +323,10 @@ bool computeIC_bootstraps(InputOutputStream *io, Pr* pr,Node** nodes,double* &T_
         } else{
             if (!pr_bootstrap->rooted){
                 unrooted2rooted(pr_bootstrap,nodes_bootstrap);
-                reroot_rootedtree(br,r,pr_bootstrap,nodes_bootstrap);
+                if (!pr->rttRoot) reroot_rootedtree(br,r,pr_bootstrap,nodes_bootstrap);
             }
+            // same topology: root on the branch chosen for the input tree, position re-optimised
+            if (pr->rttRoot) estimate_root_rtt_residual(pr_bootstrap,nodes_bootstrap,r,false);
             if (pr->ratePartition.size()>0) assignRateGroupToTree(pr,nodes_bootstrap);
             computeVariance(pr_bootstrap,nodes_bootstrap);
             if (pr->splitExternal) splitExternalBranches(pr_bootstrap,nodes_bootstrap);
