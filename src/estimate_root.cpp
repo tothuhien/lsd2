@@ -2033,3 +2033,264 @@ void imposeMinBlen(ostream& file,Pr* pr, Node** nodes,double minB, bool verbose)
         }
     }
 }
+
+/* ------------------------------------------------------------------------------------------------
+ * Rooting by root-to-tip regression, residual minimisation (option -r rtt).
+ *
+ * Follows the "efficient search for the optimal root" of TreeTime (Sagulenko, Puller & Neher,
+ * Virus Evolution 2018, 4(1):vex042, Appendix), using the residual sum of squares of the
+ * root-to-tip regression as objective instead of the correlation coefficient.
+ *
+ * For a set of dated tips with dates t_i and root-to-tip distances d_i, the residual sum of squares
+ * of the least-squares line d = a + mu*t is
+ *     RSS = Cdd - Cdt^2/Ctt                 (slope estimated)
+ *     RSS = Cdd - 2*mu*Cdt + mu^2*Ctt       (slope fixed to a given rate mu, option -w)
+ * with Ctt = sum (t-<t>)^2, Cdt = sum (t-<t>)(d-<d>), Cdd = sum (d-<d>)^2. Ctt does not depend on the
+ * root. When the root is placed at distance x above node i on its branch, d_i is linear in x, so Cdt
+ * is linear and Cdd quadratic in x: the RSS is a quadratic in x and its minimum on the branch is
+ * obtained in closed form. All the needed sums are computed for every branch with one postorder and
+ * one preorder traversal (TreeTime Eq. 13-15), so the whole search is linear in the tree size.
+ *
+ * As in TreeTime (force_positive), when the slope is estimated the root positions giving a
+ * non-positive slope are excluded.
+ * ------------------------------------------------------------------------------------------------ */
+
+namespace {
+
+// Sums over the dated tips of a subtree, distances being measured from a reference point.
+struct RttStats {
+    double n;   // number of dated tips
+    double t;   // sum of (centred) dates
+    double d;   // sum of distances
+    double dt;  // sum of date*distance
+    double dd;  // sum of squared distances
+    RttStats(): n(0), t(0), d(0), dt(0), dd(0) {}
+    // Same tips, reference point moved h further away from them.
+    RttStats shifted(double h) const {
+        RttStats s;
+        s.n = n;
+        s.t = t;
+        s.d = d + n*h;
+        s.dt = dt + h*t;
+        s.dd = dd + 2*h*d + n*h*h;
+        return s;
+    }
+    void add(const RttStats& o) {
+        n += o.n; t += o.t; d += o.d; dt += o.dt; dd += o.dd;
+    }
+    void subtract(const RttStats& o) {
+        n -= o.n; t -= o.t; d -= o.d; dt -= o.dt; dd -= o.dd;
+    }
+};
+
+// Date used for the regression: precise dates, or the middle of a bounded interval.
+bool rttTipDate(Node* no, double& t) {
+    if (no->type == 'p') { t = no->D; return true; }
+    if (no->type == 'b') { t = (no->lower + no->upper)/2.; return true; }
+    return false;
+}
+
+struct RttCandidate {
+    int node;       // the root is on the branch above this node
+    double x;       // distance from the node
+    double rss;
+    double slope;
+    double cdt;     // Cdt at the optimum
+    double cdd;     // Cdd at the optimum
+    double meanD;   // <d> at the optimum
+    RttCandidate(): node(-1), x(0), rss(0), slope(0), cdt(0), cdd(0), meanD(0) {}
+};
+
+// Optimal root position on the branch above a node. below: dated tips under the node, distances from
+// the node; out: the other dated tips, distances from the other end of the branch; l: branch length.
+bool rttBestOnBranch(const RttStats& below, const RttStats& out, double l, double N, double Ctt,
+                     bool fixedSlope, double mu, RttCandidate& best) {
+    // Sd(x) = A0 + A1 x, Sdt(x) = B0 + B1 x, Sdd(x) = C0 + C1 x + C2 x^2
+    double A0 = below.d + out.d + out.n*l;
+    double A1 = below.n - out.n;
+    double B0 = below.dt + out.dt + l*out.t;
+    double B1 = below.t - out.t;
+    double C0 = below.dd + out.dd + 2*l*out.d + out.n*l*l;
+    double C1 = 2*below.d - 2*out.d - 2*out.n*l;
+    double C2 = below.n + out.n;
+    // dates are centred, so sum t = 0 and Cdt = Sdt, Cdd = Sdd - Sd^2/N
+    double e0 = B0, e1 = B1;
+    double f0 = C0 - A0*A0/N, f1 = C1 - 2*A0*A1/N, f2 = C2 - A1*A1/N;
+    double q0, q1, q2;
+    if (fixedSlope) {
+        q2 = f2; q1 = f1 - 2*mu*e1; q0 = f0 - 2*mu*e0 + mu*mu*Ctt;
+    } else {
+        q2 = f2 - e1*e1/Ctt; q1 = f1 - 2*e0*e1/Ctt; q0 = f0 - e0*e0/Ctt;
+    }
+    double lo = 0, hi = l;
+    if (!fixedSlope) { // keep only the part of the branch where the slope e0+e1*x is positive
+        if (e1 > 0) lo = max(lo, -e0/e1);
+        else if (e1 < 0) hi = min(hi, -e0/e1);
+        else if (e0 <= 0) return false;
+        if (lo > hi) return false;
+    }
+    vector<double> xs;
+    xs.push_back(lo);
+    xs.push_back(hi);
+    if (q2 > 0) {
+        double v = -q1/(2*q2);
+        if (v > lo && v < hi) xs.push_back(v);
+    }
+    bool found = false;
+    RttCandidate c;
+    for (size_t k = 0; k < xs.size(); k++) {
+        double x = xs[k];
+        double cdt = e0 + e1*x;
+        double slope = fixedSlope ? mu : cdt/Ctt;
+        if (slope <= 0) continue;
+        double rss = q0 + q1*x + q2*x*x;
+        if (!found || rss < c.rss) {
+            found = true;
+            c.x = x;
+            c.rss = rss;
+            c.slope = slope;
+            c.cdt = cdt;
+            c.cdd = f0 + f1*x + f2*x*x;
+            c.meanD = (A0 + A1*x)/N;
+        }
+    }
+    if (found) best = c;
+    return found;
+}
+
+}
+
+int estimate_root_rtt_residual(Pr* pr, Node** &nodes, int forcedBranch, bool verbose) {
+    if (nodes[0]->suc.size() != 2) {
+        myExit("Rooting by root-to-tip regression requires a binary root.\n");
+    }
+    int nbNodes = pr->nbBranches + 1;
+    // dated tips, with centred dates
+    vector<double> date(nbNodes, 0);
+    vector<bool> dated(nbNodes, false);
+    double N = 0, meanT = 0;
+    for (int i = pr->nbINodes; i <= pr->nbBranches; i++) {
+        double t;
+        if (rttTipDate(nodes[i], t)) {
+            dated[i] = true;
+            date[i] = t;
+            N++;
+            meanT += t;
+        }
+    }
+    if (N < 3) myExit("Rooting by root-to-tip regression requires at least 3 dated tips.\n");
+    meanT /= N;
+    double Ctt = 0;
+    for (int i = pr->nbINodes; i <= pr->nbBranches; i++) {
+        if (dated[i]) {
+            date[i] -= meanT;
+            Ctt += date[i]*date[i];
+        }
+    }
+    bool fixedSlope = pr->givenRate[0];
+    double mu = pr->rho;
+    if (!fixedSlope && Ctt <= 1e-12*N*max(1., meanT*meanT)) {
+        myExit("Rooting by root-to-tip regression requires tips sampled at different dates.\n");
+    }
+    // preorder from the root
+    vector<int> order;
+    order.reserve(nbNodes);
+    order.push_back(0);
+    for (size_t k = 0; k < order.size(); k++) {
+        int i = order[k];
+        for (size_t c = 0; c < nodes[i]->suc.size(); c++) order.push_back(nodes[i]->suc[c]);
+    }
+    if ((int)order.size() != nbNodes) myExit("Rooting by root-to-tip regression: inconsistent tree.\n");
+    // postorder pass: sums over the tips below each node, distances from the node
+    vector<RttStats> down(nbNodes);
+    for (int k = nbNodes - 1; k >= 0; k--) {
+        int i = order[k];
+        if (nodes[i]->suc.empty()) {
+            if (dated[i]) {
+                down[i].n = 1;
+                down[i].t = date[i];
+            }
+        } else {
+            for (size_t c = 0; c < nodes[i]->suc.size(); c++) {
+                int s = nodes[i]->suc[c];
+                down[i].add(down[s].shifted(nodes[s]->B));
+            }
+        }
+    }
+    // preorder pass: sums over the tips not below each node, distances from its parent
+    vector<RttStats> out(nbNodes);
+    for (size_t k = 1; k < order.size(); k++) {
+        int i = order[k];
+        int p = nodes[i]->P;
+        // siblings = everything below p minus the subtree of i: O(1) per node, also for polytomies
+        RttStats o;
+        if (p != 0) o = out[p].shifted(nodes[p]->B);
+        o.add(down[p]);
+        o.subtract(down[i].shifted(nodes[i]->B));
+        out[i] = o;
+    }
+    int s1 = nodes[0]->suc[0];
+    int s2 = nodes[0]->suc[1];
+    // the two branches below the root form a single branch of the unrooted tree
+    vector<int> candidates;
+    if (forcedBranch > 0) {
+        if (forcedBranch == s1 || forcedBranch == s2) {
+            candidates.push_back(s1);
+            candidates.push_back(s2);
+        } else {
+            candidates.push_back(forcedBranch);
+        }
+    } else {
+        for (int i = 1; i <= pr->nbBranches; i++) candidates.push_back(i);
+    }
+    RttCandidate best;
+    bool found = false;
+    for (size_t k = 0; k < candidates.size(); k++) {
+        int i = candidates[k];
+        RttCandidate c;
+        if (rttBestOnBranch(down[i], out[i], nodes[i]->B, N, Ctt, fixedSlope, mu, c)) {
+            c.node = i;
+            if (!found || c.rss < best.rss) {
+                best = c;
+                found = true;
+            }
+        }
+    }
+    if (!found) {
+        myExit("Rooting by root-to-tip regression: no root position gives a positive substitution rate.\n");
+    }
+    // reroot on the selected branch and place the root at the optimal position
+    int r = best.node;
+    double x = best.x;
+    Node** nodes_new = cloneLeaves(pr, nodes, 0);
+    double br = 0;
+    reroot_rootedtree(br, r, s1, s2, pr, nodes, nodes_new);
+    int other;
+    if (r == s1 || r == s2) {
+        other = (r == s1) ? s2 : s1;    // br is the merged length B[s1]+B[s2]
+        x = min(x, br);
+    } else {
+        other = nodes[r]->P;            // br is B[r]
+    }
+    nodes_new[r]->B = x;
+    nodes_new[other]->B = max(0., br - x);
+    computeVariance(pr, nodes_new);
+    for (int i = 0; i <= pr->nbBranches; i++) delete nodes[i];
+    delete[] nodes;
+    nodes = nodes_new;
+    if (r == s2) r = s1;                 // same branch of the unrooted tree, keep one label
+    if (verbose) {
+        double r2 = (best.cdd > 0) ? best.cdt*best.cdt/(Ctt*best.cdd) : 0;
+        double tRoot = meanT - best.meanD/best.slope;    // date where the regression line crosses d=0
+        std::ostringstream oss;
+        oss<<"- Root estimated by root-to-tip regression (residual minimisation) using "<<(int)N<<" dated tips:\n";
+        oss<<" root placed on a branch of length "<<br<<", at distances "<<nodes[best.node]->B<<" and "<<nodes[other]->B;
+        if (best.node >= pr->nbINodes) oss<<" from tip "<<nodes[best.node]->L<<" and its sibling";
+        oss<<",\n";
+        oss<<" regression "<<(fixedSlope ? "with fixed rate " : "rate ")<<best.slope<<", root date "<<tRoot
+           <<", R^2 "<<r2<<", residual sum of squares "<<best.rss<<"\n";
+        pr->resultMessage.push_back(oss.str());
+        cout<<oss.str();
+    }
+    return r;
+}

@@ -98,7 +98,7 @@ int lsd::buildTimeTree( int argc, char** argv, InputOutputStream *inputOutput)
             (*(io->inBootstrapTree)).seekg(pos);
         }
         if (diffTopology || !(io->inBootstrapTree)){
-            if (opt->rooted && opt->estimate_root!="" && opt->estimate_root!="k"){
+            if (opt->rooted && ((opt->estimate_root!="" && opt->estimate_root!="k") || opt->rttRoot)){
                 rooted2unrooted(opt,nodes);
             }
             collapseUnInformativeBranches(opt,nodes,true);
@@ -147,6 +147,10 @@ int lsd::buildTimeTree( int argc, char** argv, InputOutputStream *inputOutput)
                 opt->warningMessage.push_back(oss.str());
                 opt->givenRate[0] = false;
             }
+        }
+        if (opt->rttRoot){
+            cout<<"Estimating the root by root-to-tip regression (residual minimisation) ..."<<endl;
+            r = estimate_root_rtt_residual(opt,nodes,-1,true);
         }
         if (opt->estimate_root=="" || opt->estimate_root=="k"){
             constraintConsistent = initConstraint(opt, nodes);
