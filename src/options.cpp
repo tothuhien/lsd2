@@ -105,8 +105,14 @@ Pr* getCommandLine( int argc, char** argv)
                 break;
             case 'r':
                 opt->estimate_root = optarg;
-                if (opt->estimate_root.compare("l")!=0 && opt->estimate_root.compare("a")!=0 && opt->estimate_root.compare("as")!=0 && opt->estimate_root.compare("k")!=0)
-                    myExit("Argument of option -r must be either \"l\" or \"a\" or \"as\".\n");
+                opt->rttRoot = false;
+                if (opt->estimate_root.compare("rtt")==0){
+                    // the root is fixed by root-to-tip regression before dating, which then runs as for a rooted tree
+                    opt->rttRoot = true;
+                    opt->estimate_root = "";
+                }
+                else if (opt->estimate_root.compare("l")!=0 && opt->estimate_root.compare("a")!=0 && opt->estimate_root.compare("as")!=0 && opt->estimate_root.compare("k")!=0)
+                    myExit("Argument of option -r must be either \"l\" or \"a\" or \"as\" or \"k\" or \"rtt\".\n");
                 break;
             case 'v':
                 if( !isInteger(optarg) )
@@ -286,6 +292,9 @@ Pr* getCommandLine( int argc, char** argv)
         cout<<"The non constrained mode is chosen, so the \"as\" method for rooting function\n is the same as the \"a\" method."<<endl;
         opt->estimate_root="a";
     }
+    if (opt->rttRoot && opt->fnOutgroup != ""){
+        myExit("Option -r rtt estimates the root from the tip dates, it can not be combined with option -g.\n");
+    }
     if (opt->estimate_root.compare("")==0 && !opt->removeOutgroup && opt->fnOutgroup != ""){
         opt->estimate_root="k";
     }
@@ -413,7 +422,10 @@ void printInterface(ostream& in, Pr* opt)
         }
     }
     in<<"  r                                             Estimate the root : ";
-    if (opt->estimate_root=="k"){
+    if (opt->rttRoot){
+        in<<"By root-to-tip regression (residual minimisation) on all branches\n";
+    }
+    else if (opt->estimate_root=="k"){
         in<<"On the branch given by the outgroups\n";
     }
     else if (opt->estimate_root.compare("l")==0){
@@ -636,6 +648,11 @@ void printHelp( void )
     <<FLAT<<"\t   Use " <<BOLD<<"-r as" <<FLAT<<" if you want to estimate to root using constrained mode on all branches.\n"
     <<FLAT<<"\t   Use " <<BOLD<<"-r k" <<FLAT<<" if you want to re-estimate the root position on the same branche of the given root.\n"
     <<FLAT<<"\t       If combined with option -g, the root will be estimated on the branche defined by the outgroups.\n"
+    <<FLAT<<"\t   Use " <<BOLD<<"-r rtt" <<FLAT<<" to place the root at the position, over all branches, that minimizes the residual sum of\n"
+    <<FLAT<<"\t       squares of the root-to-tip regression (distance against date), as in TreeTime (linear-time search).\n"
+    <<FLAT<<"\t       Only tips with precise dates (or the middle of bounded intervals) are used. The tree is then dated\n"
+    <<FLAT<<"\t       with this root fixed. If a rate is given (-w) the regression slope is fixed to it, otherwise\n"
+    <<FLAT<<"\t       positions giving a non-positive slope are excluded. Can not be combined with option -g.\n"
     <<FLAT<<"\t" <<BOLD<<"-R " <<LINE<<"round_time\n"
     <<FLAT<<"\t   This value is used to round the minimum branch length of the time scaled tree. The purpose of this is to make the minimum branch length\n"
     <<FLAT<<"\t   a meaningful time unit, such as day, week, year ... By default this value is 365, so if the input dates are year, the minimum branch\n"
